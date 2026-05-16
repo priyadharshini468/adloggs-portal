@@ -548,7 +548,7 @@
 
         <div class="form-group">
           <div class="form-label">Cloudflare Worker URL</div>
-          <input class="input" id="cfg-jira-proxy" placeholder="https://jira-proxy.YOUR-NAME.workers.dev" />
+          <input class="input" id="cfg-jira-proxy" placeholder="https://jira-proxy.priyadharshini468.workers.dev" />
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-primary btn-sm" onclick="saveJiraProxy()">Save URL</button>
@@ -899,7 +899,7 @@ const STATE = {
   scriptUrl: localStorage.getItem('adloggs_script_url') || '',
   addingToTeam: null,
   timers: {},
-  jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || '',
+  jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || 'https://jira-proxy.priyadharshini.workers.dev',
   sheetsInterval: parseInt(localStorage.getItem('adloggs_sheets_interval') || '120000'),
 };
 
@@ -1845,7 +1845,7 @@ function init() {
     document.getElementById('cfg-jira-proxy').value = STATE.jiraProxyUrl;
     const badge = document.getElementById('jira-cfg-badge');
     badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
-    badge.textContent = '✓ Proxy configured';
+    badge.textContent = '✓ Cloudflare Worker connected';
   }
 
   renderTeams();
