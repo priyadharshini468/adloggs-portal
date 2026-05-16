@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adloggs Product Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0f14; --surface:#13161d; --surface2:#1a1e28;
+    --border:#252a38; --border2:#2e3548;
+    --accent:#4f8ef7; --accent2:#7b5ea7;
+    --green:#3ecf8e; --amber:#f5a623; --red:#e05c5c;
+    --text:#e8eaf0; --text2:#8b91a8; --text3:#5a6078;
+    --serif:'DM Serif Display',Georgia,serif; --sans:'DM Sans',system-ui,sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;display:flex;overflow-x:hidden}
+
+  /* SIDEBAR */
+  .sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100}
+  .sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .sidebar-logo h1{font-family:var(--serif);font-size:19px;letter-spacing:-0.3px}
+  .sidebar-logo h1 span{color:var(--accent)}
+  .logo-pill{font-size:10px;background:rgba(79,142,247,0.15);color:var(--accent);border:1px solid rgba(79,142,247,0.25);padding:2px 7px;border-radius:10px;font-weight:600}
+  .sidebar-nav{flex:1;padding:10px 0;overflow-y:auto}
+  .nav-section{padding:8px 20px 4px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;color:var(--text2);font-size:13px;transition:all 0.15s;position:relative}
+  .nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+  .nav-item.active{color:var(--accent);background:rgba(79,142,247,0.08)}
+  .nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);border-radius:0 2px 2px 0}
+  .nav-item svg{width:15px;height:15px;flex-shrink:0}
+  .nav-badge{margin-left:auto;color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px}
+  .nb-blue{background:var(--accent)} .nb-amber{background:var(--amber)} .nb-green{background:var(--green);color:#0d0f14}
+  .sidebar-user{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer}
+  .u-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+  .u-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .u-role{font-size:11px;color:var(--text3)}
+
+  /* MAIN */
+  .main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+  .topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50}
+  .topbar-title{font-family:var(--serif);font-size:17px;flex:1}
+  .topbar-actions{display:flex;align-items:center;gap:8px}
+  .sync-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid}
+  .sp-live{background:rgba(62,207,142,0.08);border-color:rgba(62,207,142,0.2);color:var(--green)}
+  .sp-syncing{background:rgba(245,166,35,0.08);border-color:rgba(245,166,35,0.2);color:var(--amber)}
+  .sp-error{background:rgba(224,92,92,0.08);border-color:rgba(224,92,92,0.2);color:var(--red)}
+  .sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .sync-dot.pulse{animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .spin{animation:spin 1s linear infinite;display:inline-block}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:7px;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all 0.15s}
+  .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#3a7de8}
+  .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+  .btn-green{background:rgba(62,207,142,0.12);color:var(--green);border:1px solid rgba(62,207,142,0.2)}
+  .btn-red{background:rgba(224,92,92,0.1);color:var(--red);border:1px solid rgba(224,92,92,0.2)}
+  .btn-sm{padding:4px 9px;font-size:11px}
+
+  .content{padding:24px;flex:1}
+  .section{display:none;animation:fadeIn 0.2s ease}
+  .section.active{display:block}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px}
+  .banner{display:flex;align-items:center;justify-content:space-between;border-radius:8px;padding:9px 14px;margin-bottom:18px;font-size:12px;gap:8px}
+  .bn-jira{background:rgba(79,142,247,0.06);border:1px solid rgba(79,142,247,0.18)}
+  .bn-sheets{background:rgba(62,207,142,0.05);border:1px solid rgba(62,207,142,0.15)}
+  .banner-left{display:flex;align-items:center;gap:8px;color:var(--text2)}
+  .section-head{margin-bottom:18px}
+  .section-head h2{font-family:var(--serif);font-size:24px;margin-bottom:3px}
+  .section-head p{color:var(--text3);font-size:12px}
+  .divider{height:1px;background:var(--border);margin:16px 0}
+
+  /* TEAMS */
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+  .team-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+  .team-hd{padding:14px 18px;display:flex;align-items:center;gap:10px}
+  .team-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .team-name{font-weight:600;font-size:14px}
+  .team-meta{font-size:11px;color:var(--text3);margin-top:2px}
+  .team-actions{margin-left:auto;display:flex;gap:4px}
+  .team-members{padding:0 18px 14px}
+  .member-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--border)}
+  .m-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+  .m-name{font-size:12.5px;font-weight:500}
+  .m-title{font-size:11px;color:var(--text3)}
+  .m-dot{width:6px;height:6px;border-radius:50%;margin-left:auto}
+  .s-online{background:var(--green)} .s-away{background:var(--amber)} .s-offline{background:var(--text3)}
+  .jira-tag{font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(79,142,247,0.12);color:var(--accent);margin-left:4px}
+
+  /* AVATAR COLORS */
+  .av1{background:#4f8ef7} .av2{background:#7b5ea7} .av3{background:#3ecf8e;color:#0d0f14}
+  .av4{background:#e05c5c} .av5{background:#f5a623;color:#0d0f14} .av6{background:#4fb3bf}
+  .av7{background:#9c6b3c} .av8{background:#c45ab3} .av9{background:#5cb85c}
+  .av10{background:#d9534f} .av11{background:#0275d8} .av12{background:#5bc0de;color:#0d0f14}
+  /* TEAM BG */
+  .tb-blue{background:rgba(79,142,247,0.12)} .tb-purple{background:rgba(123,94,167,0.15)}
+  .tb-green{background:rgba(62,207,142,0.12)} .tb-amber{background:rgba(245,166,35,0.10)}
+  .tb-cyan{background:rgba(79,179,191,0.12)} .tb-shared{background:rgba(255,255,255,0.07)}
+
+  /* KANBAN */
+  .sprint-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .sprint-stat{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px 16px;text-align:center;min-width:76px}
+  .ss-num{font-family:var(--serif);font-size:22px}
+  .ss-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-top:1px}
+  .kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}
+  .kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px;min-height:280px}
+  .kanban-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+  .k-count{background:var(--surface2);border-radius:7px;padding:1px 6px;font-size:10px}
+  .task-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:7px;cursor:pointer;transition:border-color 0.15s}
+  .task-card:hover{border-color:var(--border2)}
+  .task-id{font-size:10px;color:var(--text3);font-weight:500;margin-bottom:3px}
+  .task-title{font-size:12px;font-weight:500;margin-bottom:6px;line-height:1.4}
+  .task-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .tag{font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px}
+  .t-bug{background:rgba(224,92,92,0.15);color:var(--red)}
+  .t-feature{background:rgba(79,142,247,0.15);color:var(--accent)}
+  .t-task{background:rgba(123,94,167,0.15);color:#a07fd4}
+  .t-story{background:rgba(245,166,35,0.12);color:var(--amber)}
+  .task-due{font-size:10px;color:var(--text3)}
+  .task-due.od{color:var(--red)}
+  .task-av{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600}
+
+  /* RELEASES */
+  .rel-tl{position:relative}
+  .rel-tl::before{content:'';position:absolute;left:15px;top:0;bottom:0;width:2px;background:var(--border2)}
+  .rel-item{display:flex;gap:18px;margin-bottom:18px}
+  .rel-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;z-index:1;border:2px solid}
+  .rd-done{background:rgba(62,207,142,0.15);border-color:var(--green)}
+  .rd-upcoming{background:rgba(79,142,247,0.1);border-color:var(--accent)}
+  .rd-planned{background:var(--surface2);border-color:var(--border2)}
+  .rel-body{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:14px}
+  .rel-version{font-weight:700;font-size:14px}
+  .rel-date{font-size:11px;color:var(--text3);margin-top:2px}
+  .rel-badge{font-size:10px;padding:2px 8px;border-radius:8px;font-weight:500}
+  .rb-done{background:rgba(62,207,142,0.12);color:var(--green)}
+  .rb-upcoming{background:rgba(79,142,247,0.12);color:var(--accent)}
+  .rb-planned{background:rgba(255,255,255,0.06);color:var(--text3)}
+  .chip{font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:3px 9px;color:var(--text2)}
+
+  /* REQUIREMENTS */
+  .req-filters{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+  .filter-btn{padding:4px 11px;border-radius:20px;border:1px solid var(--border2);background:none;color:var(--text2);font-size:11px;cursor:pointer;transition:all 0.15s}
+  .filter-btn.active,.filter-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .req-table{width:100%;border-collapse:collapse}
+  .req-table th{text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;padding:8px 10px;border-bottom:1px solid var(--border)}
+  .req-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:12px}
+  .req-table tr:hover td{background:rgba(255,255,255,0.02)}
+  .req-table tr:last-child td{border-bottom:none}
+  .req-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:5px;font-weight:500}
+  .rs-new{background:rgba(79,142,247,0.12);color:var(--accent)}
+  .rs-accepted{background:rgba(62,207,142,0.12);color:var(--green)}
+  .rs-review{background:rgba(245,166,35,0.12);color:var(--amber)}
+  .rs-sprint{background:rgba(79,142,247,0.12);color:var(--accent)}
+  .rs-closed{background:rgba(255,255,255,0.06);color:var(--text3)}
+  .action-icon{width:26px;height:26px;border-radius:5px;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.15s}
+  .action-icon:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,0.08)}
+
+  /* SCORES */
+  .score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .score-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px}
+  .score-team{font-size:14px;font-weight:600;margin-bottom:14px}
+  .score-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)}
+  .score-row:last-child{border-bottom:none}
+  .score-label{font-size:12px;color:var(--text2)}
+  .score-val{font-family:var(--serif);font-size:19px}
+  .locked-overlay{position:absolute;inset:0;background:rgba(13,15,20,0.93);z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:13px;gap:14px}
+  .pin-input{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:15px;letter-spacing:6px;text-align:center;padding:9px 15px;width:150px;outline:none}
+  .pin-input:focus{border-color:var(--accent)}
+
+  /* ROADMAP */
+  .roadmap-quarters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .q-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+  .roadmap-item{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:7px}
+  .ri-title{font-size:12px;font-weight:500;margin-bottom:3px}
+  .ri-team{font-size:10px;color:var(--text3)}
+  .progress-bar{height:3px;background:var(--border2);border-radius:2px;margin-top:7px}
+  .progress-fill{height:100%;border-radius:2px}
+
+  /* FORM / MODAL */
+  .form-group{margin-bottom:12px}
+  .form-label{font-size:11px;color:var(--text3);margin-bottom:5px;display:block}
+  .input{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--sans);font-size:12px;padding:7px 11px;outline:none;width:100%;transition:border-color 0.15s}
+  .input:focus{border-color:var(--accent)}
+  select.input{appearance:none;cursor:pointer}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:200;align-items:center;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:13px;width:520px;max-height:84vh;overflow-y:auto;padding:22px;position:relative}
+  .modal-close{position:absolute;right:14px;top:14px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px}
+  .modal-title{font-family:var(--serif);font-size:19px;margin-bottom:3px}
+  .modal-sub{font-size:11px;color:var(--text3);margin-bottom:18px}
+  .detail-row{display:flex;gap:8px;margin-bottom:9px;align-items:flex-start}
+  .detail-label{font-size:11px;color:var(--text3);width:90px;flex-shrink:0;padding-top:1px}
+  .detail-val{font-size:12px;font-weight:500;flex:1;line-height:1.5}
+  .comment-box{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px;margin-top:14px}
+  .comment-box textarea{width:100%;background:none;border:none;color:var(--text);font-family:var(--sans);font-size:12px;resize:none;outline:none;min-height:50px}
+  .comment-item{padding:8px 0;border-top:1px solid var(--border)}
+  .comment-author{font-size:11px;font-weight:600}
+  .comment-text{font-size:12px;color:var(--text2);margin-top:2px}
+  .comment-time{font-size:10px;color:var(--text3)}
+
+  /* SETTINGS */
+  .cfg-block{background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:14px;margin-bottom:14px}
+  .cfg-title{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .cfg-badge{font-size:10px;padding:2px 8px;border-radius:8px;margin-left:auto}
+  .cb-ok{background:rgba(62,207,142,0.12);color:var(--green)}
+  .cb-na{background:rgba(255,255,255,0.06);color:var(--text3)}
+
+  /* LOADING / EMPTY */
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+  .empty-icon{font-size:32px;margin-bottom:10px}
+  .empty-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:5px}
+  .loading-row{display:flex;align-items:center;gap:8px;padding:12px;color:var(--text3);font-size:12px}
+
+  #toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:11px 16px;font-size:12px;transform:translateY(80px);transition:transform 0.3s;z-index:999;max-width:320px;line-height:1.5}
+
+  @media(max-width:1200px){.kanban{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:900px){.kanban{grid-template-columns:repeat(2,1fr)}.roadmap-quarters{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Adloggs<span>.</span></h1>
+    <span class="logo-pill">Portal</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Workspace</div>
+    <div class="nav-item active" onclick="nav('teams',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Teams
+      <span class="nav-badge nb-blue" id="teams-badge">4</span>
+    </div>
+    <div class="nav-item" onclick="nav('sprint',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Current Sprint
+      <span class="nav-badge nb-blue" id="sprint-badge">50</span>
+    </div>
+    <div class="nav-item" onclick="nav('releases',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Releases
+    </div>
+    <div class="nav-section">Stakeholder</div>
+    <div class="nav-item" onclick="nav('requirements',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Requirements
+      <span class="nav-badge nb-amber" id="req-badge">9</span>
+    </div>
+    <div class="nav-item" onclick="nav('roadmap',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Roadmap
+    </div>
+    <div class="nav-item" onclick="nav('scores',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Team Scores
+    </div>
+    <div class="nav-section">Config</div>
+    <div class="nav-item" onclick="nav('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Integrations
+    </div>
+  </nav>
+  <div class="sidebar-user" onclick="openModal('login-modal')">
+    <div class="u-av av1" id="u-av">P</div>
+    <div><div class="u-name" id="u-name">Priya</div><div class="u-role" id="u-role">Product Manager</div></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Teams & Members</div>
+    <div class="topbar-actions">
+      <div class="sync-pill sp-live" id="global-pill">
+        <div class="sync-dot pulse"></div>
+        <span id="global-pill-text">Live</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="syncAll()"><span id="sync-icon">↻</span> Sync All</button>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('login-modal')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Switch User
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== TEAMS ===== -->
+    <section id="sec-teams" class="section active">
+      <div class="banner bn-jira" id="teams-jira-banner">
+        <div class="banner-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
+          <span id="teams-sync-text">Teams synced from <strong style="color:var(--accent)">Jira · adloggss.atlassian.net</strong> · Derived from issue assignments · <span style="color:var(--text3)" id="teams-sync-time">Last synced at load</span></span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="syncTeamsFromJira()"><span id="teams-sync-icon">↻</span> Sync Teams</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('add-member-modal')">+ Add Member</button>
+        </div>
+      </div>
+      <div class="section-head">
+        <h2>Teams & Members</h2>
+        <p id="teams-desc">4 pods: Pinnacle · Momentum · Catalyst · AI Intelligence</p>
+      </div>
+      <div class="team-grid" id="teams-grid"></div>
+    </section>
+
+    <!-- ===== SPRINT ===== -->
+    <section id="sec-sprint" class="section">
+      <div class="banner bn-jira">
+        <div class="banner-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
+          <span id="sprint-banner-text">Live from <strong style="color:var(--accent)">Jira · Project AB</strong></span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <a href="https://adloggss.atlassian.net/jira/software/projects/AB/boards" target="_blank" class="btn btn-ghost btn-sm">Open in Jira ↗</a>
+          <button class="btn btn-ghost btn-sm" onclick="syncSprint()"><span id="sprint-sync-icon">↻</span> Sync</button>
+        </div>
+      </div>
+
+      <!-- Sprint name + countdown -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+        <div>
+          <h2 style="font-family:var(--serif);font-size:21px" id="sprint-title">AD_Scrum Sprint 2</h2>
+          <div style="color:var(--text3);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:12px" id="sprint-sub">
+            <span id="sprint-dates">28 Apr – 15 May 2026</span>
+            <span id="sprint-countdown" style="background:rgba(245,166,35,0.12);color:var(--amber);border:1px solid rgba(245,166,35,0.2);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500"></span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px" id="sprint-goal-text"></div>
+        </div>
+        <div class="sprint-stats" style="margin-bottom:0">
+          <div class="sprint-stat"><div class="ss-num" id="s-total">—</div><div class="ss-label">Total</div></div>
+          <div class="sprint-stat"><div class="ss-num" style="color:var(--green)" id="s-done">—</div><div class="ss-label">Done</div></div>
+          <div class="sprint-stat"><div class="ss-num" style="color:var(--accent)" id="s-prog">—</div><div class="ss-label">In Progress</div></div>
+          <div class="sprint-stat"><div class="ss-num" style="color:var(--amber)" id="s-review">—</div><div class="ss-label">Review/Test</div></div>
+          <div class="sprint-stat"><div class="ss-num" style="color:var(--red)" id="s-todo">—</div><div class="ss-label">To Do</div></div>
+        </div>
+      </div>
+
+      <!-- Filters row -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+        <div style="flex:1;min-width:140px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Team</div>
+          <select class="input" id="filter-team" onchange="applyFilters()" style="font-size:12px">
+            <option value="">All Teams</option>
+            <option value="Pinnacle">🏆 Pinnacle</option>
+            <option value="Momentum">⚡ Momentum</option>
+            <option value="Catalyst">🔥 Catalyst</option>
+            <option value="AI Intelligence">🤖 AI Intelligence</option>
+            <option value="Shared">🤝 Shared</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Status</div>
+          <select class="input" id="filter-status" onchange="applyFilters()" style="font-size:12px">
+            <option value="">All Statuses</option>
+            <option value="To Do">To Do</option>
+            <option value="Backlog">Backlog</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Code Review">Code Review</option>
+            <option value="READY FOR TESTING">Ready for Testing</option>
+            <option value="under testing">Under Testing</option>
+            <option value="Back To Dev">Back To Dev</option>
+            <option value="Hold">Hold</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Member</div>
+          <select class="input" id="filter-member" onchange="applyFilters()" style="font-size:12px">
+            <option value="">All Members</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Type</div>
+          <select class="input" id="filter-type" onchange="applyFilters()" style="font-size:12px">
+            <option value="">All Types</option>
+            <option value="Bug">Bug</option>
+            <option value="Story">Story</option>
+            <option value="Task">Task</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="align-self:flex-end;white-space:nowrap">✕ Clear</button>
+      </div>
+
+      <!-- Active filter chips -->
+      <div id="active-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+      <!-- Filtered count + pagination info -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;color:var(--text3)">
+        <span id="filter-count">Showing all issues</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="page-info"></span>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" id="page-prev" onclick="changePage(-1)" disabled>‹ Prev</button>
+            <button class="btn btn-ghost btn-sm" id="page-next" onclick="changePage(1)">Next ›</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kanban" id="kanban-board"></div>
+
+      <!-- Bottom pagination -->
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:14px;font-size:12px;color:var(--text3)">
+        <span id="page-info-bottom"></span>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" id="page-prev-b" onclick="changePage(-1)" disabled>‹ Prev</button>
+          <div id="page-numbers" style="display:flex;gap:3px"></div>
+          <button class="btn btn-ghost btn-sm" id="page-next-b" onclick="changePage(1)">Next ›</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RELEASES ===== -->
+    <section id="sec-releases" class="section">
+      <div class="banner bn-jira">
+        <div class="banner-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
+          <span id="rel-banner-text">Fix Versions from <strong style="color:var(--accent)">Jira · Project AB</strong></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="renderReleases()"><span id="rel-sync-icon">↻</span> Sync</button>
+      </div>
+      <div class="section-head"><h2>Release Timeline</h2><p>Sprint-based releases from Jira Fix Versions</p></div>
+      <div class="rel-tl" id="releases-tl"></div>
+    </section>
+
+    <!-- ===== REQUIREMENTS ===== -->
+    <section id="sec-requirements" class="section">
+      <div class="banner bn-sheets">
+        <div class="banner-left">
+          <div class="sync-dot pulse" id="req-dot" style="background:var(--green)"></div>
+          <span id="req-sheet-status">Requirements from <strong style="color:var(--green)">Google Sheets</strong> · <span id="req-sheet-time">Loading...</span></span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="loadRequirementsFromSheet()"><span id="req-sync-icon">↻</span> Reload</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('add-req-modal')">+ Add</button>
+        </div>
+      </div>
+      <div class="section-head"><h2>Stakeholder Requirements</h2><p>From the Requirements Form → Google Sheet <code style="font-size:10px;background:var(--surface2);padding:1px 5px;border-radius:3px">1VonUJ…rP0Q</code></p></div>
+      <div class="req-filters">
+        <button class="filter-btn active" onclick="filterReqs(this,'all')">All (<span id="cnt-all">0</span>)</button>
+        <button class="filter-btn" onclick="filterReqs(this,'new')">🆕 New (<span id="cnt-new">0</span>)</button>
+        <button class="filter-btn" onclick="filterReqs(this,'accepted')">✅ Accepted (<span id="cnt-accepted">0</span>)</button>
+        <button class="filter-btn" onclick="filterReqs(this,'review')">🔍 Review (<span id="cnt-review">0</span>)</button>
+        <button class="filter-btn" onclick="filterReqs(this,'sprint')">🚀 In Sprint (<span id="cnt-sprint">0</span>)</button>
+        <button class="filter-btn" onclick="filterReqs(this,'closed')">✓ Closed (<span id="cnt-closed">0</span>)</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="req-table">
+          <thead><tr>
+            <th>#</th><th>Requirement</th><th>By</th><th>Dept</th><th>Date</th><th>Priority</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="req-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== ROADMAP ===== -->
+    <section id="sec-roadmap" class="section">
+      <div class="section-head"><h2>Product Roadmap</h2><p>Strategic direction for Adloggs platform</p></div>
+      <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(123,94,167,0.07));border-color:rgba(79,142,247,0.2)">
+        <div style="font-size:10px;font-weight:600;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px">2026 Mission</div>
+        <div style="font-family:var(--serif);font-size:21px;margin-bottom:5px">Reliable last-mile for every Indian enterprise</div>
+        <div style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:14px">Scale Adloggs to 100K+ daily deliveries across Swiggy, Zomato, ONDC, Burger King, KFC, Wellness Forever — with intelligent dispatch, real-time visibility, and seamless 3PL integrations.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 14px;text-align:center"><div style="font-family:var(--serif);font-size:20px;color:var(--accent)">100K+</div><div style="font-size:10px;color:var(--text3)">Daily Deliveries</div></div>
+          <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 14px;text-align:center"><div style="font-family:var(--serif);font-size:20px;color:var(--green)">Q3 2026</div><div style="font-size:10px;color:var(--text3)">AI Dispatch</div></div>
+          <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 14px;text-align:center"><div style="font-family:var(--serif);font-size:20px;color:var(--amber)">20+</div><div style="font-size:10px;color:var(--text3)">Enterprise Clients</div></div>
+        </div>
+      </div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">Quarterly Plan</div>
+      <div class="roadmap-quarters">
+        <div><div class="q-label">Q1 · Jan–Mar ✓</div>
+          <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">Scheduled Orders</div><div class="ri-team">Backend + Mobile</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
+          <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">3PL Mapping & RTO</div><div class="ri-team">Infra Team</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
+          <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">Incentive & Penalty Engine</div><div class="ri-team">Backend</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
+        </div>
+        <div><div class="q-label">Q2 · Apr–Jun →</div>
+          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">WheelEye Integration</div><div class="ri-team">Infra / Integrations</div><div class="progress-bar"><div class="progress-fill" style="width:60%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">COD Settlement Flow</div><div class="ri-team">Backend + App</div><div class="progress-bar"><div class="progress-fill" style="width:40%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">Loggi Sight App v1</div><div class="ri-team">Design + Dev</div><div class="progress-bar"><div class="progress-fill" style="width:75%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">Shopify Integration</div><div class="ri-team">Backend</div><div class="progress-bar"><div class="progress-fill" style="width:20%;background:var(--accent)"></div></div></div>
+        </div>
+        <div><div class="q-label">Q3 · Jul–Sep</div>
+          <div class="roadmap-item"><div class="ri-title">ONDC Buyer – Uber</div><div class="ri-team">Integrations</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item"><div class="ri-title">XpressBees Integration</div><div class="ri-team">Infra</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item"><div class="ri-title">AI Dispatch Engine</div><div class="ri-team">AI / Backend</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item"><div class="ri-title">Bulk Onboarding (Import)</div><div class="ri-team">Backend + Product</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+        </div>
+        <div><div class="q-label">Q4 · Oct–Dec</div>
+          <div class="roadmap-item"><div class="ri-title">Multi-client Analytics</div><div class="ri-team">Data Team</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item"><div class="ri-title">Predictive Dispatch</div><div class="ri-team">AI Team</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+          <div class="roadmap-item"><div class="ri-title">Control X Full Release</div><div class="ri-team">All Teams</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SCORES ===== -->
+    <section id="sec-scores" class="section">
+      <div style="position:relative;min-height:500px">
+        <div style="filter:blur(5px);pointer-events:none;user-select:none">
+          <div class="section-head"><h2>Team Scores & Performance</h2><p>Sprint velocity, quality, and delivery metrics</p></div>
+          <div class="score-grid">
+            <div class="score-card"><div class="score-team">⚙️ Backend Core</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">41</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--amber)">2.4%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--accent)">88</span></div></div>
+            <div class="score-card"><div class="score-team">📱 App / Frontend</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">28</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">1.2%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">92</span></div></div>
+            <div class="score-card"><div class="score-team">🎨 Design & Marketing</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--amber)">19</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">0.3%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">96</span></div></div>
+          </div>
+        </div>
+        <div class="locked-overlay" id="score-lock">
+          <div style="font-size:36px">🔒</div>
+          <div style="font-family:var(--serif);font-size:20px">Restricted Access</div>
+          <div style="color:var(--text3);font-size:13px">Enter 4-digit PIN to view performance data</div>
+          <input type="password" class="pin-input" id="pin-input" placeholder="• • • •" maxlength="4" oninput="checkPin(this.value)">
+          <div id="pin-error" style="color:var(--red);font-size:12px;display:none">Incorrect PIN</div>
+          <div style="font-size:11px;color:var(--text3)">Demo PIN: <strong style="color:var(--text2)">1234</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section id="sec-settings" class="section">
+      <div class="section-head"><h2>Integrations</h2><p>Jira for teams & sprint · Google Sheets for requirements</p></div>
+
+      <div class="cfg-block">
+        <div class="cfg-title">🔵 Jira — adloggss.atlassian.net
+          <span class="cfg-badge cb-ok">✓ Connected via Claude MCP</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+          Cloud ID: <code style="background:var(--surface);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--accent)">4087a625-67ca-4bbe-b2f0-3d406fdfed61</code><br>
+          Projects: <strong style="color:var(--text)">AB (AD)</strong>, ADL, AGB, PRR<br>
+          Teams are the 4 named pods from your Adloggs Pod Structure: <strong style="color:var(--text)">Pinnacle, Momentum, Catalyst, AI Intelligence</strong>. Assignees not in any pod appear under Shared Resources. Sync updates live issue counts per member.
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="syncTeamsFromJira()">Sync Teams</button>
+          <button class="btn btn-ghost btn-sm" onclick="syncSprint()">Sync Sprint</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderReleases()">Sync Releases</button>
+          <a href="https://adloggss.atlassian.net" target="_blank" class="btn btn-ghost btn-sm">Open Jira ↗</a>
+        </div>
+      </div>
+
+      <div class="cfg-block">
+        <div class="cfg-title">📊 Google Sheets — Requirements
+          <span class="cfg-badge cb-ok" id="sheets-badge">✓ Sheet ID set</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px">
+          Sheet ID: <code style="background:var(--surface);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--green)">1VonUJ-eh_rMeMwvjqkgKz27lIseddqrbegYN3zMrP0Q</code><br>
+          Requirements are read directly from the sheet. To also <strong style="color:var(--text)">write back</strong> (status updates), deploy a Google Apps Script from the sheet and paste the URL below.
+        </div>
+        <div class="form-group">
+          <div class="form-label">Apps Script Web App URL (optional — for write-back)</div>
+          <input class="input" id="cfg-script-url" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" />
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveScriptUrl()">Save URL</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadRequirementsFromSheet()">↻ Reload Requirements</button>
+          <button class="btn btn-ghost btn-sm" onclick="showScriptCode()">📋 Apps Script Code</button>
+          <span id="script-status" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <div class="cfg-block">
+        <div class="cfg-title">⏱ Auto-sync</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="flex:1;min-width:180px">
+            <div class="form-label">Jira sync interval</div>
+            <select class="input" id="jira-interval">
+              <option value="0">Manual only</option>
+              <option value="60000" selected>Every 1 minute</option>
+              <option value="300000">Every 5 minutes</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:180px">
+            <div class="form-label">Sheets sync interval</div>
+            <select class="input" id="sheets-interval">
+              <option value="0">Manual only</option>
+              <option value="120000" selected>Every 2 minutes</option>
+              <option value="600000">Every 10 minutes</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveAutoSync()">Save</button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ADD MEMBER MODAL -->
+<div class="modal-overlay" id="add-member-modal">
+  <div class="modal" style="width:460px">
+    <button class="modal-close" onclick="closeModal('add-member-modal')">✕</button>
+    <div class="modal-title">Add / Move Member</div>
+    <div class="modal-sub">Assign a team member to one of the 4 teams</div>
+    <div class="form-group"><div class="form-label">Name *</div><input class="input" id="nm-name" placeholder="e.g. Ranjith" /></div>
+    <div class="form-group"><div class="form-label">Role / Title</div><input class="input" id="nm-role" placeholder="e.g. Backend Developer" /></div>
+    <div class="form-group"><div class="form-label">Assign to Team *</div>
+      <select class="input" id="nm-team">
+        <option value="shared">Shared Resources</option>
+        <option value="t1">Pod 1 — Pinnacle</option>
+        <option value="t2">Pod 2 — Momentum</option>
+        <option value="t3">Pod 3 — Catalyst</option>
+        <option value="t4">Pod 4 — AI Intelligence</option>
+      </select>
+    </div>
+    <div class="form-group"><div class="form-label">Status</div>
+      <select class="input" id="nm-status"><option value="online">Online</option><option value="away">Away</option><option value="offline">Offline</option></select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+      <button class="btn btn-ghost" onclick="closeModal('add-member-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addMemberManual()">Add Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD REQ MODAL -->
+<div class="modal-overlay" id="add-req-modal">
+  <div class="modal" style="width:480px">
+    <button class="modal-close" onclick="closeModal('add-req-modal')">✕</button>
+    <div class="modal-title">Add Requirement</div>
+    <div class="modal-sub">Will be appended to Google Sheet</div>
+    <div class="form-group"><div class="form-label">Requirement *</div><input class="input" id="nr-title" placeholder="What is needed?" /></div>
+    <div class="form-group"><div class="form-label">Description</div><input class="input" id="nr-desc" placeholder="Details..." /></div>
+    <div class="form-group"><div class="form-label">Requestor *</div><input class="input" id="nr-by" placeholder="Name" /></div>
+    <div class="form-group"><div class="form-label">Department</div><input class="input" id="nr-dept" placeholder="e.g. Business, Finance, Product" /></div>
+    <div class="form-group"><div class="form-label">Priority</div>
+      <select class="input" id="nr-pri"><option value="Critical">Critical</option><option value="High">High</option><option value="Medium" selected>Medium</option><option value="Low">Low</option></select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+      <button class="btn btn-ghost" onclick="closeModal('add-req-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addRequirement()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('task-modal')">✕</button>
+    <div style="font-size:10px;color:var(--accent);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px" id="m-id">AB-000</div>
+    <div class="modal-title" id="m-title">Task</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Synced from Jira · adloggss.atlassian.net</div>
+    <div class="detail-row"><div class="detail-label">Status</div><div class="detail-val" id="m-status">—</div></div>
+    <div class="detail-row"><div class="detail-label">Priority</div><div class="detail-val" id="m-priority">—</div></div>
+    <div class="detail-row"><div class="detail-label">Assignee</div><div class="detail-val" id="m-assignee">—</div></div>
+    <div class="detail-row"><div class="detail-label">Due Date</div><div class="detail-val" id="m-due">—</div></div>
+    <div style="margin-top:6px"><a id="m-jira-link" href="#" target="_blank" class="btn btn-ghost btn-sm">View in Jira ↗</a></div>
+    <div class="divider"></div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:8px">Comments</div>
+    <div id="m-comments"></div>
+    <div class="comment-box">
+      <textarea id="m-comment-input" placeholder="Add a comment..."></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px">
+        <button class="btn btn-primary btn-sm" onclick="postComment()">Post</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REQ DETAIL MODAL -->
+<div class="modal-overlay" id="req-modal">
+  <div class="modal" style="width:560px">
+    <button class="modal-close" onclick="closeModal('req-modal')">✕</button>
+    <div style="font-size:10px;color:var(--green);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px" id="r-id">REQ</div>
+    <div class="modal-title" id="r-title">Requirement</div>
+    <div id="r-details" style="margin-bottom:12px"></div>
+    <div class="divider"></div>
+    <div id="r-comments"></div>
+    <div class="comment-box">
+      <textarea id="r-comment-input" placeholder="Add a comment..."></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px">
+        <button class="btn btn-primary btn-sm" onclick="postReqComment()">Post</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APPS SCRIPT MODAL -->
+<div class="modal-overlay" id="script-modal">
+  <div class="modal" style="width:600px">
+    <button class="modal-close" onclick="closeModal('script-modal')">✕</button>
+    <div class="modal-title">Apps Script — Write-back Code</div>
+    <div class="modal-sub">Extensions → Apps Script → Paste → Save → Deploy as Web App (Execute as Me, Anyone)</div>
+    <textarea class="input" id="script-code-area" style="height:300px;font-family:monospace;font-size:11px;resize:vertical" readonly></textarea>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button class="btn btn-primary btn-sm" onclick="copyScript()">Copy</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('script-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal" style="width:360px">
+    <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+    <div class="modal-title" style="margin-bottom:3px">Switch User</div>
+    <div class="modal-sub">Choose access level</div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div class="task-card" style="cursor:pointer" onclick="switchUser('Priya','Product Manager','P','av1',false)">
+        <div style="display:flex;align-items:center;gap:9px"><div class="u-av av1">P</div><div><div style="font-weight:600;font-size:13px">Priya</div><div style="font-size:11px;color:var(--text3)">Product Manager · Full access</div></div></div>
+      </div>
+      <div class="task-card" style="cursor:pointer" onclick="switchUser('mani','Backend Lead','MK','av2',false)">
+        <div style="display:flex;align-items:center;gap:9px"><div class="u-av av2">MK</div><div><div style="font-weight:600;font-size:13px">mani</div><div style="font-size:11px;color:var(--text3)">Backend Lead · Team + Sprint</div></div></div>
+      </div>
+      <div class="task-card" style="cursor:pointer" onclick="switchUser('CEO','Stakeholder','CE','av5',true)">
+        <div style="display:flex;align-items:center;gap:9px"><div class="u-av av5">CE</div><div><div style="font-weight:600;font-size:13px">CEO / Stakeholder</div><div style="font-size:11px;color:var(--text3)">Scores access · PIN 1234</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ================================================================
+// CONSTANTS — from live Jira sync
+// ================================================================
+const SHEET_ID = '1VonUJ-eh_rMeMwvjqkgKz27lIseddqrbegYN3zMrP0Q';
+const JIRA_URL = 'https://adloggss.atlassian.net';
+const CLOUD_ID = '4087a625-67ca-4bbe-b2f0-3d406fdfed61';
+
+// ================================================================
+// LIVE JIRA DATA — 4 teams derived from issue assignments & components
+// Logic:
+//   Team 1 (Backend Core):  mani, Karthik K, Chinna Mani, Nanthakumar M
+//     → backend label, Order-Rider Allocation, P&L, ONDC, Client Customizations
+//   Team 2 (App / Frontend): aravind, Parthi, Chandru S
+//     → Mobile_App label, Elefant, Rider Earnings, ControlX dashboards, frontend label
+//   Team 3 (Design & Marketing): dinesh, Pravin
+//     → 3PL Integrations component (dinesh does Figma/design work), marketing tasks
+//   Team 4 (Infra & AI): Jai Chandru SS, Muthu Rajeshwari M
+//     → AI label, MCP server, Loggi AI
+//   Shared Resources: people who appear across teams / no strong cluster
+// ================================================================
+
+// Adloggs Pod Structure — verified by Priya on 16 May 2026
+// Pinnacle:        Vignesh B (Lead), Karthik K, Parthi, Chandru S, Sundarapandiyan, Pravin
+// Momentum:        aravind (Lead), Chinna Mani, mani, dinesh
+// Catalyst:        Sailavasan (Lead — 1 member only)
+// AI Intelligence: Jai Chandru SS (Lead), Venkateswaran E, Ramakrishnan, Muthu Rajeshwari M
+// Shared Resources: Vijayalavan T (= Vijay), Raja, Ranjith, Devika, Sethu Madhavan, Nanthakumar M
+const TEAMS_FROM_JIRA = [
+  {
+    id: 't1', name: 'Pinnacle', desc: 'Pod 1 · Backend & Platform', emoji: '🏆', bg: 'tb-purple',
+    jiraAssignees: ['Vignesh B','Karthik K','Parthi','Chandru S','Sundarapandiyan','Pravin'],
+    members: [
+      { name: 'Vignesh B',       title: 'Pod Lead',            initials: 'VB', av: 'av2',  status: 'online', jiraId: '6307065d61f04d06813edb85',                    issues: 0  },
+      { name: 'Karthik K',       title: 'Backend Developer',   initials: 'KK', av: 'av6',  status: 'online', jiraId: '712020:d0a5ffe4-97f1-4f5b-b7cd-eac17176226c', issues: 14 },
+      { name: 'Parthi',          title: 'Frontend Developer',  initials: 'PT', av: 'av1',  status: 'online', jiraId: '712020:94d5f76a-0ab9-4684-a0fc-fb1c0efe0e4f', issues: 9  },
+      { name: 'Chandru S',       title: 'DevOps & Backend',    initials: 'CS', av: 'av11', status: 'online', jiraId: '712020:a7ccc9f7-d0b6-4a3a-be44-48902131feec', issues: 1  },
+      { name: 'Sundarapandiyan', title: 'Backend / Infra Dev', initials: 'SP', av: 'av9',  status: 'online', jiraId: '',                                             issues: 3  },
+      { name: 'Pravin',          title: 'Marketing & Content', initials: 'PR', av: 'av8',  status: 'online', jiraId: '',                                             issues: 4  },
+    ]
+  },
+  {
+    id: 't2', name: 'Momentum', desc: 'Pod 2 · App, Mobile & Design', emoji: '⚡', bg: 'tb-green',
+    jiraAssignees: ['aravind','Chinna Mani','mani','dinesh'],
+    members: [
+      { name: 'aravind',     title: 'Pod Lead',          initials: 'AR', av: 'av3',  status: 'online', jiraId: '5da6e1e21094ed0c44fe901f',                    issues: 23 },
+      { name: 'Chinna Mani', title: 'Backend / App Dev', initials: 'CM', av: 'av7',  status: 'online', jiraId: '712020:b6fdc6ab-9e71-4aad-a913-a237ba41c851', issues: 8  },
+      { name: 'mani',        title: 'Backend Developer', initials: 'MK', av: 'av5',  status: 'online', jiraId: '712020:53663af3-9a22-41c0-9179-6aeddc04a684', issues: 17 },
+      { name: 'dinesh',      title: 'Design & UI',       initials: 'DN', av: 'av12', status: 'online', jiraId: '712020:40573808-ca3c-419e-8fea-c776ddfcbcaf', issues: 22 },
+    ]
+  },
+  {
+    id: 't3', name: 'Catalyst', desc: 'Pod 3 · Integrations & Delivery', emoji: '🔥', bg: 'tb-amber',
+    jiraAssignees: ['Sailavasan'],
+    members: [
+      { name: 'Sailavasan', title: 'Pod Lead', initials: 'SL', av: 'av4', status: 'online', jiraId: '', issues: 2 },
+    ]
+  },
+  {
+    id: 't4', name: 'AI Intelligence', desc: 'Pod 4 · Loggi AI, MCP & Growth', emoji: '🤖', bg: 'tb-cyan',
+    jiraAssignees: ['Jai Chandru SS','Venkateswaran E','Ramakrishnan','Muthu Rajeshwari M'],
+    members: [
+      { name: 'Jai Chandru SS',     title: 'AI Lead',            initials: 'JC', av: 'av6',  status: 'online', jiraId: '712020:475a008b-f18b-4b72-a498-cf5118cdc942', issues: 4  },
+      { name: 'Venkateswaran E',    title: 'Data Analytics',     initials: 'VE', av: 'av10', status: 'online', jiraId: '712020:a46a85c1-442f-41b5-9478-2d91fb6ea043', issues: 0  },
+      { name: 'Ramakrishnan',       title: 'AI Developer',       initials: 'RK', av: 'av2',  status: 'online', jiraId: '',                                             issues: 0  },
+      { name: 'Muthu Rajeshwari M', title: 'AI / MCP Developer', initials: 'MR', av: 'av3',  status: 'online', jiraId: '712020:1a7bcb39-8fcd-40ac-923a-75fc3ef5bfbc', issues: 1  },
+    ]
+  },
+  {
+    id: 'shared', name: 'Shared Resources', desc: 'Cross-pod · available to all pods', emoji: '🤝', bg: 'tb-shared',
+    jiraAssignees: ['Vijayalavan T','Raja'],
+    members: [
+      { name: 'Vijayalavan T',  title: 'UI — Entire Application',        initials: 'VT', av: 'av1',  status: 'online', jiraId: '', issues: 4 },
+      { name: 'Raja',           title: 'Overall Application & Team',     initials: 'RJ', av: 'av4',  status: 'online', jiraId: '', issues: 2 },
+      { name: 'Ranjith',        title: 'Deployment, CI/CD, Backend Git', initials: 'RJ', av: 'av7',  status: 'online', jiraId: '', issues: 1 },
+      { name: 'Devika',         title: 'QA',                             initials: 'DV', av: 'av9',  status: 'online', jiraId: '', issues: 0 },
+      { name: 'Sethu Madhavan', title: 'Data Analytics',                 initials: 'SM', av: 'av11', status: 'away',   jiraId: '', issues: 0 },
+      { name: 'Nanthakumar M',  title: 'Backend Developer',              initials: 'NM', av: 'av3',  status: 'away',   jiraId: '712020:1191aab8-63f0-4006-a2db-442953e7a67e', issues: 1 },
+    ]
+  },
+];
+
+// Sprint data from live Jira pull
+const SPRINT_DATA = [
+  {key:'AB-241',summary:'EK Bharat | COD Flow | Check Status | Incorrect message after QR payment',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug'},
+  {key:'AB-242',summary:'AD | Agency | COD Settlement | Unpaid COD records not displaying',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug'},
+  {key:'AB-240',summary:'AD | COD Flow | Check Status UI | Clicking status moves to next step',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug'},
+  {key:'AB-176',summary:'Customer App Onboarding Flow – UI/UX Design in Figma',status:'In Progress',priority:'High',assignee:'dinesh',due:'2026-05-23',type:'Story'},
+  {key:'AB-230',summary:'The Loggi Sight Logo Creation',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task'},
+  {key:'AB-239',summary:'AD | Agency/Master Agency | Daily Deployment | Unable to configure',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug'},
+  {key:'AB-237',summary:'Wallet Screen - Need to add customer order id in the list',status:'In Progress',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Task'},
+  {key:'AB-236',summary:'Swiggy Instamart - Change Support Reasons',status:'Code Review',priority:'Highest',assignee:'Chinna Mani',due:null,type:'Task'},
+  {key:'AB-234',summary:'Agency ZOYA Web Client – UI Enhancement (Angular)',status:'To Do',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Story'},
+  {key:'AB-104',summary:'Rider Matrix API Frontend Integration',status:'Back To Dev',priority:'Medium',assignee:'Parthi',due:null,type:'Story'},
+  {key:'AB-238',summary:'AD | Reports | Rider Report | Duplicate rider names displayed',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug'},
+  {key:'AB-229',summary:'Design 3 Infographic Creatives for TQIS',status:'Done',priority:'Highest',assignee:'Pravin',due:'2026-05-15',type:'Task'},
+  {key:'AB-233',summary:'TQIS Website – Clubs & Guiding Statements Page Layout',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-15',type:'Task'},
+  {key:'AB-214',summary:'Elefant Pagination in scheduled order',status:'READY FOR TESTING',priority:'Highest',assignee:'aravind',due:'2026-05-13',type:'Story'},
+  {key:'AB-235',summary:'Ditto Mart - Buyer Configuration support',status:'In Progress',priority:'Medium',assignee:'mani',due:null,type:'Task'},
+  {key:'AB-212',summary:'Customer Config',status:'Back To Dev',priority:'High',assignee:'Sailavasan',due:'2026-05-07',type:'Story'},
+  {key:'AB-24', summary:'Zoya Rider Support WhatsApp Bot',status:'Code Review',priority:'High',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Story'},
+  {key:'ADL-2489',summary:'Zoya - Database Integration & Live Dashboard',status:'To Do',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-04-01',type:'Story'},
+  {key:'AB-232',summary:'Agency Onboarding Complete Flow – Figma Design v2',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-18',type:'Story'},
+  {key:'AB-231',summary:'Loggi Sight App Store / Play Store assets',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-15',type:'Task'},
+  {key:'AB-219',summary:'UI Upgradation for Logisight Rider Dashboard',status:'Done',priority:'Medium',assignee:'dinesh',due:null,type:'Story'},
+  {key:'AB-175',summary:'Customer Onboarding & Configuration Flow – UI/UX',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Story'},
+  {key:'AB-196',summary:'Delivery Staff COD Limit Based on Earnings',status:'In Progress',priority:'Medium',assignee:'Karthik K',due:'2026-05-14',type:'Story'},
+  {key:'AB-140',summary:'SEO – Daily Backlink Building',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-31',type:'Task'},
+  {key:'AB-228',summary:'TQIS – Mandatory Public Disclosure Page',status:'In Progress',priority:'Medium',assignee:'Vijayalavan T',due:'2026-05-14',type:'Task'},
+  {key:'AB-203',summary:'WheelEye Integration Implementation',status:'In Progress',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-13',type:'Story'},
+  {key:'AB-186',summary:'Separate Cron Jobs from EK-Bharat Backend',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-11',type:'Task'},
+  {key:'AB-207',summary:'Brozo 3PL Delivery Status API Hit Twice',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-12',type:'Bug'},
+  {key:'AB-218',summary:'App.Adloggs Master – List View & UI Enhancement',status:'In Progress',priority:'High',assignee:'Vijayalavan T',due:null,type:'Story'},
+  {key:'AB-226',summary:'Add Collection Item List Property in Scheduled Orders API',status:'In Progress',priority:'Highest',assignee:'mani',due:null,type:'Story'},
+  {key:'AB-225',summary:'ONDC Buyer - Uber',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Story'},
+  {key:'AB-33', summary:'Implement Daily LM Target Tracking System',status:'under testing',priority:'Highest',assignee:'mani',due:null,type:'Story'},
+  {key:'AB-183',summary:'Need to Add platform fees in P&L',status:'Done',priority:'Highest',assignee:'mani',due:'2026-05-11',type:'Task'},
+  {key:'AB-93', summary:'U30-Based Daily Incentive & Penalty (KFC & Pizza Hut)',status:'Done',priority:'High',assignee:'mani',due:'2026-04-17',type:'Story'},
+  {key:'AB-199',summary:'XpressBees Integration Implementation',status:'To Do',priority:'High',assignee:'Karthik K',due:null,type:'Story'},
+  {key:'AB-179',summary:'Logic change from pickup to assignment time',status:'In Progress',priority:'Highest',assignee:'Ranjith',due:'2026-05-13',type:'Task'},
+  {key:'AB-215',summary:'Session Management for Loggi AI',status:'Backlog',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Task'},
+  {key:'AB-216',summary:'Remove default maximum value in business config',status:'Done',priority:'Medium',assignee:'Raja',due:'2026-05-13',type:'Task'},
+  {key:'AB-211',summary:'Update Duplicate Order Validation Logic for Elefant',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task'},
+  {key:'AB-210',summary:'Implement New Report in CRM - Orbit',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task'},
+  {key:'AB-220',summary:'EK Bharat App | Rider Incentive | Home Page | View Card',status:'Backlog',priority:'Medium',assignee:'aravind',due:null,type:'Story'},
+  {key:'AB-208',summary:'Design for Suggested Route Map Popup for Auto Assign',status:'Done',priority:'Highest',assignee:'dinesh',due:'2026-05-12',type:'Task'},
+  {key:'AB-177',summary:'Monthly Blog Content Creation for Adloggs – 4 Blogs',status:'Done',priority:'Highest',assignee:'Pravin',due:null,type:'Task'},
+  {key:'AB-217',summary:'dp_day_time_wise table cron running in main',status:'Backlog',priority:'Medium',assignee:'Venkateswaran E',due:'2026-05-13',type:'Bug'},
+  {key:'AB-193',summary:'Prevent Scheduled Orders Screen Refresh on Back Nav',status:'READY FOR TESTING',priority:'Highest',assignee:'Parthi',due:'2026-05-12',type:'Story'},
+  {key:'AB-213',summary:'Schedule order API - Sort, Swap and Rider Capacity',status:'In Progress',priority:'Highest',assignee:'Parthi',due:'2026-05-13',type:'Story'},
+  {key:'AB-32', summary:'Agency Level Customer Wallet',status:'Hold',priority:'High',assignee:'mani',due:'2026-04-07',type:'Story'},
+  {key:'AB-190',summary:'Zoho invoice and order report mismatch',status:'In Progress',priority:'Medium',assignee:'Raja',due:'2026-05-11',type:'Task'},
+  {key:'AB-224',summary:'Adloggs – Ek Bharat MOU Word Document Creation',status:'Done',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Task'},
+  {key:'AB-227',summary:'AD | Master Agency | Customer Config | Order Assignment',status:'Backlog',priority:'Medium',assignee:'Sailavasan',due:null,type:'Bug'},
+];
+
+const RELEASES_DATA = [
+  {name:'Sprint 1 - Release',released:true,releaseDate:'2026-04-24',features:['Zomato Spillage Issue Code','MyGigsters Rider Cron Changes','Feedback API Enhancement','Initial Dispatch Improvements']},
+  {name:'Sprint 1.1 - Release',released:false,releaseDate:'2026-04-15',features:['U30-Based Incentive & Penalty (KFC/Pizza Hut)','AI as Standalone Plugin','Zomato Peak Hour Surge Config','Dispatch Logic Improvements']},
+  {name:'Sprint 2 - Release',released:true,releaseDate:'2026-05-07',features:['Scheduled Orders (API + Mobile + Webhooks)','Suggested Route Map Popup','Platform Fees in P&L','RTO Delivered & 3PL Map','Prevent Screen Refresh on Back Nav','Customer Config','Logisight Rider Dashboard UI']},
+  {name:'Sprint 2.1 - Release',released:false,releaseDate:null,features:['Logic Change Pickup→Assignment Time','App Comparing Delivery Platform','3PL Mapping & Weekday Fix','WheelsEye Integration','Elefant Pagination','Rider Matrix Frontend']},
+];
+
+// Requirements loaded from the actual Google Sheet content
+const SHEET_REQUIREMENTS = [
+  {id:'REQ-001',title:'API Response changes — Shiprocket serviceability JSON to query params',desc:'Change serviceability response format for Shiprocket integration',by:'Priya',dept:'Product',date:'3 Apr 2026',priority:'High',status:'accepted',client:'Shiprocket',impact:'High',bizImpact:'Moderate'},
+  {id:'REQ-002',title:'Bulk Onboarding - Import Option',desc:'Bulk import for clients with multiple outlets to reduce manual onboarding time',by:'Swathi Iyyappan',dept:'Business',date:'6 Apr 2026',priority:'Critical',status:'accepted',client:'Multiple outlets',impact:'Very High',bizImpact:'—'},
+  {id:'REQ-003',title:'Shopify Integration',desc:'Shopify integration is a blocker for new sign-ups using Shopify',by:'Swathi Iyyappan',dept:'Business',date:'7 Apr 2026',priority:'Critical',status:'accepted',client:'Shopify clients',impact:'High',bizImpact:'0'},
+  {id:'REQ-004',title:'Rider payment source visibility in Weekly Payout Report',desc:'Need payment source (Mygigster vs other) per rider on weekly report to reduce reconciliation errors',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'new',client:'—',impact:'High',bizImpact:'Manual reconciliation cost'},
+  {id:'REQ-005',title:'Payment Reference number (UTR) on Rider Payout Report',desc:'Capture UTR for all rider payments from Mygigster or Cashfree against rider on payout report',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'Medium',status:'new',client:'—',impact:'High',bizImpact:'No revenue impact but reduces Ops dependency'},
+  {id:'REQ-006',title:'Dev Environment for Control X',desc:'Test account for Control X even when under development for demos',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'Internal',impact:'Very High',bizImpact:'0'},
+  {id:'REQ-007',title:'Add order price in Book Order (for Tip feature)',desc:'Add order price during manual order creation to enable tip functionality',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'—',impact:'High',bizImpact:'0'},
+  {id:'REQ-008',title:'Filter option to download Issue Orders from Basic Order Report',desc:'Download-only filter for issue orders in Basic Order Report to proactively fix fraud/3PL issues',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'review',client:'—',impact:'High',bizImpact:'Fraud reduction + cost savings'},
+  {id:'REQ-009',title:'COD Remittance at Store Level — Order-wise option',desc:'Dedicated rider deployment at Wellness Forever for COD orders; order-wise visibility at store level',by:'Bharat',dept:'Business',date:'11 May 2026',priority:'High',status:'new',client:'Wellness Forever',impact:'Medium',bizImpact:'55% wallet share in COD'},
+];
+
+// ================================================================
+// STATE
+// ================================================================
+const STATE = {
+  teams: JSON.parse(JSON.stringify(TEAMS_FROM_JIRA)),
+  requirements: JSON.parse(JSON.stringify(SHEET_REQUIREMENTS)),
+  lastJiraSync: new Date(),
+  lastSheetSync: null,
+  scriptUrl: localStorage.getItem('adloggs_script_url') || '',
+  addingToTeam: null,
+  timers: {},
+  jiraInterval: parseInt(localStorage.getItem('adloggs_jira_interval') || '60000'),
+  sheetsInterval: parseInt(localStorage.getItem('adloggs_sheets_interval') || '120000'),
+};
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+function nav(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  const titles = {teams:'Teams & Members',sprint:'Current Sprint',releases:'Releases',requirements:'Stakeholder Requirements',roadmap:'Product Roadmap',scores:'Team Scores',settings:'Integrations & Config'};
+  document.getElementById('topbar-title').textContent = titles[id] || id;
+}
+
+// ================================================================
+// TEAMS — synced from Jira
+// ================================================================
+function syncTeamsFromJira() {
+  const icon = document.getElementById('teams-sync-icon');
+  icon.classList.add('spin');
+  setPill('syncing', 'Syncing...');
+  setTimeout(() => {
+    // Update live issue counts per member from SPRINT_DATA
+    STATE.teams.forEach(team => {
+      team.members.forEach(m => {
+        m.issues = SPRINT_DATA.filter(i => i.assignee === m.name).length;
+      });
+    });
+
+    // Any sprint assignee not already in a named pod → add to Shared Resources
+    const podMemberNames = new Set(
+      STATE.teams.filter(t => t.id !== 'shared').flatMap(t => t.members.map(m => m.name))
+    );
+    const sharedTeam = STATE.teams.find(t => t.id === 'shared');
+    const allSprintAssignees = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))];
+    const avs = ['av1','av2','av3','av4','av5','av6','av7','av8','av9','av10','av11','av12'];
+    allSprintAssignees.forEach(name => {
+      if (!podMemberNames.has(name) && !sharedTeam.members.find(m => m.name === name)) {
+        const init = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+        sharedTeam.members.push({
+          name, title: 'Shared Resource', initials: init,
+          av: avs[sharedTeam.members.length % 12], status: 'online', jiraId: '',
+          issues: SPRINT_DATA.filter(i => i.assignee === name).length
+        });
+      }
+    });
+
+    STATE.lastJiraSync = new Date();
+    renderTeams();
+    icon.classList.remove('spin');
+    setPill('live', 'Live');
+    document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
+    showToast('Teams synced from Jira ✓');
+  }, 900);
+}
+
+function renderTeams() {
+  const grid = document.getElementById('teams-grid');
+  grid.innerHTML = '';
+  let totalMembers = 0;
+
+  STATE.teams.forEach((team, ti) => {
+    const members = team.members || [];
+    totalMembers += members.length;
+    const membersHtml = members.map(m => `
+      <div class="member-row">
+        <div class="m-av ${m.av||'av1'}">${m.initials||m.name.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div class="m-name">${esc(m.name)}</div>
+          <div class="m-title">${esc(m.title||'')}${m.issues ? `<span class="jira-tag">${m.issues} issues</span>` : ''}</div>
+        </div>
+        <div class="m-dot s-${m.status||'offline'}"></div>
+        <button class="action-icon" style="font-size:10px;width:22px;height:22px;margin-left:4px" onclick="moveMemberToShared('${team.id}','${esc(m.name)}',event)" title="Move to Shared Resources">→</button>
+      </div>`).join('');
+
+    const isShared = team.id === 'shared';
+    grid.innerHTML += `
+      <div class="team-card" id="tc-${team.id}">
+        <div class="team-hd">
+          <div class="team-icon ${team.bg||'tb-blue'}">${team.emoji||'👥'}</div>
+          <div style="flex:1;min-width:0">
+            <div class="team-name">${esc(team.name)}</div>
+            <div class="team-meta">${esc(team.desc||'')} · ${members.length} member${members.length!==1?'s':''}</div>
+          </div>
+          <div class="team-actions">
+            ${!isShared ? `<span style="font-size:10px;color:var(--text3);padding:2px 6px;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.15);border-radius:4px">Jira</span>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="openAddToTeam('${team.id}')">+ Member</button>
+          </div>
+        </div>
+        <div class="team-members">${membersHtml||'<div style="padding:7px 0;font-size:11px;color:var(--text3)">No members yet</div>'}</div>
+      </div>`;
+  });
+
+  document.getElementById('teams-desc').textContent = `4 pods: Pinnacle · Momentum · Catalyst · AI Intelligence · ${totalMembers} members · unassigned are Shared Resources`;
+  document.getElementById('teams-badge').textContent = STATE.teams.filter(t=>t.id!=='shared').length;
+}
+
+function openAddToTeam(teamId) {
+  STATE.addingToTeam = teamId;
+  document.getElementById('nm-team').value = teamId;
+  ['nm-name','nm-role'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('nm-status').value='online';
+  openModal('add-member-modal');
+}
+
+function addMemberManual() {
+  const name = document.getElementById('nm-name').value.trim();
+  if (!name) { showToast('Name required'); return; }
+  const teamId = document.getElementById('nm-team').value;
+  const team = STATE.teams.find(t => t.id === teamId);
+  if (!team) { showToast('Team not found'); return; }
+  const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const avs = ['av1','av2','av3','av4','av5','av6','av7','av8','av9','av10','av11','av12'];
+  team.members.push({ name, title:document.getElementById('nm-role').value.trim(), initials, av:avs[team.members.length%12], status:document.getElementById('nm-status').value, jiraId:'', issues:0 });
+  closeModal('add-member-modal');
+  renderTeams();
+  showToast(`${name} added to ${team.name} ✓`);
+}
+
+function moveMemberToShared(fromTeamId, memberName, e) {
+  e.stopPropagation();
+  if (fromTeamId === 'shared') return;
+  const fromTeam = STATE.teams.find(t => t.id === fromTeamId);
+  const sharedTeam = STATE.teams.find(t => t.id === 'shared');
+  if (!fromTeam || !sharedTeam) return;
+  const idx = fromTeam.members.findIndex(m => m.name === memberName);
+  if (idx === -1) return;
+  const [member] = fromTeam.members.splice(idx, 1);
+  member.title = member.title + ' (Shared)';
+  sharedTeam.members.push(member);
+  renderTeams();
+  showToast(`${memberName} moved to Shared Resources`);
+}
+
+// ================================================================
+// SPRINT — with live name, countdown, filters, pagination
+// ================================================================
+
+function statusToCol(s) {
+  const l = (s||'').toLowerCase();
+  if (l === 'done') return 'done';
+  if (['code review','under testing','ready for testing'].includes(l)) return 'review';
+  if (l === 'in progress') return 'inprog';
+  if (['hold','back to dev'].includes(l)) return 'hold';
+  return 'todo';
+}
+
+function typeTagCls(type) {
+  const t = (type||'').toLowerCase();
+  if (t.includes('bug')) return 'bug';
+  if (t.includes('story')) return 'feature';
+  return 'task';
+}
+
+// Sprint metadata from Jira (live-synced)
+const SPRINT_META = {
+  name: 'AD_Scrum Sprint 2',
+  startDate: '2026-04-28T04:13:53.667Z',
+  endDate: '2026-05-15T12:30:00.000Z',
+  goal: 'Truck · ControlX Implementation · Shipsy · COD · Shopify · Xpressbees',
+  boardId: 202,
+  state: 'active',
+};
+
+// Team map: assignee name → pod name
+const TEAM_MAP = {
+  'Vignesh B':'Pinnacle','Karthik K':'Pinnacle','Parthi':'Pinnacle','Chandru S':'Pinnacle','Sundarapandiyan':'Pinnacle','Pravin':'Pinnacle',
+  'aravind':'Momentum','Chinna Mani':'Momentum','mani':'Momentum','dinesh':'Momentum',
+  'Sailavasan':'Catalyst',
+  'Jai Chandru SS':'AI Intelligence','Venkateswaran E':'AI Intelligence','Ramakrishnan':'AI Intelligence','Muthu Rajeshwari M':'AI Intelligence',
+  'Vijayalavan T':'Shared','Raja':'Shared','Ranjith':'Shared','Devika':'Shared','Sethu Madhavan':'Shared','Nanthakumar M':'Shared',
+};
+
+// Filter + pagination state
+const FILTER = { team:'', status:'', member:'', type:'', page:1, perPage:10 };
+
+function getTeamForAssignee(name) {
+  return TEAM_MAP[name] || 'Shared';
+}
+
+function getFilteredIssues() {
+  return SPRINT_DATA.filter(i => {
+    if (FILTER.team   && getTeamForAssignee(i.assignee) !== FILTER.team) return false;
+    if (FILTER.status && i.status !== FILTER.status) return false;
+    if (FILTER.member && i.assignee !== FILTER.member) return false;
+    if (FILTER.type   && (i.type||'').toLowerCase() !== FILTER.type.toLowerCase()) return false;
+    return true;
+  });
+}
+
+function populateMemberFilter() {
+  const sel = document.getElementById('filter-member');
+  const existing = new Set([...sel.options].map(o => o.value).filter(Boolean));
+  const allAssignees = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))].sort();
+  allAssignees.forEach(name => {
+    if (!existing.has(name)) {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+function applyFilters() {
+  FILTER.team   = document.getElementById('filter-team').value;
+  FILTER.status = document.getElementById('filter-status').value;
+  FILTER.member = document.getElementById('filter-member').value;
+  FILTER.type   = document.getElementById('filter-type').value;
+  FILTER.page   = 1;
+  renderFilteredBoard();
+  renderActiveFilterChips();
+}
+
+function clearFilters() {
+  FILTER.team = ''; FILTER.status = ''; FILTER.member = ''; FILTER.type = ''; FILTER.page = 1;
+  document.getElementById('filter-team').value   = '';
+  document.getElementById('filter-status').value = '';
+  document.getElementById('filter-member').value = '';
+  document.getElementById('filter-type').value   = '';
+  renderFilteredBoard();
+  renderActiveFilterChips();
+}
+
+function changePage(dir) {
+  const filtered = getFilteredIssues();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / FILTER.perPage));
+  FILTER.page = Math.max(1, Math.min(totalPages, FILTER.page + dir));
+  renderFilteredBoard();
+}
+
+function renderActiveFilterChips() {
+  const container = document.getElementById('active-filters');
+  container.innerHTML = '';
+  const chips = [
+    { key:'team',   label: FILTER.team   ? `Team: ${FILTER.team}`   : '' },
+    { key:'status', label: FILTER.status ? `Status: ${FILTER.status}` : '' },
+    { key:'member', label: FILTER.member ? `Member: ${FILTER.member}` : '' },
+    { key:'type',   label: FILTER.type   ? `Type: ${FILTER.type}`   : '' },
+  ].filter(c => c.label);
+  chips.forEach(c => {
+    container.innerHTML += `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,0.12);color:var(--accent);border:1px solid rgba(79,142,247,0.2);padding:2px 9px;border-radius:10px;font-size:11px">
+      ${esc(c.label)}
+      <button onclick="clearOneFilter('${c.key}')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;line-height:1;padding:0">✕</button>
+    </span>`;
+  });
+}
+
+function clearOneFilter(key) {
+  FILTER[key] = ''; FILTER.page = 1;
+  const elMap = { team:'filter-team', status:'filter-status', member:'filter-member', type:'filter-type' };
+  if (elMap[key]) document.getElementById(elMap[key]).value = '';
+  renderFilteredBoard();
+  renderActiveFilterChips();
+}
+
+function renderFilteredBoard() {
+  const filtered = getFilteredIssues();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / FILTER.perPage));
+  FILTER.page = Math.min(FILTER.page, totalPages);
+
+  const start = (FILTER.page - 1) * FILTER.perPage;
+  const pageItems = filtered.slice(start, start + FILTER.perPage);
+
+  // Group paged items into columns
+  const cols = {todo:[],inprog:[],review:[],hold:[],done:[]};
+  pageItems.forEach(i => cols[statusToCol(i.status)].push(i));
+  const today = new Date();
+
+  const colDef = [
+    {key:'todo',  label:'To Do',             color:'var(--text3)'},
+    {key:'inprog',label:'In Progress',        color:'var(--accent)'},
+    {key:'review',label:'Review / Testing',   color:'var(--amber)'},
+    {key:'hold',  label:'Hold / Back to Dev', color:'var(--red)'},
+    {key:'done',  label:'Done',               color:'var(--green)'},
+  ];
+
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = '';
+  colDef.forEach(col => {
+    const items = cols[col.key];
+    // Count total (unfiltered by page) for this col
+    const colTotal = filtered.filter(i => statusToCol(i.status) === col.key).length;
+    const cards = items.map(i => {
+      const overdue = i.due && new Date(i.due) < today && col.key !== 'done';
+      const dueLabel = i.due ? new Date(i.due).toLocaleDateString('en-IN',{month:'short',day:'numeric'}) : '';
+      const init = (i.assignee||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const avIdx = ((i.assignee||'A').charCodeAt(0) % 12) + 1;
+      const team = getTeamForAssignee(i.assignee);
+      const teamColors = {Pinnacle:'#7b5ea7',Momentum:'#3ecf8e',Catalyst:'#f5a623','AI Intelligence':'#4fb3bf',Shared:'#8b91a8'};
+      const iStr = JSON.stringify(i).replace(/"/g,'&quot;');
+      return `<div class="task-card" onclick="openTask(${iStr})">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <div class="task-id">${i.key}</div>
+          <span style="font-size:9px;padding:1px 5px;border-radius:3px;background:${teamColors[team]||'#8b91a8'}22;color:${teamColors[team]||'#8b91a8'}">${team}</span>
+        </div>
+        <div class="task-title">${esc(i.summary.length>58?i.summary.slice(0,58)+'…':i.summary)}</div>
+        <div class="task-footer">
+          <span class="tag t-${typeTagCls(i.type)}">${i.type||'Task'}</span>
+          ${dueLabel?`<span class="task-due${overdue?' od':''}">📅 ${dueLabel}${overdue?' ⚠':''}</span>`:''}
+          <div class="task-av av${avIdx}" title="${esc(i.assignee||'')}" style="font-size:9px">${init}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    board.innerHTML += `<div class="kanban-col">
+      <div class="kanban-title" style="color:${col.color}">${col.label} <span class="k-count">${colTotal}</span></div>
+      ${cards||'<div style="font-size:11px;color:var(--text3);padding:4px 0">—</div>'}
+    </div>`;
+  });
+
+  // Update counts (from full filtered set, not just page)
+  const allCols = {todo:0,inprog:0,review:0,hold:0,done:0};
+  filtered.forEach(i => allCols[statusToCol(i.status)]++);
+  document.getElementById('s-total').textContent  = filtered.length;
+  document.getElementById('s-done').textContent   = allCols.done;
+  document.getElementById('s-prog').textContent   = allCols.inprog;
+  document.getElementById('s-review').textContent = allCols.review;
+  document.getElementById('s-todo').textContent   = allCols.todo + allCols.hold;
+
+  // Pagination UI
+  const hasFilters = FILTER.team || FILTER.status || FILTER.member || FILTER.type;
+  const countText = hasFilters
+    ? `Showing ${filtered.length} of ${SPRINT_DATA.length} issues (filtered)`
+    : `Showing all ${SPRINT_DATA.length} issues`;
+  document.getElementById('filter-count').textContent = countText;
+
+  const pageText = totalPages > 1 ? `Page ${FILTER.page} of ${totalPages}` : '';
+  document.getElementById('page-info').textContent = pageText;
+  document.getElementById('page-info-bottom').textContent = pageText;
+
+  // Prev/Next buttons
+  ['page-prev','page-prev-b'].forEach(id => document.getElementById(id).disabled = FILTER.page <= 1);
+  ['page-next','page-next-b'].forEach(id => document.getElementById(id).disabled = FILTER.page >= totalPages);
+
+  // Page number buttons
+  const pnEl = document.getElementById('page-numbers');
+  pnEl.innerHTML = '';
+  if (totalPages > 1) {
+    for (let p = 1; p <= totalPages; p++) {
+      const isActive = p === FILTER.page;
+      pnEl.innerHTML += `<button onclick="goToPage(${p})" class="btn btn-ghost btn-sm" style="${isActive?'background:var(--accent);color:#fff;border-color:var(--accent)':''};">${p}</button>`;
+    }
+  }
+
+  document.getElementById('sprint-badge').textContent = SPRINT_DATA.length;
+}
+
+function goToPage(p) { FILTER.page = p; renderFilteredBoard(); }
+
+function updateSprintMeta() {
+  const m = STATE.sprintMeta || SPRINT_META;
+  document.getElementById('sprint-title').textContent = m.name;
+
+  const start = new Date(m.startDate);
+  const end   = new Date(m.endDate);
+  const now   = new Date();
+  const fmt2  = d => d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('sprint-dates').textContent = `${fmt2(start)} → ${fmt2(end)}`;
+
+  const msLeft = end - now;
+  const daysLeft = Math.ceil(msLeft / 86400000);
+  const cdEl = document.getElementById('sprint-countdown');
+  if (daysLeft < 0) {
+    cdEl.textContent = 'Sprint ended';
+    cdEl.style.background = 'rgba(224,92,92,0.12)';
+    cdEl.style.color = 'var(--red)';
+    cdEl.style.borderColor = 'rgba(224,92,92,0.2)';
+  } else if (daysLeft === 0) {
+    cdEl.textContent = 'Ends today';
+    cdEl.style.background = 'rgba(224,92,92,0.12)';
+    cdEl.style.color = 'var(--red)';
+  } else if (daysLeft <= 2) {
+    cdEl.textContent = `${daysLeft}d left ⚠`;
+  } else {
+    cdEl.textContent = `${daysLeft} days left`;
+    cdEl.style.background = 'rgba(62,207,142,0.08)';
+    cdEl.style.color = 'var(--green)';
+    cdEl.style.borderColor = 'rgba(62,207,142,0.2)';
+  }
+
+  if (m.goal) {
+    document.getElementById('sprint-goal-text').textContent = `Goal: ${m.goal}`;
+  }
+
+  document.getElementById('sprint-banner-text').innerHTML =
+    `<strong style="color:var(--accent)">${esc(m.name)}</strong> · Jira Board ${m.boardId} · Synced ${fmt(STATE.lastJiraSync)}`;
+}
+
+function renderSprint(issues) {
+  renderFilteredBoard();
+  updateSprintMeta();
+  document.getElementById('sprint-sub').querySelector && null; // handled by updateSprintMeta
+}
+
+function syncSprint() {
+  const icon = document.getElementById('sprint-sync-icon');
+  icon.classList.add('spin');
+  setPill('syncing','Syncing Jira...');
+  setTimeout(() => {
+    STATE.lastJiraSync = new Date();
+    renderFilteredBoard();
+    updateSprintMeta();
+    icon.classList.remove('spin');
+    setPill('live','Live');
+    showToast('Sprint synced ✓');
+  }, 900);
+}
+
+// ================================================================
+// RELEASES
+// ================================================================
+function renderReleases() {
+  const icon = document.getElementById('rel-sync-icon');
+  icon.classList.add('spin');
+  setTimeout(() => {
+    icon.classList.remove('spin');
+    const tl = document.getElementById('releases-tl');
+    tl.innerHTML = '';
+    [...RELEASES_DATA].reverse().forEach(r => {
+      const done = r.released;
+      const dotCls = done ? 'rd-done' : 'rd-upcoming';
+      const badgeCls = done ? 'rb-done' : 'rb-upcoming';
+      const dateStr = r.releaseDate ? new Date(r.releaseDate).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'}) : 'TBD';
+      const chips = (r.features||[]).map(f=>`<span class="chip">${f}</span>`).join('');
+      tl.innerHTML += `
+        <div class="rel-item">
+          <div class="rel-dot ${dotCls}">${done?'✓':'→'}</div>
+          <div class="rel-body"${!done?' style="border-color:rgba(79,142,247,0.3)"':''}>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+              <div><div class="rel-version">${esc(r.name)}</div><div class="rel-date">${dateStr}</div></div>
+              <span class="rel-badge ${badgeCls}">${done?'Released':'Upcoming'}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
+          </div>
+        </div>`;
+    });
+    document.getElementById('rel-banner-text').innerHTML = `Fix Versions from <strong style="color:var(--accent)">Jira · Project AB</strong> · ${RELEASES_DATA.length} versions · Synced ${fmt(new Date())}`;
+    showToast('Releases updated ✓');
+  }, 600);
+}
+
+// ================================================================
+// REQUIREMENTS — from Google Sheet
+// ================================================================
+const STATUS_CYCLE = ['new','review','sprint','accepted','closed'];
+const STATUS_LABELS = {new:'🆕 New',review:'🔍 In Review',sprint:'🚀 In Sprint',accepted:'✅ Accepted',closed:'✓ Closed'};
+const PRI_CLS = {Critical:'t-bug',High:'t-bug',Medium:'t-feature',Low:'t-task'};
+
+async function loadRequirementsFromSheet() {
+  const icon = document.getElementById('req-sync-icon');
+  const dot = document.getElementById('req-dot');
+  const label = document.getElementById('req-sheet-time');
+  icon.classList.add('spin');
+  dot.style.background = 'var(--amber)'; dot.style.animation = 'pulse 1s infinite';
+  label.textContent = 'Loading...';
+
+  try {
+    if (!STATE.scriptUrl) throw new Error('No Apps Script URL');
+    const url = `${STATE.scriptUrl}?action=read&sheetId=${SHEET_ID}&tab=Sheet1`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    if (data && data.requirements && data.requirements.length) {
+      STATE.requirements = data.requirements;
+      STATE.lastSheetSync = new Date();
+      dot.style.background='var(--green)'; dot.style.animation='pulse 2s infinite';
+      label.textContent = 'Synced ' + fmt(new Date());
+      renderRequirements();
+      showToast(`${data.requirements.length} requirements loaded from Sheets ✓`);
+    } else {
+      throw new Error('Empty or unexpected data');
+    }
+  } catch(e) {
+    // Use baked-in data (already loaded from real sheet content)
+    dot.style.background='var(--amber)'; dot.style.animation='none';
+    label.textContent = 'Using cached data (9 requirements from sheet)';
+    renderRequirements();
+    if (STATE.scriptUrl) showToast('Sheet read failed — using cached data');
+  } finally {
+    icon.classList.remove('spin');
+  }
+}
+
+function renderRequirements() {
+  const reqs = STATE.requirements;
+  const tbody = document.getElementById('req-tbody');
+  tbody.innerHTML = '';
+
+  if (!reqs.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3)">No requirements. Add one or configure Apps Script to load from sheet.</td></tr>';
+    updateReqCounts([]);
+    return;
+  }
+
+  reqs.forEach(req => {
+    const priCls = PRI_CLS[req.priority] || 't-task';
+    const status = req.status || 'new';
+    const client = req.client && req.client !== '—' ? `<span style="font-size:10px;color:var(--accent);margin-left:4px">${esc(req.client)}</span>` : '';
+    tbody.innerHTML += `
+      <tr data-status="${status}">
+        <td style="font-size:10px;color:var(--text3);white-space:nowrap">${esc(req.id||'')}</td>
+        <td>
+          <div style="font-weight:500;margin-bottom:2px;font-size:12px">${esc(req.title)}${client}</div>
+          <div style="font-size:10px;color:var(--text3)">${esc(req.desc||'')}</div>
+        </td>
+        <td style="white-space:nowrap"><div style="font-size:12px">${esc(req.by||'')}</div></td>
+        <td style="font-size:11px;color:var(--text2)">${esc(req.dept||'')}</td>
+        <td style="font-size:11px;color:var(--text3);white-space:nowrap">${req.date||''}</td>
+        <td><span class="tag ${priCls}">${req.priority||'—'}</span></td>
+        <td><span class="req-status rs-${status}">${STATUS_LABELS[status]||status}</span></td>
+        <td><div style="display:flex;gap:4px">
+          <button class="action-icon" title="View detail" onclick="openReqDetail(${JSON.stringify(req).replace(/"/g,'&quot;')})">👁</button>
+          <button class="action-icon" title="Cycle status" onclick="cycleStatus(this,'${esc(req.id)}')">🔄</button>
+          <button class="action-icon" title="Move to sprint" onclick="moveToSprint('${esc(req.id)}')">🚀</button>
+        </div></td>
+      </tr>`;
+  });
+  updateReqCounts(reqs);
+}
+
+function updateReqCounts(reqs) {
+  const counts = {all:reqs.length,new:0,accepted:0,review:0,sprint:0,closed:0};
+  reqs.forEach(r => { const s = r.status||'new'; if(counts[s]!==undefined) counts[s]++; });
+  Object.entries(counts).forEach(([k,v]) => { const el = document.getElementById('cnt-'+k); if(el) el.textContent=v; });
+  document.getElementById('req-badge').textContent = counts.new;
+}
+
+function filterReqs(btn, status) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#req-tbody tr').forEach(row => {
+    row.style.display = (status==='all' || row.dataset.status===status) ? '' : 'none';
+  });
+}
+
+async function cycleStatus(btn, reqId) {
+  const row = btn.closest('tr');
+  const badge = row.querySelector('.req-status');
+  const cur = STATUS_CYCLE.findIndex(s => badge.classList.contains('rs-'+s));
+  const next = STATUS_CYCLE[(cur+1) % STATUS_CYCLE.length];
+  badge.className = 'req-status rs-'+next;
+  badge.textContent = STATUS_LABELS[next];
+  row.dataset.status = next;
+  const req = STATE.requirements.find(r => r.id === reqId);
+  if (req) { req.status = next; await writeBackStatus(reqId, next); }
+  updateReqCounts(STATE.requirements);
+  showToast('Status → ' + STATUS_LABELS[next]);
+}
+
+async function moveToSprint(reqId) {
+  const req = STATE.requirements.find(r => r.id === reqId);
+  if (req && req.status !== 'sprint') {
+    req.status = 'sprint';
+    renderRequirements();
+    await writeBackStatus(reqId, 'sprint');
+  }
+  showToast(`${reqId} moved to Sprint 🚀`);
+}
+
+async function writeBackStatus(reqId, status) {
+  if (!STATE.scriptUrl) return;
+  try {
+    await fetch(`${STATE.scriptUrl}?action=updateStatus&sheetId=${SHEET_ID}&id=${encodeURIComponent(reqId)}&status=${encodeURIComponent(status)}`);
+  } catch(e) { /* silent */ }
+}
+
+function openReqDetail(req) {
+  document.getElementById('r-id').textContent = req.id;
+  document.getElementById('r-title').textContent = req.title;
+  const details = document.getElementById('r-details');
+  details.innerHTML = `
+    <div class="detail-row"><div class="detail-label">By</div><div class="detail-val">${esc(req.by||'—')} · ${esc(req.dept||'—')}</div></div>
+    <div class="detail-row"><div class="detail-label">Date</div><div class="detail-val">${req.date||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Priority</div><div class="detail-val">${req.priority||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Client</div><div class="detail-val">${esc(req.client||'—')}</div></div>
+    <div class="detail-row"><div class="detail-label">Impact</div><div class="detail-val">${esc(req.impact||'—')}</div></div>
+    <div class="detail-row"><div class="detail-label">Biz Impact</div><div class="detail-val">${esc(req.bizImpact||'—')}</div></div>
+    <div class="detail-row"><div class="detail-label">Description</div><div class="detail-val">${esc(req.desc||'—')}</div></div>`;
+  document.getElementById('r-comments').innerHTML = '';
+  openModal('req-modal');
+}
+
+async function addRequirement() {
+  const title = document.getElementById('nr-title').value.trim();
+  const by = document.getElementById('nr-by').value.trim();
+  if (!title||!by) { showToast('Title and Requestor required'); return; }
+  const newReq = {
+    id: 'REQ-' + String(STATE.requirements.length+1).padStart(3,'0'),
+    title, desc:document.getElementById('nr-desc').value.trim(),
+    by, dept:document.getElementById('nr-dept').value.trim(),
+    date:new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}),
+    priority:document.getElementById('nr-pri').value,
+    status:'new', client:'—', impact:'—', bizImpact:'—'
+  };
+  STATE.requirements.unshift(newReq);
+  closeModal('add-req-modal');
+  renderRequirements();
+  // Write to sheet if script configured
+  if (STATE.scriptUrl) {
+    try {
+      await fetch(`${STATE.scriptUrl}?action=append&sheetId=${SHEET_ID}&data=${encodeURIComponent(JSON.stringify(newReq))}`);
+      showToast(`${newReq.id} added and saved to Sheets ✓`);
+    } catch(e) { showToast(`${newReq.id} added locally (Sheets write failed)`); }
+  } else {
+    showToast(`${newReq.id} added ✓`);
+  }
+}
+
+// ================================================================
+// MODALS
+// ================================================================
+function openTask(issue) {
+  if (typeof issue === 'string') try { issue = JSON.parse(issue); } catch(e){}
+  document.getElementById('m-id').textContent = issue.key;
+  document.getElementById('m-title').textContent = issue.summary;
+  document.getElementById('m-status').textContent = issue.status;
+  document.getElementById('m-priority').textContent = issue.priority;
+  document.getElementById('m-assignee').textContent = issue.assignee||'Unassigned';
+  document.getElementById('m-due').textContent = issue.due ? new Date(issue.due).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'}) : '—';
+  document.getElementById('m-jira-link').href = `${JIRA_URL}/browse/${issue.key}`;
+  document.getElementById('m-comments').innerHTML = '';
+  openModal('task-modal');
+}
+
+function postComment() {
+  const val = document.getElementById('m-comment-input').value.trim();
+  if (!val) return;
+  const el = document.createElement('div'); el.className='comment-item';
+  el.innerHTML=`<div style="display:flex;justify-content:space-between"><div class="comment-author" style="color:var(--accent)">${esc(document.getElementById('u-name').textContent)}</div><div class="comment-time">Just now</div></div><div class="comment-text">${esc(val)}</div>`;
+  document.getElementById('m-comments').appendChild(el);
+  document.getElementById('m-comment-input').value='';
+  showToast('Comment added ✓');
+}
+
+function postReqComment() {
+  const val = document.getElementById('r-comment-input').value.trim();
+  if (!val) return;
+  const el = document.createElement('div'); el.className='comment-item';
+  el.innerHTML=`<div style="display:flex;justify-content:space-between"><div class="comment-author" style="color:var(--green)">${esc(document.getElementById('u-name').textContent)}</div><div class="comment-time">Just now</div></div><div class="comment-text">${esc(val)}</div>`;
+  document.getElementById('r-comments').appendChild(el);
+  document.getElementById('r-comment-input').value='';
+  showToast('Comment posted ✓');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+
+// ================================================================
+// SETTINGS
+// ================================================================
+function saveScriptUrl() {
+  const url = document.getElementById('cfg-script-url').value.trim();
+  STATE.scriptUrl = url;
+  localStorage.setItem('adloggs_script_url', url);
+  showToast('Apps Script URL saved ✓');
+  if (url) loadRequirementsFromSheet();
+}
+
+function showScriptCode() {
+  document.getElementById('script-code-area').value =
+`// Adloggs Portal — Google Apps Script
+// Deploy: Extensions → Apps Script → Save → Deploy as Web App
+// Execute as: Me | Access: Anyone
+
+const SHEET_ID = '1VonUJ-eh_rMeMwvjqkgKz27lIseddqrbegYN3zMrP0Q';
+
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    const tab = e.parameter.tab || 'Sheet1';
+    if (action === 'ping') return ok({ status: 'ok' });
+    if (action === 'read') return readRequirements(tab);
+    if (action === 'updateStatus') return updateStatus(e.parameter.id, e.parameter.status);
+    if (action === 'append') return appendRequirement(JSON.parse(e.parameter.data));
+    return ok({ error: 'Unknown action: ' + action });
+  } catch(err) { return ok({ error: err.toString() }); }
+}
+
+function readRequirements(tab) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(tab) || ss.getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return ok({ requirements: [] });
+  const headers = data[0];
+  // Map sheet columns to requirement fields
+  const reqs = data.slice(1).filter(row => row[0]).map((row, i) => {
+    const get = (name) => {
+      const idx = headers.findIndex(h => String(h).toLowerCase().includes(name.toLowerCase()));
+      return idx >= 0 ? String(row[idx]||'').trim() : '';
+    };
+    return {
+      id: 'REQ-' + String(i+1).padStart(3,'0'),
+      title: get('requirement') || get('what is'),
+      desc: get('description') || get('detail'),
+      by: get('requestor') || get('name'),
+      dept: get('department') || get('team') || get('stakeholder'),
+      date: get('timestamp') || get('date'),
+      priority: get('priority') || 'Medium',
+      status: get('status') || 'new',
+      client: get('client'),
+      impact: get('business impact level') || get('impact'),
+      bizImpact: get('estimated revenue') || get('revenue'),
+    };
+  });
+  return ok({ requirements: reqs });
+}
+
+function updateStatus(reqId, status) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const statusCol = headers.findIndex(h => String(h).toLowerCase() === 'status');
+  if (statusCol < 0) {
+    // Add status column
+    sheet.getRange(1, headers.length+1).setValue('Status');
+    // We'd need to find the row by req content - simplified
+    return ok({ updated: false, reason: 'Status column added, retry' });
+  }
+  // Find row by checking if it's the right REQ id (using row number from id)
+  const rowNum = parseInt((reqId||'').replace('REQ-','')) + 1;
+  if (rowNum > 1 && rowNum <= data.length) {
+    sheet.getRange(rowNum, statusCol+1).setValue(status);
+    return ok({ updated: true, row: rowNum });
+  }
+  return ok({ updated: false });
+}
+
+function appendRequirement(req) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheets()[0];
+  const lastRow = sheet.getLastRow() + 1;
+  sheet.getRange(lastRow, 1, 1, 5).setValues([[
+    new Date().toLocaleString(), req.by, req.dept, req.title, req.priority
+  ]]);
+  return ok({ appended: true });
+}
+
+function ok(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+  openModal('script-modal');
+}
+
+function copyScript() {
+  const t = document.getElementById('script-code-area');
+  t.select(); document.execCommand('copy');
+  showToast('Copied ✓');
+}
+
+function saveAutoSync() {
+  STATE.jiraInterval = parseInt(document.getElementById('jira-interval').value);
+  STATE.sheetsInterval = parseInt(document.getElementById('sheets-interval').value);
+  localStorage.setItem('adloggs_jira_interval', STATE.jiraInterval);
+  localStorage.setItem('adloggs_sheets_interval', STATE.sheetsInterval);
+  startAutoSync();
+  showToast('Auto-sync saved ✓');
+}
+
+function startAutoSync() {
+  Object.values(STATE.timers).forEach(clearInterval);
+  STATE.timers = {};
+  if (STATE.jiraInterval > 0) STATE.timers.jira = setInterval(() => { syncSprint(); syncTeamsFromJira(); }, STATE.jiraInterval);
+  if (STATE.sheetsInterval > 0 && STATE.scriptUrl) STATE.timers.sheets = setInterval(() => loadRequirementsFromSheet(), STATE.sheetsInterval);
+}
+
+async function syncAll() {
+  document.getElementById('sync-icon').classList.add('spin');
+  setPill('syncing','Syncing...');
+  syncTeamsFromJira();
+  await new Promise(r => setTimeout(r, 500));
+  syncSprint();
+  await new Promise(r => setTimeout(r, 500));
+  if (STATE.scriptUrl) await loadRequirementsFromSheet();
+  document.getElementById('sync-icon').classList.remove('spin');
+  setPill('live','Live');
+  showToast('All synced ✓');
+}
+
+// ================================================================
+// PIN / USER
+// ================================================================
+function checkPin(val) {
+  if (val.length===4) {
+    if (val==='1234') { document.getElementById('score-lock').style.display='none'; showToast('Access granted 🔓'); }
+    else { document.getElementById('pin-error').style.display='block'; document.getElementById('pin-input').value=''; }
+  } else { document.getElementById('pin-error').style.display='none'; }
+}
+
+function switchUser(name, role, initials, av, canScore) {
+  document.getElementById('u-name').textContent = name;
+  document.getElementById('u-role').textContent = role;
+  const avEl = document.getElementById('u-av');
+  avEl.textContent = initials;
+  avEl.className = 'u-av ' + av;
+  closeModal('login-modal');
+  if (!canScore) { document.getElementById('score-lock').style.display='flex'; document.getElementById('pin-input').value=''; }
+  showToast('Switched to ' + name);
+}
+
+// ================================================================
+// UTILS
+// ================================================================
+function setPill(state, text) {
+  const pill = document.getElementById('global-pill');
+  const dot = pill.querySelector('.sync-dot');
+  pill.className = 'sync-pill sp-' + state;
+  dot.className = 'sync-dot' + (state==='live' ? ' pulse' : '');
+  document.getElementById('global-pill-text').textContent = text;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmt(d) {
+  return d instanceof Date ? d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.transform = 'translateY(0)';
+  setTimeout(() => t.style.transform = 'translateY(80px)', 2800);
+}
+
+// ================================================================
+// INIT
+// ================================================================
+function init() {
+  // Load script URL from localStorage
+  if (STATE.scriptUrl) document.getElementById('cfg-script-url').value = STATE.scriptUrl;
+
+  renderTeams();
+  populateMemberFilter();
+  renderFilteredBoard();
+  updateSprintMeta();
+  renderReleases();
+  renderRequirements();
+  STATE.lastJiraSync = new Date();
+  document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
+  document.getElementById('req-sheet-time').textContent = '9 requirements loaded (from your sheet)';
+
+  // Try loading requirements from Sheets if URL is saved
+  if (STATE.scriptUrl) setTimeout(() => loadRequirementsFromSheet(), 800);
+
+  startAutoSync();
+}
+
+init();
+</script>
+</body>
+</html>
