@@ -527,18 +527,36 @@
 
       <div class="cfg-block">
         <div class="cfg-title">🔵 Jira — adloggss.atlassian.net
-          <span class="cfg-badge cb-ok">✓ Connected via Claude MCP</span>
+          <span class="cfg-badge" id="jira-cfg-badge" style="background:rgba(245,166,35,0.12);color:var(--amber)">⚠ Proxy needed for live sync</span>
         </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
-          Cloud ID: <code style="background:var(--surface);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--accent)">4087a625-67ca-4bbe-b2f0-3d406fdfed61</code><br>
-          Projects: <strong style="color:var(--text)">AB (AD)</strong>, ADL, AGB, PRR<br>
-          Teams are the 4 named pods from your Adloggs Pod Structure: <strong style="color:var(--text)">Pinnacle, Momentum, Catalyst, AI Intelligence</strong>. Assignees not in any pod appear under Shared Resources. Sync updates live issue counts per member.
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px">
+          Cloud ID: <code style="background:var(--surface);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--accent)">4087a625-67ca-4bbe-b2f0-3d406fdfed61</code> · Project <strong style="color:var(--text)">AB</strong><br>
+          Browsers can't call Jira directly (CORS). A Cloudflare Worker acts as a secure proxy — free, no server needed.
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="syncTeamsFromJira()">Sync Teams</button>
-          <button class="btn btn-ghost btn-sm" onclick="syncSprint()">Sync Sprint</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderReleases()">Sync Releases</button>
+
+        <div style="background:rgba(79,142,247,0.05);border:1px solid rgba(79,142,247,0.15);border-radius:7px;padding:12px;font-size:12px;margin-bottom:12px;line-height:2">
+          <strong style="color:var(--text)">☁️ Cloudflare Worker setup (free, ~5 min):</strong><br>
+          1. Go to <a href="https://workers.cloudflare.com" target="_blank" style="color:var(--accent)">workers.cloudflare.com</a> → sign up free → <strong>Create Worker</strong><br>
+          2. Delete default code → paste the <strong>jira-proxy-worker.js</strong> file (download below)<br>
+          3. Click <strong>Settings → Variables → Add variable</strong>:<br>
+          &nbsp;&nbsp;&nbsp;→ <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">JIRA_EMAIL</code> = your Jira email<br>
+          &nbsp;&nbsp;&nbsp;→ <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">JIRA_TOKEN</code> = your Jira API token (<a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color:var(--accent)">get token ↗</a>)<br>
+          4. Edit line 13 in the worker: replace <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">YOUR-USERNAME.github.io</code> with your actual GitHub Pages URL<br>
+          5. Click <strong>Deploy</strong> → copy the worker URL (e.g. <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">https://jira-proxy.YOUR-NAME.workers.dev</code>)<br>
+          6. Paste it below → Save
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">Cloudflare Worker URL</div>
+          <input class="input" id="cfg-jira-proxy" placeholder="https://jira-proxy.YOUR-NAME.workers.dev" />
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary btn-sm" onclick="saveJiraProxy()">Save URL</button>
+          <button class="btn btn-ghost btn-sm" onclick="testJiraProxy()">Test Connection</button>
+          <button class="btn btn-ghost btn-sm" onclick="syncSprint()">↻ Sync Sprint</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderReleases()">↻ Sync Releases</button>
           <a href="https://adloggss.atlassian.net" target="_blank" class="btn btn-ghost btn-sm">Open Jira ↗</a>
+          <span id="jira-proxy-status" style="font-size:11px;color:var(--text3)"></span>
         </div>
       </div>
 
@@ -881,7 +899,7 @@ const STATE = {
   scriptUrl: localStorage.getItem('adloggs_script_url') || '',
   addingToTeam: null,
   timers: {},
-  jiraInterval: parseInt(localStorage.getItem('adloggs_jira_interval') || '60000'),
+  jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || '',
   sheetsInterval: parseInt(localStorage.getItem('adloggs_sheets_interval') || '120000'),
 };
 
@@ -1277,18 +1295,105 @@ function renderSprint(issues) {
   document.getElementById('sprint-sub').querySelector && null; // handled by updateSprintMeta
 }
 
-function syncSprint() {
+function saveJiraProxy() {
+  const url = document.getElementById('cfg-jira-proxy').value.trim();
+  STATE.jiraProxyUrl = url;
+  localStorage.setItem('adloggs_jira_proxy', url);
+  const badge = document.getElementById('jira-cfg-badge');
+  if (url) {
+    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
+    badge.textContent = '✓ Proxy configured';
+  }
+  showToast('Jira proxy URL saved ✓');
+}
+
+async function testJiraProxy() {
+  const el = document.getElementById('jira-proxy-status');
+  const url = document.getElementById('cfg-jira-proxy').value.trim() || STATE.jiraProxyUrl;
+  if (!url) { el.style.color='var(--red)'; el.textContent='✗ No URL set'; return; }
+  el.style.color='var(--text3)'; el.textContent='⏳ Testing...';
+  try {
+    const res = await fetch(url + '/ping', { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    el.style.color='var(--green)'; el.textContent=`✓ Connected as ${data.user}`;
+    showToast('Jira proxy working ✓ — logged in as ' + data.user);
+  } catch(e) {
+    el.style.color='var(--red)'; el.textContent='✗ ' + e.message;
+    showToast('Proxy test failed: ' + e.message);
+  }
+}
+
+async function syncSprint() {
   const icon = document.getElementById('sprint-sync-icon');
   icon.classList.add('spin');
   setPill('syncing','Syncing Jira...');
-  setTimeout(() => {
+
+  try {
+    if (STATE.jiraProxyUrl) {
+      // Real live call via Cloudflare Worker proxy
+      const res = await fetch(STATE.jiraProxyUrl + '/sprint', { signal: AbortSignal.timeout(12000) });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const raw = data.issues || [];
+
+      if (raw.length > 0) {
+        // Parse Jira API response into our internal format
+        SPRINT_DATA.length = 0;
+        raw.forEach(issue => {
+          const f = issue.fields || {};
+          const sprint = (f.customfield_10020 || [])[0] || {};
+          // Update sprint meta if available
+          if (sprint.name) {
+            STATE.sprintMeta = {
+              name:      sprint.name,
+              startDate: sprint.startDate,
+              endDate:   sprint.endDate,
+              goal:      sprint.goal || '',
+              boardId:   sprint.boardId,
+              state:     sprint.state,
+            };
+          }
+          SPRINT_DATA.push({
+            key:      issue.key,
+            summary:  f.summary || '',
+            status:   f.status?.name || 'To Do',
+            priority: f.priority?.name || 'Medium',
+            assignee: f.assignee?.displayName || 'Unassigned',
+            due:      f.duedate || null,
+            type:     f.issuetype?.name || 'Task',
+          });
+        });
+
+        // Rebuild member filter with fresh assignees
+        const sel = document.getElementById('filter-member');
+        sel.innerHTML = '<option value="">All Members</option>';
+        const names = [...new Set(SPRINT_DATA.map(i=>i.assignee).filter(Boolean))].sort();
+        names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+
+        showToast(`Sprint synced live from Jira — ${SPRINT_DATA.length} issues ✓`);
+      }
+    } else {
+      // No proxy → use baked-in data, just refresh UI
+      await new Promise(r => setTimeout(r, 600));
+      showToast('Using cached sprint data — add proxy URL in Integrations for live sync');
+    }
+
     STATE.lastJiraSync = new Date();
     renderFilteredBoard();
     updateSprintMeta();
-    icon.classList.remove('spin');
     setPill('live','Live');
-    showToast('Sprint synced ✓');
-  }, 900);
+
+  } catch(e) {
+    showToast('Jira sync failed: ' + e.message + ' — showing cached data');
+    renderFilteredBoard();
+    updateSprintMeta();
+    setPill('error','Sync failed');
+    setTimeout(() => setPill('live','Live'), 4000);
+  } finally {
+    icon.classList.remove('spin');
+  }
 }
 
 // ================================================================
@@ -1297,31 +1402,49 @@ function syncSprint() {
 function renderReleases() {
   const icon = document.getElementById('rel-sync-icon');
   icon.classList.add('spin');
-  setTimeout(() => {
+
+  const doRender = (releases) => {
     icon.classList.remove('spin');
     const tl = document.getElementById('releases-tl');
     tl.innerHTML = '';
-    [...RELEASES_DATA].reverse().forEach(r => {
+    [...releases].reverse().forEach(r => {
       const done = r.released;
       const dotCls = done ? 'rd-done' : 'rd-upcoming';
       const badgeCls = done ? 'rb-done' : 'rb-upcoming';
       const dateStr = r.releaseDate ? new Date(r.releaseDate).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'}) : 'TBD';
-      const chips = (r.features||[]).map(f=>`<span class="chip">${f}</span>`).join('');
+      const chips = (r.features||r.name?[r.name]:[]).map(f=>`<span class="chip">${esc(f)}</span>`).join('');
       tl.innerHTML += `
         <div class="rel-item">
           <div class="rel-dot ${dotCls}">${done?'✓':'→'}</div>
           <div class="rel-body"${!done?' style="border-color:rgba(79,142,247,0.3)"':''}>
             <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
-              <div><div class="rel-version">${esc(r.name)}</div><div class="rel-date">${dateStr}</div></div>
+              <div><div class="rel-version">${esc(r.name||r.version||'')}</div><div class="rel-date">${dateStr}</div></div>
               <span class="rel-badge ${badgeCls}">${done?'Released':'Upcoming'}</span>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
           </div>
         </div>`;
     });
-    document.getElementById('rel-banner-text').innerHTML = `Fix Versions from <strong style="color:var(--accent)">Jira · Project AB</strong> · ${RELEASES_DATA.length} versions · Synced ${fmt(new Date())}`;
-    showToast('Releases updated ✓');
-  }, 600);
+    document.getElementById('rel-banner-text').innerHTML =
+      `Fix Versions from <strong style="color:var(--accent)">Jira · Project AB</strong> · ${releases.length} versions · Synced ${fmt(new Date())}`;
+  };
+
+  if (STATE.jiraProxyUrl) {
+    fetch(STATE.jiraProxyUrl + '/releases', { signal: AbortSignal.timeout(10000) })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => {
+        // Jira versions API returns an array directly
+        const versions = Array.isArray(data) ? data : (data.values || RELEASES_DATA);
+        doRender(versions);
+        showToast(`Releases synced — ${versions.length} versions ✓`);
+      })
+      .catch(e => {
+        doRender(RELEASES_DATA);
+        showToast('Releases sync failed — using cached data');
+      });
+  } else {
+    setTimeout(() => { doRender(RELEASES_DATA); }, 400);
+  }
 }
 
 // ================================================================
@@ -1716,8 +1839,14 @@ function showToast(msg) {
 // INIT
 // ================================================================
 function init() {
-  // Load script URL from localStorage
+  // Restore saved config
   if (STATE.scriptUrl) document.getElementById('cfg-script-url').value = STATE.scriptUrl;
+  if (STATE.jiraProxyUrl) {
+    document.getElementById('cfg-jira-proxy').value = STATE.jiraProxyUrl;
+    const badge = document.getElementById('jira-cfg-badge');
+    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
+    badge.textContent = '✓ Proxy configured';
+  }
 
   renderTeams();
   populateMemberFilter();
@@ -1729,8 +1858,9 @@ function init() {
   document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
   document.getElementById('req-sheet-time').textContent = '9 requirements loaded (from your sheet)';
 
-  // Try loading requirements from Sheets if URL is saved
   if (STATE.scriptUrl) setTimeout(() => loadRequirementsFromSheet(), 800);
+  // Auto-sync Jira on load if proxy is configured
+  if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
 
   startAutoSync();
 }
