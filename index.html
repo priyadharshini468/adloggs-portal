@@ -478,6 +478,7 @@
           <span id="req-sheet-status">Requirements from <strong style="color:var(--green)">Google Sheets</strong> · <span id="req-sheet-time">Loading...</span></span>
         </div>
         <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="debugSheetResponse()">🔍 Debug</button>
           <button class="btn btn-ghost btn-sm" onclick="loadRequirementsFromSheet()"><span id="req-sync-icon">↻</span> Reload</button>
           <a href="https://docs.google.com/forms/d/e/1FAIpQLSeVKgJ5TuLXiJDwQcfHS1kgGc3SOUW0K5rI0HVak7go6uCKig/viewform?usp=header" target="_blank" class="btn btn-primary btn-sm">+ Add New Requirement</a>
         </div>
@@ -1926,6 +1927,27 @@ async function moveToSprint(reqId) {
   showToast(`${reqId} moved to Sprint 🚀`);
 }
 
+async function debugSheetResponse() {
+  if (!STATE.scriptUrl) { showToast('No Apps Script URL configured'); return; }
+  showToast('Fetching from sheet...');
+  try {
+    const res = await fetch(`${STATE.scriptUrl}?action=read&tab=auto`, { redirect: 'follow' });
+    const data = await res.json();
+    const reqs = data.requirements || [];
+    // Show summary of what came back
+    const summary = reqs.map((r,i) =>
+      `REQ-${String(i+1).padStart(3,'0')}: "${r.title.slice(0,30)}" | comments:${(r.comments||[]).length} | attachments:${(r.attachments||[]).length} | status:${r.status}`
+    ).join('\n');
+    // Find any with comments
+    const withComments = reqs.filter(r => (r.comments||[]).length > 0);
+    const msg = `Sheet returned ${reqs.length} requirements.\n${withComments.length} have comments.\n\nFull summary:\n${summary}`;
+    alert(msg);
+    console.log('Sheet debug:', data);
+  } catch(e) {
+    alert('Error: ' + e.message);
+    console.error(e);
+  }
+}
 async function writeBackStatus(reqId, status) {
   if (!STATE.scriptUrl) return;
   try {
