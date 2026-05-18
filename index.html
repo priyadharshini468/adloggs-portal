@@ -794,6 +794,51 @@
   </div>
 </div>
 
+<!-- EMAIL MODAL -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal" style="width:560px">
+    <button class="modal-close" onclick="closeModal('email-modal')">✕</button>
+    <div style="font-size:10px;color:var(--accent);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px" id="em-req-id">REQ</div>
+    <div class="modal-title" style="margin-bottom:4px">Send Email</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px" id="em-req-title"></div>
+    <div class="form-group">
+      <div class="form-label">From (you)</div>
+      <input class="input" id="em-from" readonly style="background:var(--surface2);color:var(--text2)" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">To</div>
+      <input class="input" id="em-to" placeholder="recipient@adloggs.com" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">CC <span style="color:var(--text3);font-weight:400">(optional — comma separated)</span></div>
+      <input class="input" id="em-cc" placeholder="cc1@adloggs.com, cc2@adloggs.com" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">Subject</div>
+      <input class="input" id="em-subject" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">Message</div>
+      <textarea class="input" id="em-body" rows="8" style="resize:vertical;line-height:1.6;font-family:var(--sans)"></textarea>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 12px;font-size:11px;color:#4b5563;margin-bottom:14px;line-height:1.6">
+      💡 <strong style="color:var(--text)">Two options:</strong> <em>Open in Email Client</em> opens Gmail/Outlook with the message pre-filled — you click Send yourself. <em>Send via Apps Script</em> sends directly from your Google account (requires Apps Script to be deployed).
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="closeModal('email-modal')">Cancel</button>
+      <button class="btn btn-ghost" onclick="sendViaMailto()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+        Open in Email Client
+      </button>
+      <button class="btn btn-primary" onclick="sendViaAppsScript()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send via Apps Script
+      </button>
+    </div>
+    <div id="em-status" style="font-size:12px;text-align:center;margin-top:10px;display:none;padding:8px;border-radius:6px"></div>
+  </div>
+</div>
+
 <!-- APPS SCRIPT MODAL -->
 <div class="modal-overlay" id="script-modal">
   <div class="modal" style="width:600px">
@@ -1473,8 +1518,93 @@ function teamBadge(team) {
 
 
 // ================================================================
-// EXPORT TO EXCEL
+// EMAIL
 // ================================================================
+function openEmailModal(req) {
+  // Get logged-in user from session
+  const session = loadSession();
+  const fromEmail = session ? session.email : '';
+  const fromName  = session ? session.name  : '';
+
+  document.getElementById('em-req-id').textContent    = req.id;
+  document.getElementById('em-req-title').textContent = req.title;
+  document.getElementById('em-from').value    = fromEmail ? `${fromName} <${fromEmail}>` : '(not logged in)';
+  document.getElementById('em-to').value      = req.email || '';
+  document.getElementById('em-cc').value      = '';
+  document.getElementById('em-subject').value = `Re: [${req.id}] ${req.title}`;
+  document.getElementById('em-body').value    =
+`Hi ${req.by || 'there'},
+
+Thank you for submitting your requirement: "${req.title}"
+
+We have reviewed your request and wanted to reach out regarding the next steps.
+
+[Your message here]
+
+Best regards,
+${fromName}
+Adloggs Product Team`;
+
+  document.getElementById('em-status').style.display = 'none';
+  openModal('email-modal');
+}
+
+function sendViaMailto() {
+  const to      = document.getElementById('em-to').value.trim();
+  const cc      = document.getElementById('em-cc').value.trim();
+  const subject = document.getElementById('em-subject').value.trim();
+  const body    = document.getElementById('em-body').value.trim();
+
+  if (!to) { showToast('Please enter a To email address'); return; }
+
+  let mailto = `mailto:${encodeURIComponent(to)}`;
+  mailto += `?subject=${encodeURIComponent(subject)}`;
+  mailto += `&body=${encodeURIComponent(body)}`;
+  if (cc) mailto += `&cc=${encodeURIComponent(cc)}`;
+
+  window.location.href = mailto;
+  showToast('Opening email client...');
+}
+
+async function sendViaAppsScript() {
+  const to      = document.getElementById('em-to').value.trim();
+  const cc      = document.getElementById('em-cc').value.trim();
+  const subject = document.getElementById('em-subject').value.trim();
+  const body    = document.getElementById('em-body').value.trim();
+  const statusEl = document.getElementById('em-status');
+
+  if (!to) { showToast('Please enter a To email address'); return; }
+  if (!STATE.scriptUrl) { showToast('Apps Script URL not configured'); return; }
+
+  statusEl.style.display  = 'block';
+  statusEl.style.background = '#fef3c7';
+  statusEl.style.color    = 'var(--amber)';
+  statusEl.textContent    = '⏳ Sending...';
+
+  try {
+    const url = `${STATE.scriptUrl}?action=sendEmail` +
+      `&to=${encodeURIComponent(to)}` +
+      `&cc=${encodeURIComponent(cc)}` +
+      `&subject=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`;
+
+    const res  = await fetch(url, { redirect: 'follow' });
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    statusEl.style.background = '#d1fae5';
+    statusEl.style.color      = 'var(--green)';
+    statusEl.textContent      = '✓ Email sent successfully!';
+    showToast('Email sent ✓');
+    setTimeout(() => closeModal('email-modal'), 1500);
+
+  } catch(e) {
+    statusEl.style.background = '#fee2e2';
+    statusEl.style.color      = 'var(--red)';
+    statusEl.textContent      = '✗ Failed: ' + e.message + ' — try Open in Email Client instead';
+  }
+}
 function exportToExcel() {
   const filtered = getFilteredIssues();
   const sprintName = (STATE.sprintMeta || SPRINT_META).name;
@@ -2066,6 +2196,7 @@ function renderRequirements() {
         <td><span class="req-status rs-${status}">${STATUS_LABELS[status]||status}</span></td>
         <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
           <button class="action-icon" title="View detail" onclick="openReqDetail(${reqJson})">👁</button>
+          <button class="action-icon" title="Send Email" onclick="openEmailModal(${reqJson})">✉️</button>
           <button class="action-icon" title="Cycle status" onclick="cycleStatus(this,'${esc(req.id)}')">🔄</button>
           <button class="action-icon" title="Move to sprint" onclick="moveToSprint('${esc(req.id)}')">🚀</button>
         </div></td>
