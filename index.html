@@ -389,11 +389,10 @@
       <!-- Active filter chips -->
       <div id="active-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
 
-      <!-- Filtered count + pagination info + VIEW TOGGLE -->
+      <!-- Filtered count + VIEW TOGGLE -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;color:var(--text3)">
         <span id="filter-count">Showing all issues</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <span id="page-info"></span>
           <!-- View toggle -->
           <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:7px;overflow:hidden">
             <button id="view-kanban-btn" onclick="switchView('kanban')" style="padding:4px 11px;font-size:11px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;display:flex;align-items:center;gap:5px">
@@ -402,10 +401,6 @@
             <button id="view-list-btn" onclick="switchView('list')" style="padding:4px 11px;font-size:11px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);display:flex;align-items:center;gap:5px">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> List
             </button>
-          </div>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn-ghost btn-sm" id="page-prev" onclick="changePage(-1)" disabled>‹ Prev</button>
-            <button class="btn btn-ghost btn-sm" id="page-next" onclick="changePage(1)">Next ›</button>
           </div>
         </div>
       </div>
@@ -417,18 +412,8 @@
 
       <!-- LIST / EXCEL VIEW -->
       <div id="list-view" style="display:none">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text3)" id="list-count"></div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span id="list-page-info" style="font-size:12px;color:var(--text3)"></span>
-            <button class="btn btn-ghost btn-sm" id="list-prev" onclick="listChangePage(-1)" disabled>‹ Prev</button>
-            <div id="list-page-numbers" style="display:flex;gap:3px"></div>
-            <button class="btn btn-ghost btn-sm" id="list-next" onclick="listChangePage(1)">Next ›</button>
-            <button class="btn btn-green btn-sm" onclick="exportToExcel()">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download Excel
-            </button>
-          </div>
         </div>
         <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:11px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.05)">
           <table id="list-table" style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px;background:var(--surface)">
@@ -448,17 +433,23 @@
             <tbody id="list-tbody"></tbody>
           </table>
         </div>
-        <!-- Bottom pagination -->
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:12px">
-          <span id="list-page-info-b" style="font-size:12px;color:var(--text3)"></span>
-          <button class="btn btn-ghost btn-sm" id="list-prev-b" onclick="listChangePage(-1)" disabled>‹ Prev</button>
-          <div id="list-page-numbers-b" style="display:flex;gap:3px"></div>
-          <button class="btn btn-ghost btn-sm" id="list-next-b" onclick="listChangePage(1)">Next ›</button>
+        <!-- Bottom pagination + download -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px">
+          <button class="btn btn-green btn-sm" onclick="exportToExcel()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Excel
+          </button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span id="list-page-info-b" style="font-size:12px;color:var(--text3)"></span>
+            <button class="btn btn-ghost btn-sm" id="list-prev-b" onclick="listChangePage(-1)" disabled>‹ Prev</button>
+            <div id="list-page-numbers-b" style="display:flex;gap:3px"></div>
+            <button class="btn btn-ghost btn-sm" id="list-next-b" onclick="listChangePage(1)">Next ›</button>
+          </div>
         </div>
       </div>
 
-      <!-- Bottom pagination -->
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:14px;font-size:12px;color:var(--text3)">
+      <!-- Board bottom pagination -->
+      <div id="board-pagination" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:14px;font-size:12px;color:var(--text3)">
         <span id="page-info-bottom"></span>
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" id="page-prev-b" onclick="changePage(-1)" disabled>‹ Prev</button>
@@ -1141,18 +1132,15 @@ let CURRENT_VIEW = 'kanban';
 
 function switchView(view) {
   CURRENT_VIEW = view;
-  document.getElementById('kanban-view').style.display = view === 'kanban' ? '' : 'none';
-  document.getElementById('list-view').style.display   = view === 'list'   ? '' : 'none';
+  document.getElementById('kanban-view').style.display    = view === 'kanban' ? '' : 'none';
+  document.getElementById('list-view').style.display      = view === 'list'   ? '' : 'none';
+  document.getElementById('board-pagination').style.display = view === 'kanban' ? '' : 'none';
 
   const kBtn = document.getElementById('view-kanban-btn');
   const lBtn = document.getElementById('view-list-btn');
   if (view === 'kanban') {
     kBtn.style.background = 'var(--accent)'; kBtn.style.color = '#fff';
     lBtn.style.background = 'transparent';   lBtn.style.color = 'var(--text2)';
-    // pagination only relevant on board view
-    ['page-prev','page-next','page-prev-b','page-next-b','page-numbers','page-info','page-info-bottom'].forEach(id => {
-      const el = document.getElementById(id); if(el) el.style.display = '';
-    });
   } else {
     lBtn.style.background = 'var(--accent)'; lBtn.style.color = '#fff';
     kBtn.style.background = 'transparent';   kBtn.style.color = 'var(--text2)';
@@ -1185,21 +1173,21 @@ function renderListView() {
   const pageText = totalPages > 1 ? `Page ${LIST_FILTER.page} of ${totalPages}` : '';
   const countText = `${filtered.length} issue${filtered.length !== 1 ? 's' : ''}${filtered.length !== SPRINT_DATA.length ? ' (filtered)' : ''}`;
   document.getElementById('list-count').textContent = countText;
-  ['list-page-info','list-page-info-b'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = pageText; });
-  ['list-prev','list-prev-b'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = LIST_FILTER.page <= 1; });
-  ['list-next','list-next-b'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = LIST_FILTER.page >= totalPages; });
+  const el_info = document.getElementById('list-page-info-b'); if(el_info) el_info.textContent = pageText;
+  const el_prev = document.getElementById('list-prev-b'); if(el_prev) el_prev.disabled = LIST_FILTER.page <= 1;
+  const el_next = document.getElementById('list-next-b'); if(el_next) el_next.disabled = LIST_FILTER.page >= totalPages;
 
-  // Page number buttons
-  ['list-page-numbers','list-page-numbers-b'].forEach(id => {
-    const el = document.getElementById(id); if (!el) return;
-    el.innerHTML = '';
+  // Page number buttons — bottom only
+  const pnEl = document.getElementById('list-page-numbers-b');
+  if (pnEl) {
+    pnEl.innerHTML = '';
     if (totalPages > 1) {
       for (let p = 1; p <= totalPages; p++) {
         const active = p === LIST_FILTER.page;
-        el.innerHTML += `<button onclick="listGoToPage(${p})" class="btn btn-ghost btn-sm" style="${active ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}">${p}</button>`;
+        pnEl.innerHTML += `<button onclick="listGoToPage(${p})" class="btn btn-ghost btn-sm" style="${active ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}">${p}</button>`;
       }
     }
-  });
+  }
 
   pageItems.forEach((issue, idx) => {
     const globalIdx = start + idx;
@@ -1532,12 +1520,9 @@ function renderFilteredBoard() {
   document.getElementById('filter-count').textContent = countText;
 
   const pageText = totalPages > 1 ? `Page ${FILTER.page} of ${totalPages}` : '';
-  document.getElementById('page-info').textContent = pageText;
   document.getElementById('page-info-bottom').textContent = pageText;
-
-  // Prev/Next buttons
-  ['page-prev','page-prev-b'].forEach(id => document.getElementById(id).disabled = FILTER.page <= 1);
-  ['page-next','page-next-b'].forEach(id => document.getElementById(id).disabled = FILTER.page >= totalPages);
+  ['page-prev-b'].forEach(id => document.getElementById(id).disabled = FILTER.page <= 1);
+  ['page-next-b'].forEach(id => document.getElementById(id).disabled = FILTER.page >= totalPages);
 
   // Page number buttons
   const pnEl = document.getElementById('page-numbers');
@@ -2051,7 +2036,10 @@ document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('cli
 // SETTINGS
 // ================================================================
 function saveScriptUrl() {
-  const url = document.getElementById('cfg-script-url').value.trim();
+  let url = document.getElementById('cfg-script-url').value.trim();
+  // Strip any accidentally appended query params (e.g. ?action=ping)
+  url = url.split('?')[0].split('#')[0];
+  document.getElementById('cfg-script-url').value = url;
   STATE.scriptUrl = url;
   localStorage.setItem('adloggs_script_url', url);
   showToast('Apps Script URL saved ✓');
