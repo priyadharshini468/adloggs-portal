@@ -414,6 +414,10 @@
       <div id="list-view" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text3)" id="list-count"></div>
+          <button class="btn btn-green btn-sm" onclick="exportToExcel()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Excel
+          </button>
         </div>
         <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:11px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.05)">
           <table id="list-table" style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px;background:var(--surface)">
@@ -433,18 +437,12 @@
             <tbody id="list-tbody"></tbody>
           </table>
         </div>
-        <!-- Bottom pagination + download -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px">
-          <button class="btn btn-green btn-sm" onclick="exportToExcel()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download Excel
-          </button>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span id="list-page-info-b" style="font-size:12px;color:var(--text3)"></span>
-            <button class="btn btn-ghost btn-sm" id="list-prev-b" onclick="listChangePage(-1)" disabled>‹ Prev</button>
-            <div id="list-page-numbers-b" style="display:flex;gap:3px"></div>
-            <button class="btn btn-ghost btn-sm" id="list-next-b" onclick="listChangePage(1)">Next ›</button>
-          </div>
+        <!-- Bottom pagination -->
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:12px">
+          <span id="list-page-info-b" style="font-size:12px;color:var(--text3)"></span>
+          <button class="btn btn-ghost btn-sm" id="list-prev-b" onclick="listChangePage(-1)" disabled>‹ Prev</button>
+          <div id="list-page-numbers-b" style="display:flex;gap:3px"></div>
+          <button class="btn btn-ghost btn-sm" id="list-next-b" onclick="listChangePage(1)">Next ›</button>
         </div>
       </div>
 
