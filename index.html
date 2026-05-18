@@ -218,9 +218,42 @@
 
   @media(max-width:1200px){.kanban{grid-template-columns:repeat(3,1fr)}}
   @media(max-width:900px){.kanban{grid-template-columns:repeat(2,1fr)}.roadmap-quarters{grid-template-columns:repeat(2,1fr)}}
+  /* LOGIN SCREEN */
+  #login-screen{position:fixed;inset:0;background:#f4f6f9;z-index:500;display:flex;align-items:center;justify-content:center}
+  .login-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:40px;width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.1)}
+  .login-logo{font-family:var(--serif);font-size:28px;margin-bottom:4px;color:var(--text)}
+  .login-logo span{color:var(--accent)}
+  .login-sub{font-size:13px;color:var(--text3);margin-bottom:32px}
+  .login-field{margin-bottom:16px}
+  .login-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block}
+  .login-input{width:100%;padding:10px 14px;border:1px solid var(--border2);border-radius:8px;font-family:var(--sans);font-size:14px;outline:none;transition:border-color 0.15s;background:#fff;color:var(--text)}
+  .login-input:focus{border-color:var(--accent)}
+  .login-btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:background 0.15s;margin-top:8px}
+  .login-btn:hover{background:#1d4ed8}
+  .login-error{color:var(--red);font-size:12px;margin-top:8px;display:none;text-align:center}
+  .login-spinner{display:none;text-align:center;color:var(--text3);font-size:13px;margin-top:8px}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Adloggs<span>.</span></div>
+    <div class="login-sub">Product Portal — Sign in to continue</div>
+    <div class="login-field">
+      <label class="login-label">Email</label>
+      <input class="login-input" id="login-email" type="email" placeholder="you@adloggs.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"/>
+    </div>
+    <div class="login-field">
+      <label class="login-label">Password</label>
+      <input class="login-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error">Incorrect email or password. Please try again.</div>
+    <div class="login-spinner" id="login-spinner">⏳ Verifying...</div>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -264,9 +297,15 @@
       Integrations
     </div>
   </nav>
-  <div class="sidebar-user" onclick="openModal('login-modal')">
+  <div class="sidebar-user">
     <div class="u-av av1" id="u-av">P</div>
-    <div><div class="u-name" id="u-name">Priya</div><div class="u-role" id="u-role">Product Manager</div></div>
+    <div style="flex:1;min-width:0">
+      <div class="u-name" id="u-name">Priya</div>
+      <div class="u-role" id="u-role">Product Manager</div>
+    </div>
+    <button onclick="doLogout()" title="Sign out" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:5px;display:flex;align-items:center" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
   </div>
 </aside>
 
@@ -280,10 +319,6 @@
         <span id="global-pill-text">Live</span>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="syncAll()"><span id="sync-icon">↻</span> Sync All</button>
-      <button class="btn btn-ghost btn-sm" onclick="openModal('login-modal')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Switch User
-      </button>
     </div>
   </div>
 
@@ -993,8 +1028,159 @@ const STATE = {
 };
 
 // ================================================================
-// NAVIGATION
+// ROLE-BASED ACCESS CONFIG
+// Defines which nav sections each role can see
 // ================================================================
+const ROLE_ACCESS = {
+  admin:      ['teams','sprint','releases','requirements','roadmap','scores','settings'],
+  subadmin:   ['teams','sprint','releases','requirements','roadmap'],
+  stakeholder:['teams','sprint','requirements','roadmap'],
+  tech:       ['teams','sprint','releases','requirements','roadmap'],
+};
+
+const ROLE_LABELS = {
+  admin:      'Admin',
+  subadmin:   'Sub Admin',
+  stakeholder:'Stakeholder',
+  tech:       'Tech',
+};
+
+// ================================================================
+// SESSION — stored in localStorage with 24h expiry
+// ================================================================
+const SESSION_KEY  = 'adloggs_session';
+const SESSION_TTL  = 24 * 60 * 60 * 1000; // 24 hours in ms
+
+function saveSession(user) {
+  const session = { ...user, loginTime: Date.now() };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (Date.now() - session.loginTime > SESSION_TTL) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch(e) { return null; }
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// ================================================================
+// LOGIN / LOGOUT
+// ================================================================
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim().toLowerCase();
+  const password = document.getElementById('login-pass').value;
+  const errEl    = document.getElementById('login-error');
+  const spinner  = document.getElementById('login-spinner');
+  const btn      = document.getElementById('login-btn');
+
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Please enter email and password.'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  spinner.style.display = 'block';
+
+  try {
+    if (!STATE.scriptUrl) throw new Error('Apps Script URL not configured — contact admin');
+
+    const url = `${STATE.scriptUrl}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+    const res = await fetch(url, { redirect: 'follow' });
+    const data = await res.json();
+
+    if (data.error || !data.success) {
+      throw new Error(data.error || 'Invalid credentials');
+    }
+
+    // Success — save session and enter portal
+    saveSession({ name: data.name, email: data.email, role: data.role });
+    enterPortal({ name: data.name, email: data.email, role: data.role });
+
+  } catch(e) {
+    errEl.textContent = e.message.includes('credentials') || e.message.includes('Invalid')
+      ? 'Incorrect email or password. Please try again.'
+      : e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+    spinner.style.display = 'none';
+  }
+}
+
+function doLogout() {
+  if (!confirm('Sign out?')) return;
+  clearSession();
+  // Reset UI
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value  = '';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.querySelector('.sidebar').style.display = 'flex';
+  document.querySelector('.main').style.display    = 'flex';
+  // Actually hide the main app
+  document.querySelector('.sidebar').style.visibility = 'hidden';
+  document.querySelector('.main').style.visibility    = 'hidden';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function enterPortal(user) {
+  // Hide login screen
+  document.getElementById('login-screen').style.display = 'none';
+  document.querySelector('.sidebar').style.visibility = 'visible';
+  document.querySelector('.main').style.visibility    = 'visible';
+
+  // Set user info in sidebar
+  const initials = user.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('u-name').textContent = user.name;
+  document.getElementById('u-role').textContent = ROLE_LABELS[user.role] || user.role;
+  const avEl = document.getElementById('u-av');
+  avEl.textContent = initials;
+  const avColors = { admin:'av4', subadmin:'av1', tech:'av2', stakeholder:'av5' };
+  avEl.className = 'u-av ' + (avColors[user.role] || 'av1');
+
+  // Apply role-based nav visibility
+  applyRoleAccess(user.role);
+
+  // Navigate to first allowed section
+  const allowed = ROLE_ACCESS[user.role] || ROLE_ACCESS.stakeholder;
+  const firstSection = allowed[0] || 'requirements';
+  const firstNavItem = document.querySelector(`.nav-item[onclick*="nav('${firstSection}'"]`);
+  nav(firstSection, firstNavItem);
+
+  showToast(`Welcome, ${user.name} 👋`);
+}
+
+function applyRoleAccess(role) {
+  const allowed = new Set(ROLE_ACCESS[role] || ROLE_ACCESS.stakeholder);
+
+  // Map section keys to nav item onclick patterns
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const match = item.getAttribute('onclick')?.match(/nav\('([^']+)'/);
+    if (match) {
+      const section = match[1];
+      item.style.display = allowed.has(section) ? '' : 'none';
+    }
+  });
+
+  // Hide nav sections (labels) if all items below are hidden
+  document.querySelectorAll('.nav-section').forEach(section => {
+    let next = section.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('nav-section')) {
+      if (next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    section.style.display = hasVisible ? '' : 'none';
+  });
+}
 function nav(id, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -2344,6 +2530,11 @@ function init() {
     badge.textContent = '✓ Cloudflare Worker connected';
   }
 
+  // Hide main app until logged in
+  document.querySelector('.sidebar').style.visibility = 'hidden';
+  document.querySelector('.main').style.visibility    = 'hidden';
+
+  // Render data (happens in background)
   renderTeams();
   populateMemberFilter();
   renderFilteredBoard();
@@ -2352,13 +2543,23 @@ function init() {
   renderRequirements();
   STATE.lastJiraSync = new Date();
   document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
-  document.getElementById('req-sheet-time').textContent = '9 requirements loaded (from your sheet)';
+  document.getElementById('req-sheet-time').textContent  = 'Loading...';
 
   if (STATE.scriptUrl) setTimeout(() => loadRequirementsFromSheet(), 800);
-  // Auto-sync Jira on load if proxy is configured
   if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
-
   startAutoSync();
+
+  // Check for existing valid session
+  const session = loadSession();
+  if (session) {
+    document.getElementById('login-screen').style.display = 'none';
+    enterPortal(session);
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    // Pre-fill email if remembered
+    const lastEmail = localStorage.getItem('adloggs_last_email');
+    if (lastEmail) document.getElementById('login-email').value = lastEmail;
+  }
 }
 
 init();
