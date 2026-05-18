@@ -1857,10 +1857,12 @@ function renderRequirements() {
     const client = req.client && req.client !== '—' ? `<span style="font-size:10px;color:var(--accent);margin-left:4px">${esc(req.client)}</span>` : '';
     const hasAttachments = (req.attachments||[]).length > 0;
     const attachBadge = hasAttachments
-      ? `<span title="${(req.attachments||[]).length} attachment(s)" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;margin-left:5px;cursor:pointer" onclick="openReqDetail(${JSON.stringify(req).replace(/"/g,'&quot;')})">📎 ${(req.attachments||[]).length}</span>`
+      ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;margin-left:5px">📎 ${(req.attachments||[]).length}</span>`
       : '';
+    const reqJson = JSON.stringify(req).replace(/"/g,'&quot;');
     tbody.innerHTML += `
-      <tr data-status="${status}">
+      <tr data-status="${status}" onclick="openReqDetail(${reqJson})"
+          style="cursor:pointer" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background=''">
         <td style="font-size:10px;color:var(--text3);white-space:nowrap">${esc(req.id||'')}</td>
         <td>
           <div style="font-weight:500;margin-bottom:2px;font-size:12px">${esc(req.title)}${client}${attachBadge}</div>
@@ -1871,8 +1873,8 @@ function renderRequirements() {
         <td style="font-size:11px;color:var(--text3);white-space:nowrap">${req.date||''}</td>
         <td><span class="tag ${priCls}">${req.priority||'—'}</span></td>
         <td><span class="req-status rs-${status}">${STATUS_LABELS[status]||status}</span></td>
-        <td><div style="display:flex;gap:4px">
-          <button class="action-icon" title="View detail" onclick="openReqDetail(${JSON.stringify(req).replace(/"/g,'&quot;')})">👁</button>
+        <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
+          <button class="action-icon" title="View detail" onclick="openReqDetail(${reqJson})">👁</button>
           <button class="action-icon" title="Cycle status" onclick="cycleStatus(this,'${esc(req.id)}')">🔄</button>
           <button class="action-icon" title="Move to sprint" onclick="moveToSprint('${esc(req.id)}')">🚀</button>
         </div></td>
@@ -1927,12 +1929,15 @@ async function writeBackStatus(reqId, status) {
   } catch(e) { /* silent */ }
 }
 
+let CURRENT_REQ_ID = null;
+
 function openReqDetail(req) {
+  CURRENT_REQ_ID = req.id;
   document.getElementById('r-id').textContent = req.id;
   document.getElementById('r-title').textContent = req.title;
   const details = document.getElementById('r-details');
 
-  // Build documents HTML if any
+  // Documents
   const docs = req.attachments || req.documents || [];
   const docsHtml = docs.length
     ? `<div class="detail-row">
@@ -1960,7 +1965,24 @@ function openReqDetail(req) {
     <div class="detail-row"><div class="detail-label">Biz Impact</div><div class="detail-val">${esc(req.bizImpact||'—')}</div></div>
     <div class="detail-row"><div class="detail-label">Description</div><div class="detail-val">${esc(req.desc||'—')}</div></div>
     ${docsHtml}`;
-  document.getElementById('r-comments').innerHTML = '';
+
+  // Load existing comments from the req object (read from sheet)
+  const commentsEl = document.getElementById('r-comments');
+  commentsEl.innerHTML = '';
+  const existing = req.comments || [];
+  existing.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'comment-item';
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between">
+        <div class="comment-author" style="color:var(--accent)">${esc(c.author||'—')}</div>
+        <div class="comment-time">${esc(c.date||'')}</div>
+      </div>
+      <div class="comment-text">${esc(c.text||'')}</div>`;
+    commentsEl.appendChild(el);
+  });
+
+  document.getElementById('r-comment-input').value = '';
   openModal('req-modal');
 }
 
@@ -2016,14 +2038,47 @@ function postComment() {
   showToast('Comment added ✓');
 }
 
-function postReqComment() {
+async function postReqComment() {
   const val = document.getElementById('r-comment-input').value.trim();
   if (!val) return;
-  const el = document.createElement('div'); el.className='comment-item';
-  el.innerHTML=`<div style="display:flex;justify-content:space-between"><div class="comment-author" style="color:var(--green)">${esc(document.getElementById('u-name').textContent)}</div><div class="comment-time">Just now</div></div><div class="comment-text">${esc(val)}</div>`;
+
+  const author = document.getElementById('u-name').textContent;
+  const now    = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  const commentObj = { author, date: now, text: val };
+
+  // Show in modal immediately
+  const el = document.createElement('div');
+  el.className = 'comment-item';
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between">
+      <div class="comment-author" style="color:var(--green)">${esc(author)}</div>
+      <div class="comment-time">${now}</div>
+    </div>
+    <div class="comment-text">${esc(val)}</div>`;
   document.getElementById('r-comments').appendChild(el);
-  document.getElementById('r-comment-input').value='';
-  showToast('Comment posted ✓');
+  document.getElementById('r-comment-input').value = '';
+
+  // Save to local state
+  const req = STATE.requirements.find(r => r.id === CURRENT_REQ_ID);
+  if (req) {
+    if (!req.comments) req.comments = [];
+    req.comments.push(commentObj);
+  }
+
+  // Save to Google Sheet
+  if (STATE.scriptUrl && CURRENT_REQ_ID) {
+    try {
+      const url = `${STATE.scriptUrl}?action=addComment&id=${encodeURIComponent(CURRENT_REQ_ID)}&author=${encodeURIComponent(author)}&text=${encodeURIComponent(val)}&date=${encodeURIComponent(now)}`;
+      const res = await fetch(url, { redirect: 'follow' });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      showToast('Comment saved to sheet ✓');
+    } catch(e) {
+      showToast('Comment shown locally — sheet save failed: ' + e.message);
+    }
+  } else {
+    showToast('Comment added ✓ (configure Apps Script URL to save to sheet)');
+  }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
