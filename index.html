@@ -389,11 +389,20 @@
       <!-- Active filter chips -->
       <div id="active-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
 
-      <!-- Filtered count + pagination info -->
+      <!-- Filtered count + pagination info + VIEW TOGGLE -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;color:var(--text3)">
         <span id="filter-count">Showing all issues</span>
         <div style="display:flex;align-items:center;gap:8px">
           <span id="page-info"></span>
+          <!-- View toggle -->
+          <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:7px;overflow:hidden">
+            <button id="view-kanban-btn" onclick="switchView('kanban')" style="padding:4px 11px;font-size:11px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;display:flex;align-items:center;gap:5px">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Board
+            </button>
+            <button id="view-list-btn" onclick="switchView('list')" style="padding:4px 11px;font-size:11px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);display:flex;align-items:center;gap:5px">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> List
+            </button>
+          </div>
           <div style="display:flex;gap:4px">
             <button class="btn btn-ghost btn-sm" id="page-prev" onclick="changePage(-1)" disabled>‹ Prev</button>
             <button class="btn btn-ghost btn-sm" id="page-next" onclick="changePage(1)">Next ›</button>
@@ -401,7 +410,52 @@
         </div>
       </div>
 
-      <div class="kanban" id="kanban-board"></div>
+      <!-- KANBAN VIEW -->
+      <div id="kanban-view">
+        <div class="kanban" id="kanban-board"></div>
+      </div>
+
+      <!-- LIST / EXCEL VIEW -->
+      <div id="list-view" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:12px;color:var(--text3)" id="list-count"></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="list-page-info" style="font-size:12px;color:var(--text3)"></span>
+            <button class="btn btn-ghost btn-sm" id="list-prev" onclick="listChangePage(-1)" disabled>‹ Prev</button>
+            <div id="list-page-numbers" style="display:flex;gap:3px"></div>
+            <button class="btn btn-ghost btn-sm" id="list-next" onclick="listChangePage(1)">Next ›</button>
+            <button class="btn btn-green btn-sm" onclick="exportToExcel()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Excel
+            </button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:11px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+          <table id="list-table" style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px;background:var(--surface)">
+            <thead>
+              <tr style="background:#f1f5f9;border-bottom:2px solid var(--border)">
+                <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;width:40px;position:sticky;left:0;background:#f1f5f9;z-index:2">#</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;width:90px;position:sticky;left:40px;background:#f1f5f9;z-index:2">Task ID</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;min-width:220px">Task</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;min-width:200px">Description</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;min-width:130px">Documents</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;min-width:120px">Assignee</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;min-width:120px">Team</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;min-width:120px">Status</th>
+                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;min-width:180px">Comments</th>
+              </tr>
+            </thead>
+            <tbody id="list-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Bottom pagination -->
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:12px">
+          <span id="list-page-info-b" style="font-size:12px;color:var(--text3)"></span>
+          <button class="btn btn-ghost btn-sm" id="list-prev-b" onclick="listChangePage(-1)" disabled>‹ Prev</button>
+          <div id="list-page-numbers-b" style="display:flex;gap:3px"></div>
+          <button class="btn btn-ghost btn-sm" id="list-next-b" onclick="listChangePage(1)">Next ›</button>
+        </div>
+      </div>
 
       <!-- Bottom pagination -->
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:14px;font-size:12px;color:var(--text3)">
@@ -436,7 +490,7 @@
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-sm" onclick="loadRequirementsFromSheet()"><span id="req-sync-icon">↻</span> Reload</button>
-          <button class="btn btn-primary btn-sm" onclick="openModal('add-req-modal')">+ Add</button>
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSeVKgJ5TuLXiJDwQcfHS1kgGc3SOUW0K5rI0HVak7go6uCKig/viewform?usp=header" target="_blank" class="btn btn-primary btn-sm">+ Add New Requirement</a>
         </div>
       </div>
       <div class="section-head"><h2>Stakeholder Requirements</h2><p>From the Requirements Form → Google Sheet <code style="font-size:10px;background:var(--surface2);padding:1px 5px;border-radius:3px">1VonUJ…rP0Q</code></p></div>
@@ -460,6 +514,15 @@
 
     <!-- ===== ROADMAP ===== -->
     <section id="sec-roadmap" class="section">
+      <!-- COMING SOON — original roadmap content preserved below in comments -->
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:420px;text-align:center;padding:48px 24px">
+        <div style="font-size:52px;margin-bottom:20px">🗺️</div>
+        <div style="font-family:var(--serif);font-size:32px;margin-bottom:10px;color:var(--text)">Coming Soon</div>
+        <div style="font-size:14px;color:var(--text3);max-width:400px;line-height:1.7">The Product Roadmap is being prepared. Check back soon for quarterly plans, initiatives, and milestone tracking.</div>
+      </div>
+
+      <!--
+      ORIGINAL ROADMAP — uncomment to restore
       <div class="section-head"><h2>Product Roadmap</h2><p>Strategic direction for Adloggs platform</p></div>
       <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(123,94,167,0.07));border-color:rgba(79,142,247,0.2)">
         <div style="font-size:10px;font-weight:600;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px">2026 Mission</div>
@@ -473,51 +536,62 @@
       </div>
       <div style="font-size:14px;font-weight:600;margin-bottom:12px">Quarterly Plan</div>
       <div class="roadmap-quarters">
-        <div><div class="q-label">Q1 · Jan–Mar ✓</div>
+        <div><div class="q-label">Q1 · Jan-Mar [check]</div>
           <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">Scheduled Orders</div><div class="ri-team">Backend + Mobile</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
           <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">3PL Mapping & RTO</div><div class="ri-team">Infra Team</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
           <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">Incentive & Penalty Engine</div><div class="ri-team">Backend</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
         </div>
-        <div><div class="q-label">Q2 · Apr–Jun →</div>
+        <div><div class="q-label">Q2 · Apr-Jun -></div>
           <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">WheelEye Integration</div><div class="ri-team">Infra / Integrations</div><div class="progress-bar"><div class="progress-fill" style="width:60%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">COD Settlement Flow</div><div class="ri-team">Backend + App</div><div class="progress-bar"><div class="progress-fill" style="width:40%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">Loggi Sight App v1</div><div class="ri-team">Design + Dev</div><div class="progress-bar"><div class="progress-fill" style="width:75%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">Shopify Integration</div><div class="ri-team">Backend</div><div class="progress-bar"><div class="progress-fill" style="width:20%;background:var(--accent)"></div></div></div>
         </div>
-        <div><div class="q-label">Q3 · Jul–Sep</div>
-          <div class="roadmap-item"><div class="ri-title">ONDC Buyer – Uber</div><div class="ri-team">Integrations</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
+        <div><div class="q-label">Q3 · Jul-Sep</div>
+          <div class="roadmap-item"><div class="ri-title">ONDC Buyer - Uber</div><div class="ri-team">Integrations</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item"><div class="ri-title">XpressBees Integration</div><div class="ri-team">Infra</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item"><div class="ri-title">AI Dispatch Engine</div><div class="ri-team">AI / Backend</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item"><div class="ri-title">Bulk Onboarding (Import)</div><div class="ri-team">Backend + Product</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
         </div>
-        <div><div class="q-label">Q4 · Oct–Dec</div>
+        <div><div class="q-label">Q4 · Oct-Dec</div>
           <div class="roadmap-item"><div class="ri-title">Multi-client Analytics</div><div class="ri-team">Data Team</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item"><div class="ri-title">Predictive Dispatch</div><div class="ri-team">AI Team</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
           <div class="roadmap-item"><div class="ri-title">Control X Full Release</div><div class="ri-team">All Teams</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
         </div>
       </div>
+      -->
     </section>
 
     <!-- ===== SCORES ===== -->
     <section id="sec-scores" class="section">
+      <!-- COMING SOON — original scores content preserved below in comments -->
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:420px;text-align:center;padding:48px 24px">
+        <div style="font-size:52px;margin-bottom:20px">📊</div>
+        <div style="font-family:var(--serif);font-size:32px;margin-bottom:10px;color:var(--text)">Coming Soon</div>
+        <div style="font-size:14px;color:var(--text3);max-width:400px;line-height:1.7">Team performance scores and velocity metrics are being configured. This section will show sprint velocity, delivery scores, and quality metrics per pod.</div>
+      </div>
+
+      <!--
+      ORIGINAL SCORES — uncomment to restore
       <div style="position:relative;min-height:500px">
         <div style="filter:blur(5px);pointer-events:none;user-select:none">
           <div class="section-head"><h2>Team Scores & Performance</h2><p>Sprint velocity, quality, and delivery metrics</p></div>
           <div class="score-grid">
-            <div class="score-card"><div class="score-team">⚙️ Backend Core</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">41</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--amber)">2.4%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--accent)">88</span></div></div>
-            <div class="score-card"><div class="score-team">📱 App / Frontend</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">28</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">1.2%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">92</span></div></div>
-            <div class="score-card"><div class="score-team">🎨 Design & Marketing</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--amber)">19</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">0.3%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">96</span></div></div>
+            <div class="score-card"><div class="score-team">Backend Core</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">41</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--amber)">2.4%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--accent)">88</span></div></div>
+            <div class="score-card"><div class="score-team">App / Frontend</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">28</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">1.2%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">92</span></div></div>
+            <div class="score-card"><div class="score-team">Design & Marketing</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--amber)">19</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">0.3%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">96</span></div></div>
           </div>
         </div>
         <div class="locked-overlay" id="score-lock">
-          <div style="font-size:36px">🔒</div>
+          <div style="font-size:36px">lock</div>
           <div style="font-family:var(--serif);font-size:20px">Restricted Access</div>
           <div style="color:var(--text3);font-size:13px">Enter 4-digit PIN to view performance data</div>
-          <input type="password" class="pin-input" id="pin-input" placeholder="• • • •" maxlength="4" oninput="checkPin(this.value)">
+          <input type="password" class="pin-input" id="pin-input" placeholder="dots" maxlength="4" oninput="checkPin(this.value)">
           <div id="pin-error" style="color:var(--red);font-size:12px;display:none">Incorrect PIN</div>
-          <div style="font-size:11px;color:var(--text3)">Demo PIN: <strong style="color:var(--text2)">1234</strong></div>
+          <div style="font-size:11px;color:var(--text3)">Demo PIN: 1234</div>
         </div>
       </div>
+      -->
     </section>
 
     <!-- ===== SETTINGS ===== -->
@@ -709,7 +783,21 @@
   </div>
 </div>
 
-<!-- LOGIN MODAL -->
+<!-- RELEASE DETAIL MODAL -->
+<div class="modal-overlay" id="release-modal">
+  <div class="modal" style="width:580px">
+    <button class="modal-close" onclick="closeModal('release-modal')">✕</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <span id="rel-modal-dot" style="width:10px;height:10px;border-radius:50%;flex-shrink:0"></span>
+      <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase" id="rel-modal-badge-text">Released</div>
+    </div>
+    <div class="modal-title" id="rel-modal-title">Sprint Release</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px" id="rel-modal-date"></div>
+    <div class="divider"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">Items in this release</div>
+    <div id="rel-modal-items" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="login-modal">
   <div class="modal" style="width:360px">
     <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
@@ -813,58 +901,69 @@ const TEAMS_FROM_JIRA = [
   },
 ];
 
-// Sprint data from live Jira pull
+// Sprint data — descriptions/attachments populated from live Jira fetch for known issues
+// When Worker syncs live, ALL fields get populated automatically
 const SPRINT_DATA = [
-  {key:'AB-241',summary:'EK Bharat | COD Flow | Check Status | Incorrect message after QR payment',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug'},
-  {key:'AB-242',summary:'AD | Agency | COD Settlement | Unpaid COD records not displaying',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug'},
-  {key:'AB-240',summary:'AD | COD Flow | Check Status UI | Clicking status moves to next step',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug'},
-  {key:'AB-176',summary:'Customer App Onboarding Flow – UI/UX Design in Figma',status:'In Progress',priority:'High',assignee:'dinesh',due:'2026-05-23',type:'Story'},
-  {key:'AB-230',summary:'The Loggi Sight Logo Creation',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task'},
-  {key:'AB-239',summary:'AD | Agency/Master Agency | Daily Deployment | Unable to configure',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug'},
-  {key:'AB-237',summary:'Wallet Screen - Need to add customer order id in the list',status:'In Progress',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Task'},
-  {key:'AB-236',summary:'Swiggy Instamart - Change Support Reasons',status:'Code Review',priority:'Highest',assignee:'Chinna Mani',due:null,type:'Task'},
-  {key:'AB-234',summary:'Agency ZOYA Web Client – UI Enhancement (Angular)',status:'To Do',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Story'},
-  {key:'AB-104',summary:'Rider Matrix API Frontend Integration',status:'Back To Dev',priority:'Medium',assignee:'Parthi',due:null,type:'Story'},
-  {key:'AB-238',summary:'AD | Reports | Rider Report | Duplicate rider names displayed',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug'},
-  {key:'AB-229',summary:'Design 3 Infographic Creatives for TQIS',status:'Done',priority:'Highest',assignee:'Pravin',due:'2026-05-15',type:'Task'},
-  {key:'AB-233',summary:'TQIS Website – Clubs & Guiding Statements Page Layout',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-15',type:'Task'},
-  {key:'AB-214',summary:'Elefant Pagination in scheduled order',status:'READY FOR TESTING',priority:'Highest',assignee:'aravind',due:'2026-05-13',type:'Story'},
-  {key:'AB-235',summary:'Ditto Mart - Buyer Configuration support',status:'In Progress',priority:'Medium',assignee:'mani',due:null,type:'Task'},
-  {key:'AB-212',summary:'Customer Config',status:'Back To Dev',priority:'High',assignee:'Sailavasan',due:'2026-05-07',type:'Story'},
-  {key:'AB-24', summary:'Zoya Rider Support WhatsApp Bot',status:'Code Review',priority:'High',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Story'},
-  {key:'ADL-2489',summary:'Zoya - Database Integration & Live Dashboard',status:'To Do',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-04-01',type:'Story'},
-  {key:'AB-232',summary:'Agency Onboarding Complete Flow – Figma Design v2',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-18',type:'Story'},
-  {key:'AB-231',summary:'Loggi Sight App Store / Play Store assets',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-15',type:'Task'},
-  {key:'AB-219',summary:'UI Upgradation for Logisight Rider Dashboard',status:'Done',priority:'Medium',assignee:'dinesh',due:null,type:'Story'},
-  {key:'AB-175',summary:'Customer Onboarding & Configuration Flow – UI/UX',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Story'},
-  {key:'AB-196',summary:'Delivery Staff COD Limit Based on Earnings',status:'In Progress',priority:'Medium',assignee:'Karthik K',due:'2026-05-14',type:'Story'},
-  {key:'AB-140',summary:'SEO – Daily Backlink Building',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-31',type:'Task'},
-  {key:'AB-228',summary:'TQIS – Mandatory Public Disclosure Page',status:'In Progress',priority:'Medium',assignee:'Vijayalavan T',due:'2026-05-14',type:'Task'},
-  {key:'AB-203',summary:'WheelEye Integration Implementation',status:'In Progress',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-13',type:'Story'},
-  {key:'AB-186',summary:'Separate Cron Jobs from EK-Bharat Backend',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-11',type:'Task'},
-  {key:'AB-207',summary:'Brozo 3PL Delivery Status API Hit Twice',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-12',type:'Bug'},
-  {key:'AB-218',summary:'App.Adloggs Master – List View & UI Enhancement',status:'In Progress',priority:'High',assignee:'Vijayalavan T',due:null,type:'Story'},
-  {key:'AB-226',summary:'Add Collection Item List Property in Scheduled Orders API',status:'In Progress',priority:'Highest',assignee:'mani',due:null,type:'Story'},
-  {key:'AB-225',summary:'ONDC Buyer - Uber',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Story'},
-  {key:'AB-33', summary:'Implement Daily LM Target Tracking System',status:'under testing',priority:'Highest',assignee:'mani',due:null,type:'Story'},
-  {key:'AB-183',summary:'Need to Add platform fees in P&L',status:'Done',priority:'Highest',assignee:'mani',due:'2026-05-11',type:'Task'},
-  {key:'AB-93', summary:'U30-Based Daily Incentive & Penalty (KFC & Pizza Hut)',status:'Done',priority:'High',assignee:'mani',due:'2026-04-17',type:'Story'},
-  {key:'AB-199',summary:'XpressBees Integration Implementation',status:'To Do',priority:'High',assignee:'Karthik K',due:null,type:'Story'},
-  {key:'AB-179',summary:'Logic change from pickup to assignment time',status:'In Progress',priority:'Highest',assignee:'Ranjith',due:'2026-05-13',type:'Task'},
-  {key:'AB-215',summary:'Session Management for Loggi AI',status:'Backlog',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Task'},
-  {key:'AB-216',summary:'Remove default maximum value in business config',status:'Done',priority:'Medium',assignee:'Raja',due:'2026-05-13',type:'Task'},
-  {key:'AB-211',summary:'Update Duplicate Order Validation Logic for Elefant',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task'},
-  {key:'AB-210',summary:'Implement New Report in CRM - Orbit',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task'},
-  {key:'AB-220',summary:'EK Bharat App | Rider Incentive | Home Page | View Card',status:'Backlog',priority:'Medium',assignee:'aravind',due:null,type:'Story'},
-  {key:'AB-208',summary:'Design for Suggested Route Map Popup for Auto Assign',status:'Done',priority:'Highest',assignee:'dinesh',due:'2026-05-12',type:'Task'},
-  {key:'AB-177',summary:'Monthly Blog Content Creation for Adloggs – 4 Blogs',status:'Done',priority:'Highest',assignee:'Pravin',due:null,type:'Task'},
-  {key:'AB-217',summary:'dp_day_time_wise table cron running in main',status:'Backlog',priority:'Medium',assignee:'Venkateswaran E',due:'2026-05-13',type:'Bug'},
-  {key:'AB-193',summary:'Prevent Scheduled Orders Screen Refresh on Back Nav',status:'READY FOR TESTING',priority:'Highest',assignee:'Parthi',due:'2026-05-12',type:'Story'},
-  {key:'AB-213',summary:'Schedule order API - Sort, Swap and Rider Capacity',status:'In Progress',priority:'Highest',assignee:'Parthi',due:'2026-05-13',type:'Story'},
-  {key:'AB-32', summary:'Agency Level Customer Wallet',status:'Hold',priority:'High',assignee:'mani',due:'2026-04-07',type:'Story'},
-  {key:'AB-190',summary:'Zoho invoice and order report mismatch',status:'In Progress',priority:'Medium',assignee:'Raja',due:'2026-05-11',type:'Task'},
-  {key:'AB-224',summary:'Adloggs – Ek Bharat MOU Word Document Creation',status:'Done',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Task'},
-  {key:'AB-227',summary:'AD | Master Agency | Customer Config | Order Assignment',status:'Backlog',priority:'Medium',assignee:'Sailavasan',due:null,type:'Bug'},
+  {key:'AB-241',summary:'EK Bharat | COD Flow | Check Status | Incorrect message after QR payment',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug',
+   description:'In the COD Flow, when a user scans the QR code and completes the payment, clicking the Check Status button incorrectly displays "Payment not yet received, please try again." even though the payment has already been completed.',
+   attachments:[{filename:'image-20260516-080811.png',mimeType:'image/png',content:'https://adloggss.atlassian.net/browse/AB-241'},{filename:'WhatsApp Video 2026-05-16.mp4',mimeType:'video/mp4',content:'https://adloggss.atlassian.net/browse/AB-241'}],comments:[]},
+  {key:'AB-242',summary:'AD | Agency | COD Settlement | Unpaid COD records not displaying',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',
+   description:'In the COD Settlement page under AD | Agency, unpaid COD records are not appearing as expected. Steps: Login as Agency → Navigate to COD Settlement page → Verify list of COD records. Unpaid COD records are not displayed.',
+   attachments:[{filename:'20260516-0803-32.mp4',mimeType:'video/mp4',content:'https://adloggss.atlassian.net/browse/AB-242'}],comments:[]},
+  {key:'AB-240',summary:'AD | COD Flow | Check Status UI | Clicking status moves to next step',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug',
+   description:'In the COD Flow, clicking the Check Status button causes the process to move to the next stage without showing any response. Expected: display a success or failure message before proceeding.',
+   attachments:[],comments:[]},
+  {key:'AB-239',summary:'AD | Agency/Master Agency | Daily Deployment | Unable to configure',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',
+   description:'Unable to change the Start/End Time in Agency/Master Agency Daily Deployment configuration.',
+   attachments:[{filename:'20260516-0645-19.mp4',mimeType:'video/mp4',content:'https://adloggss.atlassian.net/browse/AB-239'}],comments:[]},
+  {key:'AB-238',summary:'AD | Reports | Rider Report | Duplicate rider names displayed',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',
+   description:'In the Rider Report under AD | Reports, searching by Rider Name or Phone Number displays duplicate entries for the same rider. Each rider should be displayed only once.',
+   attachments:[{filename:'image-20260515-110530.png',mimeType:'image/png',content:'https://adloggss.atlassian.net/browse/AB-238'}],comments:[]},
+  {key:'AB-176',summary:'Customer App Onboarding Flow – UI/UX Design in Figma',status:'In Progress',priority:'High',assignee:'dinesh',due:'2026-05-23',type:'Story',description:'Design the complete customer app onboarding flow in Figma including all screens and interactions.',attachments:[],comments:[]},
+  {key:'AB-230',summary:'The Loggi Sight Logo Creation',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Create the official Loggi Sight logo.',attachments:[],comments:[]},
+  {key:'AB-237',summary:'Wallet Screen - Need to add customer order id in the list',status:'In Progress',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Task',description:'Add customer order ID column to the wallet screen list view.',attachments:[],comments:[]},
+  {key:'AB-236',summary:'Swiggy Instamart - Change Support Reasons',status:'Code Review',priority:'Highest',assignee:'Chinna Mani',due:null,type:'Task',description:'Update support reason codes for Swiggy Instamart integration.',attachments:[],comments:[]},
+  {key:'AB-234',summary:'Agency ZOYA Web Client – UI Enhancement (Angular)',status:'To Do',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Story',description:'UI enhancements for the Agency ZOYA web client built in Angular.',attachments:[],comments:[]},
+  {key:'AB-104',summary:'Rider Matrix API Frontend Integration',status:'Back To Dev',priority:'Medium',assignee:'Parthi',due:null,type:'Story',description:'Integrate the Rider Matrix API with the frontend dashboard.',attachments:[],comments:[]},
+  {key:'AB-229',summary:'Design 3 Infographic Creatives for TQIS',status:'Done',priority:'Highest',assignee:'Pravin',due:'2026-05-15',type:'Task',description:'Design 3 infographic creatives for The Quest International School.',attachments:[],comments:[]},
+  {key:'AB-233',summary:'TQIS Website – Clubs & Guiding Statements Page Layout',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-15',type:'Task',description:'Design and implement the Clubs & Guiding Statements page layout for TQIS website.',attachments:[],comments:[]},
+  {key:'AB-214',summary:'Elefant Pagination in scheduled order',status:'READY FOR TESTING',priority:'Highest',assignee:'aravind',due:'2026-05-13',type:'Story',description:'Implement pagination for Elefant orders in the scheduled order screen.',attachments:[],comments:[]},
+  {key:'AB-235',summary:'Ditto Mart - Buyer Configuration support',status:'In Progress',priority:'Medium',assignee:'mani',due:null,type:'Task',description:'Add Ditto Mart buyer configuration support to the platform.',attachments:[],comments:[]},
+  {key:'AB-212',summary:'Customer Config',status:'Back To Dev',priority:'High',assignee:'Sailavasan',due:'2026-05-07',type:'Story',description:'Customer configuration module development.',attachments:[],comments:[]},
+  {key:'AB-24', summary:'Zoya Rider Support WhatsApp Bot',status:'Code Review',priority:'High',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Story',description:'Build a WhatsApp bot for Zoya rider support queries.',attachments:[],comments:[]},
+  {key:'ADL-2489',summary:'Zoya - Database Integration & Live Dashboard',status:'To Do',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-04-01',type:'Story',description:'Integrate Zoya with the database and create a live dashboard.',attachments:[],comments:[]},
+  {key:'AB-232',summary:'Agency Onboarding Complete Flow – Figma Design v2',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-18',type:'Story',description:'Version 2 of the complete agency onboarding flow design in Figma.',attachments:[],comments:[]},
+  {key:'AB-231',summary:'Loggi Sight App Store / Play Store assets',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-15',type:'Task',description:'Design and prepare all App Store and Play Store assets for Loggi Sight.',attachments:[],comments:[]},
+  {key:'AB-219',summary:'UI Upgradation for Logisight Rider Dashboard',status:'Done',priority:'Medium',assignee:'dinesh',due:null,type:'Story',description:'UI upgrades for the Logisight rider dashboard and order detection screens.',attachments:[],comments:[]},
+  {key:'AB-175',summary:'Customer Onboarding & Configuration Flow – UI/UX',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Story',description:'Complete UI/UX design for customer onboarding and configuration flow.',attachments:[],comments:[]},
+  {key:'AB-196',summary:'Delivery Staff COD Limit Based on Earnings',status:'In Progress',priority:'Medium',assignee:'Karthik K',due:'2026-05-14',type:'Story',description:'Implement COD limit logic for delivery staff based on their earnings history.',attachments:[],comments:[]},
+  {key:'AB-140',summary:'SEO – Daily Backlink Building',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-31',type:'Task',description:'Ongoing daily backlink building activity for Adloggs SEO.',attachments:[],comments:[]},
+  {key:'AB-228',summary:'TQIS – Mandatory Public Disclosure Page',status:'In Progress',priority:'Medium',assignee:'Vijayalavan T',due:'2026-05-14',type:'Task',description:'Build the mandatory public disclosure page for The Quest International School website.',attachments:[],comments:[]},
+  {key:'AB-203',summary:'WheelEye Integration Implementation',status:'In Progress',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-13',type:'Story',description:'Implement WheelEye GPS tracking integration.',attachments:[],comments:[]},
+  {key:'AB-186',summary:'Separate Cron Jobs from EK-Bharat Backend',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-11',type:'Task',description:'Separate all cron jobs from the EK-Bharat backend repository into a standalone service.',attachments:[],comments:[]},
+  {key:'AB-207',summary:'Brozo 3PL Delivery Status API Hit Twice',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-12',type:'Bug',description:'Fixed bug where Brozo 3PL delivery status API was being called twice, causing double charges.',attachments:[],comments:[]},
+  {key:'AB-218',summary:'App.Adloggs Master – List View & UI Enhancement',status:'In Progress',priority:'High',assignee:'Vijayalavan T',due:null,type:'Story',description:'Enhance the list view and overall UI for App.Adloggs Master.',attachments:[],comments:[]},
+  {key:'AB-226',summary:'Add Collection Item List Property in Scheduled Orders API',status:'In Progress',priority:'Highest',assignee:'mani',due:null,type:'Story',description:'Add collection item list property to the scheduled orders API response.',attachments:[],comments:[]},
+  {key:'AB-225',summary:'ONDC Buyer - Uber',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Story',description:'ONDC buyer integration with Uber for last-mile delivery.',attachments:[],comments:[]},
+  {key:'AB-33', summary:'Implement Daily LM Target Tracking System',status:'under testing',priority:'Highest',assignee:'mani',due:null,type:'Story',description:'Build a daily last-mile target tracking system with KPIs per rider.',attachments:[],comments:[]},
+  {key:'AB-183',summary:'Need to Add platform fees in P&L',status:'Done',priority:'Highest',assignee:'mani',due:'2026-05-11',type:'Task',description:'Add platform fees as a line item in the P&L report.',attachments:[],comments:[]},
+  {key:'AB-93', summary:'U30-Based Daily Incentive & Penalty (KFC & Pizza Hut)',status:'Done',priority:'High',assignee:'mani',due:'2026-04-17',type:'Story',description:'Implement U30-based daily incentive and penalty calculation for KFC and Pizza Hut delivery partners.',attachments:[],comments:[]},
+  {key:'AB-199',summary:'XpressBees Integration Implementation',status:'To Do',priority:'High',assignee:'Karthik K',due:null,type:'Story',description:'Implement XpressBees 3PL integration for parcel delivery.',attachments:[],comments:[]},
+  {key:'AB-179',summary:'Logic change from pickup to assignment time',status:'In Progress',priority:'Highest',assignee:'Ranjith',due:'2026-05-13',type:'Task',description:'Change the time tracking logic from pickup time to assignment time for SLA calculations.',attachments:[],comments:[]},
+  {key:'AB-215',summary:'Session Management for Loggi AI',status:'Backlog',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Task',description:'Implement session management for Loggi AI conversations.',attachments:[],comments:[]},
+  {key:'AB-216',summary:'Remove default maximum value in business config',status:'Done',priority:'Medium',assignee:'Raja',due:'2026-05-13',type:'Task',description:'Remove the hardcoded default maximum value from business configuration.',attachments:[],comments:[]},
+  {key:'AB-211',summary:'Update Duplicate Order Validation Logic for Elefant',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task',description:'Update the duplicate order validation logic specifically for Elefant orders.',attachments:[],comments:[]},
+  {key:'AB-210',summary:'Implement New Report in CRM - Orbit',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task',description:'Implement new report type in the CRM Orbit module.',attachments:[],comments:[]},
+  {key:'AB-220',summary:'EK Bharat App | Rider Incentive | Home Page | View Card',status:'Backlog',priority:'Medium',assignee:'aravind',due:null,type:'Story',description:'Add rider incentive view card to the EK Bharat app home page.',attachments:[],comments:[]},
+  {key:'AB-208',summary:'Design for Suggested Route Map Popup for Auto Assign',status:'Done',priority:'Highest',assignee:'dinesh',due:'2026-05-12',type:'Task',description:'Design the suggested route map popup used in the auto-assign flow.',attachments:[],comments:[]},
+  {key:'AB-177',summary:'Monthly Blog Content Creation for Adloggs – 4 Blogs',status:'Done',priority:'Highest',assignee:'Pravin',due:null,type:'Task',description:'Create 4 monthly blog posts for Adloggs content marketing.',attachments:[],comments:[]},
+  {key:'AB-217',summary:'dp_day_time_wise table cron running in main',status:'Backlog',priority:'Medium',assignee:'Venkateswaran E',due:'2026-05-13',type:'Bug',description:'dp_day_time_wise table cron job is running in both main and analytics environments, causing duplicate processing.',attachments:[],comments:[]},
+  {key:'AB-193',summary:'Prevent Scheduled Orders Screen Refresh on Back Nav',status:'READY FOR TESTING',priority:'Highest',assignee:'Parthi',due:'2026-05-12',type:'Story',description:'Prevent the scheduled orders screen from refreshing when user navigates back.',attachments:[],comments:[]},
+  {key:'AB-213',summary:'Schedule order API - Sort, Swap and Rider Capacity',status:'In Progress',priority:'Highest',assignee:'Parthi',due:'2026-05-13',type:'Story',description:'Add sort, swap and rider capacity features to the schedule order API.',attachments:[],comments:[]},
+  {key:'AB-32', summary:'Agency Level Customer Wallet',status:'Hold',priority:'High',assignee:'mani',due:'2026-04-07',type:'Story',description:'Implement agency-level customer wallet functionality.',attachments:[],comments:[]},
+  {key:'AB-190',summary:'Zoho invoice and order report mismatch',status:'In Progress',priority:'Medium',assignee:'Raja',due:'2026-05-11',type:'Task',description:'Investigation and fix for the mismatch between Zoho invoice data and order reports.',attachments:[],comments:[]},
+  {key:'AB-224',summary:'Adloggs – Ek Bharat MOU Word Document Creation',status:'Done',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Task',description:'Create the MOU Word document for Adloggs and Ek Bharat partnership.',attachments:[],comments:[]},
+  {key:'AB-227',summary:'AD | Master Agency | Customer Config | Order Assignment',status:'Backlog',priority:'Medium',assignee:'Sailavasan',due:null,type:'Bug',description:'Customer config order assignment not working correctly under Master Agency.',attachments:[],comments:[]},
 ];
 
 const RELEASES_DATA = [
@@ -876,15 +975,16 @@ const RELEASES_DATA = [
 
 // Requirements loaded from the actual Google Sheet content
 const SHEET_REQUIREMENTS = [
-  {id:'REQ-001',title:'API Response changes — Shiprocket serviceability JSON to query params',desc:'Change serviceability response format for Shiprocket integration',by:'Priya',dept:'Product',date:'3 Apr 2026',priority:'High',status:'accepted',client:'Shiprocket',impact:'High',bizImpact:'Moderate'},
-  {id:'REQ-002',title:'Bulk Onboarding - Import Option',desc:'Bulk import for clients with multiple outlets to reduce manual onboarding time',by:'Swathi Iyyappan',dept:'Business',date:'6 Apr 2026',priority:'Critical',status:'accepted',client:'Multiple outlets',impact:'Very High',bizImpact:'—'},
-  {id:'REQ-003',title:'Shopify Integration',desc:'Shopify integration is a blocker for new sign-ups using Shopify',by:'Swathi Iyyappan',dept:'Business',date:'7 Apr 2026',priority:'Critical',status:'accepted',client:'Shopify clients',impact:'High',bizImpact:'0'},
-  {id:'REQ-004',title:'Rider payment source visibility in Weekly Payout Report',desc:'Need payment source (Mygigster vs other) per rider on weekly report to reduce reconciliation errors',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'new',client:'—',impact:'High',bizImpact:'Manual reconciliation cost'},
-  {id:'REQ-005',title:'Payment Reference number (UTR) on Rider Payout Report',desc:'Capture UTR for all rider payments from Mygigster or Cashfree against rider on payout report',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'Medium',status:'new',client:'—',impact:'High',bizImpact:'No revenue impact but reduces Ops dependency'},
-  {id:'REQ-006',title:'Dev Environment for Control X',desc:'Test account for Control X even when under development for demos',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'Internal',impact:'Very High',bizImpact:'0'},
-  {id:'REQ-007',title:'Add order price in Book Order (for Tip feature)',desc:'Add order price during manual order creation to enable tip functionality',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'—',impact:'High',bizImpact:'0'},
-  {id:'REQ-008',title:'Filter option to download Issue Orders from Basic Order Report',desc:'Download-only filter for issue orders in Basic Order Report to proactively fix fraud/3PL issues',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'review',client:'—',impact:'High',bizImpact:'Fraud reduction + cost savings'},
-  {id:'REQ-009',title:'COD Remittance at Store Level — Order-wise option',desc:'Dedicated rider deployment at Wellness Forever for COD orders; order-wise visibility at store level',by:'Bharat',dept:'Business',date:'11 May 2026',priority:'High',status:'new',client:'Wellness Forever',impact:'Medium',bizImpact:'55% wallet share in COD'},
+  {id:'REQ-001',title:'API Response changes — Shiprocket serviceability JSON to query params',desc:'Change serviceability response format for Shiprocket — from JSON to query params in the URL.',by:'Priya',dept:'Product',date:'3 Apr 2026',priority:'High',status:'accepted',client:'Shiprocket',impact:'High',bizImpact:'Moderate',
+   attachments:[{filename:'Shiprocket Reference Doc',url:'https://drive.google.com/open?id=12ipFwxx2IRJEgSVakUy9yxr4DRi-FrhJ'}]},
+  {id:'REQ-002',title:'Bulk Onboarding - Import Option',desc:'Bulk import for clients with multiple outlets to reduce manual onboarding time.',by:'Swathi Iyyappan',dept:'Business',date:'6 Apr 2026',priority:'Critical',status:'accepted',client:'Multiple outlets',impact:'Very High',bizImpact:'—',attachments:[]},
+  {id:'REQ-003',title:'Shopify Integration',desc:'Shopify integration is a blocker for new sign-ups using Shopify.',by:'Swathi Iyyappan',dept:'Business',date:'7 Apr 2026',priority:'Critical',status:'accepted',client:'Shopify clients',impact:'High',bizImpact:'0',attachments:[]},
+  {id:'REQ-004',title:'Rider payment source visibility in Weekly Payout Report',desc:'Need payment source (Mygigster vs other) per rider on weekly report to reduce reconciliation errors.',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'new',client:'—',impact:'High',bizImpact:'No revenue impact — saves manual reconciliation time',attachments:[]},
+  {id:'REQ-005',title:'Payment Reference number (UTR) on Rider Payout Report',desc:'Capture UTR for all rider payments from Mygigster or Cashfree against each rider on the payout report.',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'Medium',status:'new',client:'—',impact:'High',bizImpact:'No revenue impact — reduces Ops dependency on Finance',attachments:[]},
+  {id:'REQ-006',title:'Dev Environment for Control X',desc:'Test account for Control X even when under development, for demos.',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'Internal',impact:'Very High',bizImpact:'0',attachments:[]},
+  {id:'REQ-007',title:'Add order price in Book Order (for Tip feature)',desc:'Add order price during manual order creation to enable tip functionality.',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'—',impact:'High',bizImpact:'0',attachments:[]},
+  {id:'REQ-008',title:'Filter option to download Issue Orders from Basic Order Report',desc:'Download-only filter for issue orders in Basic Order Report to proactively fix fraud/3PL issues.',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'review',client:'—',impact:'High',bizImpact:'Fraud reduction + cost savings',attachments:[]},
+  {id:'REQ-009',title:'COD Remittance at Store Level — Order-wise option',desc:'Dedicated rider deployment at Wellness Forever for COD orders; order-wise visibility at store level.',by:'Bharat',dept:'Business',date:'11 May 2026',priority:'High',status:'new',client:'Wellness Forever',impact:'Medium',bizImpact:'55% wallet share in COD',attachments:[]},
 ];
 
 // ================================================================
@@ -895,7 +995,7 @@ const STATE = {
   requirements: JSON.parse(JSON.stringify(SHEET_REQUIREMENTS)),
   lastJiraSync: new Date(),
   lastSheetSync: null,
-  scriptUrl: localStorage.getItem('adloggs_script_url') || '',
+  scriptUrl: localStorage.getItem('adloggs_script_url') || 'https://script.google.com/macros/s/AKfycbyCT1XbGL8254syhjw3TFExuZ0F9-uMC3Z0-RW_eZoRjMa_DS5A6r0R0Zq828n-dFdX/exec',
   addingToTeam: null,
   timers: {},
   jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || 'https://jira-proxy.priyadharshini.workers.dev',
@@ -1035,8 +1135,213 @@ function moveMemberToShared(fromTeamId, memberName, e) {
 }
 
 // ================================================================
-// SPRINT — with live name, countdown, filters, pagination
+// VIEW SWITCHER — Board / List
 // ================================================================
+let CURRENT_VIEW = 'kanban';
+
+function switchView(view) {
+  CURRENT_VIEW = view;
+  document.getElementById('kanban-view').style.display = view === 'kanban' ? '' : 'none';
+  document.getElementById('list-view').style.display   = view === 'list'   ? '' : 'none';
+
+  const kBtn = document.getElementById('view-kanban-btn');
+  const lBtn = document.getElementById('view-list-btn');
+  if (view === 'kanban') {
+    kBtn.style.background = 'var(--accent)'; kBtn.style.color = '#fff';
+    lBtn.style.background = 'transparent';   lBtn.style.color = 'var(--text2)';
+    // pagination only relevant on board view
+    ['page-prev','page-next','page-prev-b','page-next-b','page-numbers','page-info','page-info-bottom'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.style.display = '';
+    });
+  } else {
+    lBtn.style.background = 'var(--accent)'; lBtn.style.color = '#fff';
+    kBtn.style.background = 'transparent';   kBtn.style.color = 'var(--text2)';
+    renderListView();
+  }
+}
+
+// List view pagination state
+const LIST_FILTER = { page: 1, perPage: 15 };
+
+function listChangePage(dir) {
+  const filtered = getFilteredIssues();
+  const total = Math.max(1, Math.ceil(filtered.length / LIST_FILTER.perPage));
+  LIST_FILTER.page = Math.max(1, Math.min(total, LIST_FILTER.page + dir));
+  renderListView();
+}
+
+function listGoToPage(p) { LIST_FILTER.page = p; renderListView(); }
+
+function renderListView() {
+  const filtered = getFilteredIssues();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / LIST_FILTER.perPage));
+  LIST_FILTER.page = Math.min(LIST_FILTER.page, totalPages);
+  const start = (LIST_FILTER.page - 1) * LIST_FILTER.perPage;
+  const pageItems = filtered.slice(start, start + LIST_FILTER.perPage);
+
+  const tbody = document.getElementById('list-tbody');
+  tbody.innerHTML = '';
+
+  const pageText = totalPages > 1 ? `Page ${LIST_FILTER.page} of ${totalPages}` : '';
+  const countText = `${filtered.length} issue${filtered.length !== 1 ? 's' : ''}${filtered.length !== SPRINT_DATA.length ? ' (filtered)' : ''}`;
+  document.getElementById('list-count').textContent = countText;
+  ['list-page-info','list-page-info-b'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = pageText; });
+  ['list-prev','list-prev-b'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = LIST_FILTER.page <= 1; });
+  ['list-next','list-next-b'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = LIST_FILTER.page >= totalPages; });
+
+  // Page number buttons
+  ['list-page-numbers','list-page-numbers-b'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.innerHTML = '';
+    if (totalPages > 1) {
+      for (let p = 1; p <= totalPages; p++) {
+        const active = p === LIST_FILTER.page;
+        el.innerHTML += `<button onclick="listGoToPage(${p})" class="btn btn-ghost btn-sm" style="${active ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}">${p}</button>`;
+      }
+    }
+  });
+
+  pageItems.forEach((issue, idx) => {
+    const globalIdx = start + idx;
+    const team = getTeamForAssignee(issue.assignee);
+    const isEven = idx % 2 === 0;
+    const rowBg = isEven ? 'var(--surface)' : '#fafbfc';
+
+    // Description
+    const desc = (issue.description || '—')
+      .replace(/\*\*|__|~~|\[.*?\]\(.*?\)|!\[.*?\]\(.*?\)|blob:https?:\/\/\S+/g, '')
+      .replace(/[\r\n]+/g, ' ').trim();
+    const descDisplay = desc.length > 120 ? desc.slice(0, 120) + '…' : desc;
+
+    // Documents
+    const attachments = issue.attachments || [];
+    const docsHtml = attachments.length
+      ? attachments.map(a => {
+          const icon = a.mimeType?.startsWith('image') ? '🖼' : a.mimeType?.startsWith('video') ? '🎥' : '📎';
+          const short = a.filename.length > 20 ? a.filename.slice(0, 17) + '…' : a.filename;
+          return `<a href="${esc(a.content)}" target="_blank" title="${esc(a.filename)}"
+            style="display:flex;align-items:center;gap:3px;color:var(--accent);text-decoration:none;font-size:11px;margin-bottom:3px;white-space:nowrap">
+            ${icon} ${esc(short)}
+          </a>`;
+        }).join('')
+      : '<span style="color:var(--text3);font-size:11px">—</span>';
+
+    // Comments
+    const comments = issue.comments || [];
+    const commentsHtml = comments.length
+      ? comments.map(c => `
+          <div style="padding:3px 0;border-bottom:1px solid var(--border)">
+            <span style="font-weight:600;color:var(--text2);font-size:11px">${esc(c.author)}</span>
+            <span style="color:var(--text3);font-size:10px;margin-left:4px">${c.created}</span>
+            <div style="color:var(--text);font-size:11px;margin-top:1px">${esc((c.body||'').slice(0,80))}${(c.body||'').length>80?'…':''}</div>
+          </div>`).join('')
+      : '<span style="color:var(--text3);font-size:11px">—</span>';
+
+    tbody.innerHTML += `
+      <tr style="border-bottom:1px solid var(--border);background:${rowBg}"
+          onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='${rowBg}'">
+        <td style="padding:10px 12px;text-align:center;color:var(--text3);font-weight:500;font-size:12px;position:sticky;left:0;background:${rowBg};z-index:1">${globalIdx + 1}</td>
+        <td style="padding:10px 12px;position:sticky;left:40px;background:${rowBg};z-index:1">
+          <a href="https://adloggss.atlassian.net/browse/${esc(issue.key)}" target="_blank"
+             style="color:var(--accent);font-weight:700;font-size:11px;text-decoration:none;white-space:nowrap">${esc(issue.key)}</a>
+          <div style="margin-top:3px"><span class="tag t-${typeTagCls(issue.type)}" style="font-size:10px">${esc(issue.type||'Task')}</span></div>
+        </td>
+        <td style="padding:10px 12px;font-weight:500;color:var(--text);line-height:1.4">${esc(issue.summary)}</td>
+        <td style="padding:10px 12px;color:var(--text2);line-height:1.5;font-size:11px">${esc(descDisplay)}</td>
+        <td style="padding:10px 12px">${docsHtml}</td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">
+              ${(issue.assignee||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+            </div>
+            <span style="font-size:12px">${esc(issue.assignee||'—')}</span>
+          </div>
+        </td>
+        <td style="padding:10px 12px">${teamBadge(team)}</td>
+        <td style="padding:10px 12px">${statusBadge(issue.status)}</td>
+        <td style="padding:10px 12px">${commentsHtml}</td>
+      </tr>`;
+  });
+
+  if (!pageItems.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="padding:32px;text-align:center;color:var(--text3)">No issues match the current filters</td></tr>`;
+  }
+}
+
+const STATUS_COLORS = {
+  'Done':               { bg:'#d1fae5', color:'#065f46' },
+  'In Progress':        { bg:'#dbeafe', color:'#1e40af' },
+  'Code Review':        { bg:'#fef3c7', color:'#92400e' },
+  'READY FOR TESTING':  { bg:'#fef3c7', color:'#92400e' },
+  'under testing':      { bg:'#fef3c7', color:'#92400e' },
+  'Back To Dev':        { bg:'#fee2e2', color:'#991b1b' },
+  'Hold':               { bg:'#fee2e2', color:'#991b1b' },
+  'To Do':              { bg:'#f1f5f9', color:'#475569' },
+  'Backlog':            { bg:'#f1f5f9', color:'#475569' },
+};
+
+function statusBadge(status) {
+  const c = STATUS_COLORS[status] || { bg:'#f1f5f9', color:'#64748b' };
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;background:${c.bg};color:${c.color};white-space:nowrap">${esc(status)}</span>`;
+}
+
+function teamBadge(team) {
+  const colors = {
+    Pinnacle:         { bg:'#ede9fe', color:'#5b21b6' },
+    Momentum:         { bg:'#d1fae5', color:'#065f46' },
+    Catalyst:         { bg:'#fef3c7', color:'#92400e' },
+    'AI Intelligence':{ bg:'#dbeafe', color:'#1e40af' },
+    Shared:           { bg:'#f1f5f9', color:'#475569' },
+  };
+  const c = colors[team] || { bg:'#f1f5f9', color:'#64748b' };
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;background:${c.bg};color:${c.color};white-space:nowrap">${esc(team)}</span>`;
+}
+
+
+
+// ================================================================
+// EXPORT TO EXCEL
+// ================================================================
+function exportToExcel() {
+  const filtered = getFilteredIssues();
+  const sprintName = (STATE.sprintMeta || SPRINT_META).name;
+
+  // Build CSV content
+  const headers = ['S.No','Task ID','Task','Description','Documents','Assignee','Team','Status','Comments'];
+  const rows = filtered.map((issue, idx) => {
+    const desc = (issue.description || '')
+      .replace(/\*\*|__|~~|\[.*?\]\(.*?\)|!\[.*?\]\(.*?\)|blob:https?:\/\/\S+/g,'')
+      .replace(/[\r\n]+/g,' ').trim();
+    const docs = (issue.attachments||[]).map(a => a.filename).join(' | ');
+    const comments = (issue.comments||[]).map(c => `${c.author}: ${(c.body||'').replace(/[\r\n]+/g,' ').trim()}`).join(' | ');
+    const team = getTeamForAssignee(issue.assignee);
+    return [
+      idx + 1,
+      issue.key,
+      issue.summary,
+      desc,
+      docs || '—',
+      issue.assignee || '—',
+      team,
+      issue.status,
+      comments || '—',
+    ];
+  });
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(','))
+    .join('\n');
+
+  // Download
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // \uFEFF = BOM for Excel
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${sprintName.replace(/\s+/g,'-')}-issues.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Downloaded ${filtered.length} issues as Excel/CSV ✓`);
+}
 
 function statusToCol(s) {
   const l = (s||'').toLowerCase();
@@ -1244,7 +1549,8 @@ function renderFilteredBoard() {
     }
   }
 
-  document.getElementById('sprint-badge').textContent = SPRINT_DATA.length;
+  // If list view is active, refresh it too
+  if (CURRENT_VIEW === 'list') renderListView();
 }
 
 function goToPage(p) { FILTER.page = p; renderFilteredBoard(); }
@@ -1355,13 +1661,34 @@ async function syncSprint() {
             };
           }
           SPRINT_DATA.push({
-            key:      issue.key,
-            summary:  f.summary || '',
-            status:   f.status?.name || 'To Do',
-            priority: f.priority?.name || 'Medium',
-            assignee: f.assignee?.displayName || 'Unassigned',
-            due:      f.duedate || null,
-            type:     f.issuetype?.name || 'Task',
+            key:         issue.key,
+            summary:     f.summary || '',
+            status:      f.status?.name || 'To Do',
+            priority:    f.priority?.name || 'Medium',
+            assignee:    f.assignee?.displayName || 'Unassigned',
+            due:         f.duedate || null,
+            type:        f.issuetype?.name || 'Task',
+            // Rich fields from Jira
+            description: f.description
+              ? (typeof f.description === 'string'
+                  ? f.description
+                  : (f.description?.content || []).map(b =>
+                      (b.content||[]).map(t => t.text||'').join('')
+                    ).join('\n'))
+              : '',
+            attachments: (f.attachment || []).map(a => ({
+              filename: a.filename,
+              mimeType: a.mimeType,
+              content:  a.content,
+              size:     a.size,
+            })),
+            comments: (f.comment?.comments || []).map(c => ({
+              author:  c.author?.displayName || '?',
+              created: c.created ? new Date(c.created).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '',
+              body:    (c.body?.content || []).map(b =>
+                         (b.content||[]).map(t => t.text||'').join('')
+                       ).join('\n') || (typeof c.body === 'string' ? c.body : ''),
+            })),
           });
         });
 
@@ -1412,13 +1739,20 @@ function renderReleases() {
       const badgeCls = done ? 'rb-done' : 'rb-upcoming';
       const dateStr = r.releaseDate ? new Date(r.releaseDate).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'}) : 'TBD';
       const chips = (r.features||r.name?[r.name]:[]).map(f=>`<span class="chip">${esc(f)}</span>`).join('');
+      const rJson = JSON.stringify(r).replace(/"/g,'&quot;');
       tl.innerHTML += `
         <div class="rel-item">
           <div class="rel-dot ${dotCls}">${done?'✓':'→'}</div>
-          <div class="rel-body"${!done?' style="border-color:rgba(79,142,247,0.3)"':''}>
+          <div class="rel-body" onclick="openReleaseModal(${rJson})"
+               style="cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s${!done?';border-color:rgba(79,142,247,0.3)':''}"
+               onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='var(--accent)'"
+               onmouseout="this.style.boxShadow='';this.style.borderColor='${!done?'rgba(79,142,247,0.3)':'var(--border)'}'">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
               <div><div class="rel-version">${esc(r.name||r.version||'')}</div><div class="rel-date">${dateStr}</div></div>
-              <span class="rel-badge ${badgeCls}">${done?'Released':'Upcoming'}</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="rel-badge ${badgeCls}">${done?'Released':'Upcoming'}</span>
+                <span style="font-size:11px;color:var(--accent)">View items →</span>
+              </div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
           </div>
@@ -1446,9 +1780,38 @@ function renderReleases() {
   }
 }
 
-// ================================================================
-// REQUIREMENTS — from Google Sheet
-// ================================================================
+function openReleaseModal(r) {
+  const done = r.released;
+  document.getElementById('rel-modal-title').textContent = r.name || r.version || '';
+  document.getElementById('rel-modal-date').textContent = r.releaseDate
+    ? new Date(r.releaseDate).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'})
+    : 'Release date TBD';
+  const dot = document.getElementById('rel-modal-dot');
+  const badge = document.getElementById('rel-modal-badge-text');
+  if (done) {
+    dot.style.background = 'var(--green)';
+    badge.style.color = 'var(--green)';
+    badge.textContent = 'Released';
+  } else {
+    dot.style.background = 'var(--accent)';
+    badge.style.color = 'var(--accent)';
+    badge.textContent = 'Upcoming';
+  }
+
+  const items = document.getElementById('rel-modal-items');
+  const features = r.features || [];
+
+  if (!features.length) {
+    items.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0">No items listed for this release.</div>';
+  } else {
+    items.innerHTML = features.map((f, i) => `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:${i%2===0?'var(--surface2)':'var(--surface)'};border:1px solid var(--border);border-radius:7px">
+        <div style="width:22px;height:22px;border-radius:50%;background:${done?'#d1fae5':'#dbeafe'};color:${done?'#065f46':'#1e40af'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5">${esc(f)}</div>
+      </div>`).join('');
+  }
+  openModal('release-modal');
+}
 const STATUS_CYCLE = ['new','review','sprint','accepted','closed'];
 const STATUS_LABELS = {new:'🆕 New',review:'🔍 In Review',sprint:'🚀 In Sprint',accepted:'✅ Accepted',closed:'✓ Closed'};
 const PRI_CLS = {Critical:'t-bug',High:'t-bug',Medium:'t-feature',Low:'t-task'};
@@ -1462,28 +1825,33 @@ async function loadRequirementsFromSheet() {
   label.textContent = 'Loading...';
 
   try {
-    if (!STATE.scriptUrl) throw new Error('No Apps Script URL');
-    const url = `${STATE.scriptUrl}?action=read&sheetId=${SHEET_ID}&tab=Sheet1`;
-    const res = await fetch(url);
+    if (!STATE.scriptUrl) throw new Error('No Apps Script URL configured');
+
+    // Apps Script requires a simple GET with no custom headers
+    // Custom headers trigger a CORS preflight which Apps Script does not support
+    const url = `${STATE.scriptUrl}?action=read&tab=auto`;
+    const res = await fetch(url, { redirect: 'follow' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
 
     if (data && data.requirements && data.requirements.length) {
       STATE.requirements = data.requirements;
       STATE.lastSheetSync = new Date();
-      dot.style.background='var(--green)'; dot.style.animation='pulse 2s infinite';
-      label.textContent = 'Synced ' + fmt(new Date());
+      dot.style.background = 'var(--green)'; dot.style.animation = 'pulse 2s infinite';
+      label.textContent = `Synced ${fmt(new Date())} · ${data.sheetName||''} · ${data.requirements.length} rows`;
       renderRequirements();
-      showToast(`${data.requirements.length} requirements loaded from Sheets ✓`);
+      showToast(`${data.requirements.length} requirements loaded ✓`);
     } else {
-      throw new Error('Empty or unexpected data');
+      throw new Error('0 rows returned — check sheet has data');
     }
   } catch(e) {
-    // Use baked-in data (already loaded from real sheet content)
-    dot.style.background='var(--amber)'; dot.style.animation='none';
-    label.textContent = 'Using cached data (9 requirements from sheet)';
+    dot.style.background = 'var(--red)'; dot.style.animation = 'none';
+    label.textContent = 'Sync failed — ' + e.message;
     renderRequirements();
-    if (STATE.scriptUrl) showToast('Sheet read failed — using cached data');
+    showToast('⚠ Sheet sync: ' + e.message);
+    console.error('Sheet sync error:', e);
   } finally {
     icon.classList.remove('spin');
   }
@@ -1504,11 +1872,15 @@ function renderRequirements() {
     const priCls = PRI_CLS[req.priority] || 't-task';
     const status = req.status || 'new';
     const client = req.client && req.client !== '—' ? `<span style="font-size:10px;color:var(--accent);margin-left:4px">${esc(req.client)}</span>` : '';
+    const hasAttachments = (req.attachments||[]).length > 0;
+    const attachBadge = hasAttachments
+      ? `<span title="${(req.attachments||[]).length} attachment(s)" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;margin-left:5px;cursor:pointer" onclick="openReqDetail(${JSON.stringify(req).replace(/"/g,'&quot;')})">📎 ${(req.attachments||[]).length}</span>`
+      : '';
     tbody.innerHTML += `
       <tr data-status="${status}">
         <td style="font-size:10px;color:var(--text3);white-space:nowrap">${esc(req.id||'')}</td>
         <td>
-          <div style="font-weight:500;margin-bottom:2px;font-size:12px">${esc(req.title)}${client}</div>
+          <div style="font-weight:500;margin-bottom:2px;font-size:12px">${esc(req.title)}${client}${attachBadge}</div>
           <div style="font-size:10px;color:var(--text3)">${esc(req.desc||'')}</div>
         </td>
         <td style="white-space:nowrap"><div style="font-size:12px">${esc(req.by||'')}</div></td>
@@ -1568,7 +1940,7 @@ async function moveToSprint(reqId) {
 async function writeBackStatus(reqId, status) {
   if (!STATE.scriptUrl) return;
   try {
-    await fetch(`${STATE.scriptUrl}?action=updateStatus&sheetId=${SHEET_ID}&id=${encodeURIComponent(reqId)}&status=${encodeURIComponent(status)}`);
+    await fetch(`${STATE.scriptUrl}?action=updateStatus&id=${encodeURIComponent(reqId)}&status=${encodeURIComponent(status)}`, { redirect: 'follow' });
   } catch(e) { /* silent */ }
 }
 
@@ -1576,6 +1948,26 @@ function openReqDetail(req) {
   document.getElementById('r-id').textContent = req.id;
   document.getElementById('r-title').textContent = req.title;
   const details = document.getElementById('r-details');
+
+  // Build documents HTML if any
+  const docs = req.attachments || req.documents || [];
+  const docsHtml = docs.length
+    ? `<div class="detail-row">
+        <div class="detail-label">Documents</div>
+        <div class="detail-val" style="display:flex;flex-wrap:wrap;gap:6px">
+          ${docs.map(d => {
+            const name = d.filename || d.name || d;
+            const url  = d.content || d.url || '#';
+            const icon = (d.mimeType||'').startsWith('image') ? '🖼' : (d.mimeType||'').startsWith('video') ? '🎥' : '📎';
+            return `<a href="${esc(url)}" target="_blank"
+              style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:#dbeafe;color:#1e40af;border-radius:5px;font-size:11px;text-decoration:none;font-weight:500">
+              ${icon} ${esc(name)}
+            </a>`;
+          }).join('')}
+        </div>
+      </div>`
+    : '';
+
   details.innerHTML = `
     <div class="detail-row"><div class="detail-label">By</div><div class="detail-val">${esc(req.by||'—')} · ${esc(req.dept||'—')}</div></div>
     <div class="detail-row"><div class="detail-label">Date</div><div class="detail-val">${req.date||'—'}</div></div>
@@ -1583,7 +1975,8 @@ function openReqDetail(req) {
     <div class="detail-row"><div class="detail-label">Client</div><div class="detail-val">${esc(req.client||'—')}</div></div>
     <div class="detail-row"><div class="detail-label">Impact</div><div class="detail-val">${esc(req.impact||'—')}</div></div>
     <div class="detail-row"><div class="detail-label">Biz Impact</div><div class="detail-val">${esc(req.bizImpact||'—')}</div></div>
-    <div class="detail-row"><div class="detail-label">Description</div><div class="detail-val">${esc(req.desc||'—')}</div></div>`;
+    <div class="detail-row"><div class="detail-label">Description</div><div class="detail-val">${esc(req.desc||'—')}</div></div>
+    ${docsHtml}`;
   document.getElementById('r-comments').innerHTML = '';
   openModal('req-modal');
 }
@@ -1676,7 +2069,7 @@ const SHEET_ID = '1VonUJ-eh_rMeMwvjqkgKz27lIseddqrbegYN3zMrP0Q';
 function doGet(e) {
   try {
     const action = e.parameter.action;
-    const tab = e.parameter.tab || 'Sheet1';
+    const tab = e.parameter.tab || 'auto';
     if (action === 'ping') return ok({ status: 'ok' });
     if (action === 'read') return readRequirements(tab);
     if (action === 'updateStatus') return updateStatus(e.parameter.id, e.parameter.status);
@@ -1687,31 +2080,47 @@ function doGet(e) {
 
 function readRequirements(tab) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName(tab) || ss.getSheets()[0];
+  const sheet = (tab === 'auto') ? ss.getSheets()[0] : (ss.getSheetByName(tab) || ss.getSheets()[0]);
+  const sheetName = sheet.getName();
   const data = sheet.getDataRange().getValues();
-  if (data.length < 2) return ok({ requirements: [] });
-  const headers = data[0];
-  // Map sheet columns to requirement fields
-  const reqs = data.slice(1).filter(row => row[0]).map((row, i) => {
-    const get = (name) => {
-      const idx = headers.findIndex(h => String(h).toLowerCase().includes(name.toLowerCase()));
-      return idx >= 0 ? String(row[idx]||'').trim() : '';
-    };
+  if (data.length < 2) return ok({ requirements: [], sheetName: sheetName });
+  const reqs = data.slice(1).filter(row => row[1] || row[3]).map((row, i) => {
+    const attachmentRaw = String(row[14] || '').trim();
+    const attachments = [];
+    if (attachmentRaw) {
+      attachmentRaw.split(',').forEach((link, j) => {
+        link = link.trim();
+        if (!link) return;
+        const matchId = link.match(/[?&/]id=([a-zA-Z0-9_-]+)/) || link.match(/\\/d\\/([a-zA-Z0-9_-]+)/);
+        const fileId = matchId ? matchId[1] : null;
+        let filename = 'Attachment ' + (j + 1);
+        if (fileId) { try { filename = DriveApp.getFileById(fileId).getName(); } catch(e) {} }
+        attachments.push({ filename: filename, url: link, fileId: fileId || null });
+      });
+    }
+    const rawStatus = String(row[16] || '').trim().toLowerCase();
+    const statusMap = { 'accepted':'accepted','accept':'accepted','new':'new','review':'review','in review':'review','sprint':'sprint','in sprint':'sprint','closed':'closed','done':'closed','rejected':'closed' };
     return {
-      id: 'REQ-' + String(i+1).padStart(3,'0'),
-      title: get('requirement') || get('what is'),
-      desc: get('description') || get('detail'),
-      by: get('requestor') || get('name'),
-      dept: get('department') || get('team') || get('stakeholder'),
-      date: get('timestamp') || get('date'),
-      priority: get('priority') || 'Medium',
-      status: get('status') || 'new',
-      client: get('client'),
-      impact: get('business impact level') || get('impact'),
-      bizImpact: get('estimated revenue') || get('revenue'),
+      id: 'REQ-' + String(i + 1).padStart(3, '0'),
+      title: String(row[3] || '').trim(),
+      desc: String(row[6] || '').trim(),
+      by: String(row[1] || '').trim(),
+      dept: String(row[2] || '').trim(),
+      date: row[0] ? new Date(row[0]).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '',
+      reqType: String(row[4] || '').trim(),
+      client: String(row[5] || '—').trim(),
+      bizImpact: String(row[7] || '—').trim(),
+      impact: String(row[8] || '—').trim(),
+      revenueImpact: String(row[9] || '—').trim(),
+      reference: String(row[10] || '').trim(),
+      priority: String(row[11] || 'Medium').trim(),
+      timeline: String(row[13] || '').trim(),
+      attachments: attachments,
+      email: String(row[15] || '').trim(),
+      status: statusMap[rawStatus] || (rawStatus ? rawStatus : 'new'),
     };
   });
-  return ok({ requirements: reqs });
+  return ok({ requirements: reqs, sheetName: sheetName, totalRows: data.length });
 }
 
 function updateStatus(reqId, status) {
