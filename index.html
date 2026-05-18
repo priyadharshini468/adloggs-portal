@@ -2115,6 +2115,7 @@ function doGet(e) {
     if (action === 'read') return readRequirements(tab);
     if (action === 'updateStatus') return updateStatus(e.parameter.id, e.parameter.status);
     if (action === 'append') return appendRequirement(JSON.parse(e.parameter.data));
+    if (action === 'addComment') return addComment(e.parameter.id, e.parameter.author, e.parameter.text, e.parameter.date);
     return ok({ error: 'Unknown action: ' + action });
   } catch(err) { return ok({ error: err.toString() }); }
 }
@@ -2164,25 +2165,41 @@ function readRequirements(tab) {
   return ok({ requirements: reqs, sheetName: sheetName, totalRows: data.length });
 }
 
+function findSheetRow(data, reqId) {
+  const reqIndex = parseInt((reqId || '').replace('REQ-', ''), 10) - 1;
+  if (isNaN(reqIndex) || reqIndex < 0) return -1;
+  let count = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1] || data[i][3]) {
+      count++;
+      if (count === reqIndex) return i + 1; // 1-indexed sheet row
+    }
+  }
+  return -1;
+}
+
 function updateStatus(reqId, status) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheets()[0];
   const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const statusCol = headers.findIndex(h => String(h).toLowerCase() === 'status');
-  if (statusCol < 0) {
-    // Add status column
-    sheet.getRange(1, headers.length+1).setValue('Status');
-    // We'd need to find the row by req content - simplified
-    return ok({ updated: false, reason: 'Status column added, retry' });
-  }
-  // Find row by checking if it's the right REQ id (using row number from id)
-  const rowNum = parseInt((reqId||'').replace('REQ-','')) + 1;
-  if (rowNum > 1 && rowNum <= data.length) {
-    sheet.getRange(rowNum, statusCol+1).setValue(status);
-    return ok({ updated: true, row: rowNum });
-  }
-  return ok({ updated: false });
+  const sheetRow = findSheetRow(data, reqId);
+  if (sheetRow === -1) return ok({ updated: false, reason: 'Row not found for ' + reqId });
+  sheet.getRange(sheetRow, 17).setValue(status.charAt(0).toUpperCase() + status.slice(1));
+  return ok({ updated: true, sheetRow: sheetRow, reqId: reqId });
+}
+
+function addComment(reqId, author, text, date) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  const sheetRow = findSheetRow(data, reqId);
+  if (sheetRow === -1) return ok({ saved: false, reason: 'Row not found for ' + reqId });
+  const existing = String(data[sheetRow - 1][17] || '').trim();
+  let comments = [];
+  if (existing) { try { comments = JSON.parse(existing); } catch(e) { comments = [{author:'—',date:'',text:existing}]; } }
+  comments.push({ author: author || '—', date: date || '', text: text || '' });
+  sheet.getRange(sheetRow, 18).setValue(JSON.stringify(comments));
+  return ok({ saved: true, sheetRow: sheetRow, reqId: reqId, totalComments: comments.length });
 }
 
 function appendRequirement(req) {
