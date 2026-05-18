@@ -1856,8 +1856,12 @@ function renderRequirements() {
     const status = req.status || 'new';
     const client = req.client && req.client !== '—' ? `<span style="font-size:10px;color:var(--accent);margin-left:4px">${esc(req.client)}</span>` : '';
     const hasAttachments = (req.attachments||[]).length > 0;
+    const hasComments    = (req.comments||[]).length > 0;
     const attachBadge = hasAttachments
       ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;margin-left:5px">📎 ${(req.attachments||[]).length}</span>`
+      : '';
+    const commentBadge = hasComments
+      ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;margin-left:4px">💬 ${(req.comments||[]).length}</span>`
       : '';
     const reqJson = JSON.stringify(req).replace(/"/g,'&quot;');
     tbody.innerHTML += `
@@ -1865,7 +1869,7 @@ function renderRequirements() {
           style="cursor:pointer" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background=''">
         <td style="font-size:10px;color:var(--text3);white-space:nowrap">${esc(req.id||'')}</td>
         <td>
-          <div style="font-weight:500;margin-bottom:2px;font-size:12px">${esc(req.title)}${client}${attachBadge}</div>
+          <div style="font-weight:500;margin-bottom:2px;font-size:12px">${esc(req.title)}${client}${attachBadge}${commentBadge}</div>
           <div style="font-size:10px;color:var(--text3)">${esc(req.desc||'')}</div>
         </td>
         <td style="white-space:nowrap"><div style="font-size:12px">${esc(req.by||'')}</div></td>
@@ -2142,6 +2146,9 @@ function readRequirements(tab) {
     }
     const rawStatus = String(row[16] || '').trim().toLowerCase();
     const statusMap = { 'accepted':'accepted','accept':'accepted','new':'new','review':'review','in review':'review','sprint':'sprint','in sprint':'sprint','closed':'closed','done':'closed','rejected':'closed' };
+    const commentsRaw = String(row[17] || '').trim();
+    let comments = [];
+    if (commentsRaw) { try { comments = JSON.parse(commentsRaw); } catch(e) { comments = [{author:'—',date:'',text:commentsRaw}]; } }
     return {
       id: 'REQ-' + String(i + 1).padStart(3, '0'),
       title: String(row[3] || '').trim(),
@@ -2160,6 +2167,7 @@ function readRequirements(tab) {
       attachments: attachments,
       email: String(row[15] || '').trim(),
       status: statusMap[rawStatus] || (rawStatus ? rawStatus : 'new'),
+      comments: comments,
     };
   });
   return ok({ requirements: reqs, sheetName: sheetName, totalRows: data.length });
