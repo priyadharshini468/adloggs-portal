@@ -1171,7 +1171,8 @@ async function doLogin() {
     const data = await res.json();
 
     if (data.error || !data.success) {
-      throw new Error(data.error || 'Invalid credentials');
+      const msg = data.error || 'Login failed';
+      throw new Error(msg);
     }
 
     // Success — save session and enter portal
@@ -1179,9 +1180,7 @@ async function doLogin() {
     enterPortal({ name: data.name, email: data.email, role: data.role });
 
   } catch(e) {
-    errEl.textContent = e.message.includes('credentials') || e.message.includes('Invalid')
-      ? 'Incorrect email or password. Please try again.'
-      : e.message;
+    errEl.textContent = e.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false; btn.textContent = 'Sign In';
