@@ -1171,8 +1171,7 @@ async function doLogin() {
     const data = await res.json();
 
     if (data.error || !data.success) {
-      const msg = data.error || 'Login failed';
-      throw new Error(msg);
+      throw new Error(data.error || 'Invalid credentials');
     }
 
     // Success — save session and enter portal
@@ -1180,7 +1179,9 @@ async function doLogin() {
     enterPortal({ name: data.name, email: data.email, role: data.role });
 
   } catch(e) {
-    errEl.textContent = e.message;
+    errEl.textContent = e.message.includes('credentials') || e.message.includes('Invalid')
+      ? 'Incorrect email or password. Please try again.'
+      : e.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false; btn.textContent = 'Sign In';
@@ -2713,6 +2714,14 @@ function init() {
   if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
   startAutoSync();
 
+  // Auto-bypass login when running locally (file://) for testing
+  if (window.location.protocol === 'file:') {
+    document.getElementById('login-screen').style.display = 'none';
+    enterPortal({ name: 'Priya (Local)', email: 'priyadharshini@adloggs.com', role: 'admin' });
+    showToast('🔧 Local mode — logged in as admin for testing');
+    return;
+  }
+
   // Check for existing valid session
   const session = loadSession();
   if (session) {
@@ -2720,6 +2729,7 @@ function init() {
     enterPortal(session);
   } else {
     document.getElementById('login-screen').style.display = 'flex';
+    // Pre-fill email if remembered
     const lastEmail = localStorage.getItem('adloggs_last_email');
     if (lastEmail) document.getElementById('login-email').value = lastEmail;
   }
