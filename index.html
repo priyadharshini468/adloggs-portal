@@ -1152,7 +1152,7 @@ function clearSession() {
 // ================================================================
 async function doLogin() {
   const email    = document.getElementById('login-email').value.trim().toLowerCase();
-  const password = document.getElementById('login-pass').value;
+  const password = document.getElementById('login-pass').value.trim();
   const errEl    = document.getElementById('login-error');
   const spinner  = document.getElementById('login-spinner');
   const btn      = document.getElementById('login-btn');
@@ -1164,24 +1164,64 @@ async function doLogin() {
   spinner.style.display = 'block';
 
   try {
-    if (!STATE.scriptUrl) throw new Error('Apps Script URL not configured — contact admin');
-
-    const url = `${STATE.scriptUrl}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
-    const res = await fetch(url, { redirect: 'follow' });
-    const data = await res.json();
-
-    if (data.error || !data.success) {
-      throw new Error(data.error || 'Invalid credentials');
+    // First try Apps Script login
+    if (STATE.scriptUrl) {
+      try {
+        const url = `${STATE.scriptUrl}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+        const res = await fetch(url, { redirect: 'follow' });
+        const data = await res.json();
+        if (data.success) {
+          saveSession({ name: data.name, email: data.email, role: data.role });
+          enterPortal({ name: data.name, email: data.email, role: data.role });
+          return;
+        }
+        if (data.error && !data.error.includes('Unknown action')) {
+          throw new Error(data.error);
+        }
+        // Falls through to CSV fallback if "Unknown action: login"
+      } catch(e) {
+        if (!e.message.includes('Unknown action') && !e.message.includes('fetch')) throw e;
+      }
     }
 
-    // Success — save session and enter portal
-    saveSession({ name: data.name, email: data.email, role: data.role });
-    enterPortal({ name: data.name, email: data.email, role: data.role });
+    // Fallback: read Users sheet directly via CSV export (works without Apps Script)
+    // Google Sheets published as CSV — gid=USERS_TAB_ID
+    // Sheet ID: 1VonUJ-eh_rMeMwvjqkgKz27lIseddqrbegYN3zMrP0Q
+    // We need the gid of the Users tab — trying common values
+    const sheetId = '1VonUJ-eh_rMeMwvjqkgKz27lIseddqrbegYN3zMrP0Q';
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Users`;
+    const csvRes = await fetch(csvUrl);
+    if (!csvRes.ok) throw new Error('Could not reach Google Sheet. Check your internet connection.');
+    const csvText = await csvRes.text();
+
+    // Parse CSV
+    const rows = csvText.trim().split('\n').map(row =>
+      row.split(',').map(cell => cell.replace(/^"|"$/g,'').trim())
+    );
+
+    // Find user: Name(0) | Email(1) | Password(2) | Role(3)
+    // Skip header row
+    let found = null;
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const rowEmail = (row[1]||'').toLowerCase();
+      const rowPass  = (row[2]||'');
+      const rowName  = (row[0]||'');
+      const rowRole  = (row[3]||'stakeholder').toLowerCase().replace(/\s+/g,'');
+      if (rowEmail === email && rowPass === password) {
+        found = { name: rowName, email: rowEmail, role: rowRole };
+        break;
+      }
+    }
+
+    if (!found) throw new Error('Incorrect email or password. Please try again.');
+
+    saveSession(found);
+    enterPortal(found);
+    localStorage.setItem('adloggs_last_email', email);
 
   } catch(e) {
-    errEl.textContent = e.message.includes('credentials') || e.message.includes('Invalid')
-      ? 'Incorrect email or password. Please try again.'
-      : e.message;
+    errEl.textContent = e.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false; btn.textContent = 'Sign In';
@@ -2714,14 +2754,6 @@ function init() {
   if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
   startAutoSync();
 
-  // Auto-bypass login when running locally (file://) for testing
-  if (window.location.protocol === 'file:') {
-    document.getElementById('login-screen').style.display = 'none';
-    enterPortal({ name: 'Priya (Local)', email: 'priyadharshini@adloggs.com', role: 'admin' });
-    showToast('🔧 Local mode — logged in as admin for testing');
-    return;
-  }
-
   // Check for existing valid session
   const session = loadSession();
   if (session) {
@@ -2729,7 +2761,6 @@ function init() {
     enterPortal(session);
   } else {
     document.getElementById('login-screen').style.display = 'flex';
-    // Pre-fill email if remembered
     const lastEmail = localStorage.getItem('adloggs_last_email');
     if (lastEmail) document.getElementById('login-email').value = lastEmail;
   }
