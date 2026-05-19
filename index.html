@@ -277,6 +277,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Releases
     </div>
+    <div class="nav-item" onclick="nav('weekly',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Weekly Updates
+    </div>
     <div class="nav-section">Stakeholder</div>
     <div class="nav-item" onclick="nav('requirements',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -505,7 +509,32 @@
       <div class="rel-tl" id="releases-tl"></div>
     </section>
 
-    <!-- ===== REQUIREMENTS ===== -->
+    <!-- ===== WEEKLY UPDATES ===== -->
+    <section id="sec-weekly" class="section">
+      <div class="banner bn-jira" style="background:rgba(62,207,142,0.05);border-color:rgba(62,207,142,0.2)">
+        <div class="banner-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Live from <strong style="color:var(--green)">Google Docs</strong> · Updates every time the doc is saved</span>
+        </div>
+      </div>
+      <div class="section-head">
+        <h2>Weekly Updates</h2>
+        <p>Live status — updated every week call</p>
+      </div>
+      <!-- Google Doc embedded as iframe using preview URL -->
+      <div style="border:1px solid var(--border);border-radius:11px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);background:var(--surface)">
+        <iframe
+          src="https://docs.google.com/document/d/1Xe4LoKB5JEO4sKyF0WZFJM_PowEiCtTQcNmfnmIiDSc/preview"
+          style="width:100%;height:780px;border:none;display:block"
+          title="Weekly Updates"
+          loading="lazy"
+          allowfullscreen>
+        </iframe>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:10px">
+        Content updates automatically when the Google Doc is saved · Last opened: <span id="weekly-last-open"></span>
+      </div>
+    </section>
     <section id="sec-requirements" class="section">
       <div class="banner bn-sheets">
         <div class="banner-left">
@@ -1077,10 +1106,10 @@ const STATE = {
 // Defines which nav sections each role can see
 // ================================================================
 const ROLE_ACCESS = {
-  admin:      ['teams','sprint','releases','requirements','roadmap','scores','settings'],
-  subadmin:   ['teams','sprint','releases','requirements','roadmap'],
-  stakeholder:['teams','sprint','requirements','roadmap'],
-  tech:       ['teams','sprint','releases','requirements','roadmap'],
+  admin:      ['teams','sprint','releases','weekly','requirements','roadmap','scores','settings'],
+  subadmin:   ['teams','sprint','releases','weekly','requirements','roadmap'],
+  stakeholder:['teams','sprint','weekly','requirements','roadmap'],
+  tech:       ['teams','sprint','releases','weekly','requirements','roadmap'],
 };
 
 const ROLE_LABELS = {
@@ -1231,7 +1260,12 @@ function nav(id, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('sec-' + id).classList.add('active');
   if (el) el.classList.add('active');
-  const titles = {teams:'Teams & Members',sprint:'Current Sprint',releases:'Releases',requirements:'Stakeholder Requirements',roadmap:'Product Roadmap',scores:'Team Scores',settings:'Integrations & Config'};
+  const titles = {teams:'Teams & Members',sprint:'Current Sprint',releases:'Releases',weekly:'Weekly Updates',requirements:'Stakeholder Requirements',roadmap:'Product Roadmap',scores:'Team Scores',settings:'Integrations & Config'};
+  document.getElementById('topbar-title').textContent = titles[id] || id;
+  if (id === 'weekly') {
+    const el = document.getElementById('weekly-last-open');
+    if (el) el.textContent = new Date().toLocaleString('en-IN', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
   document.getElementById('topbar-title').textContent = titles[id] || id;
 }
 
@@ -2679,6 +2713,14 @@ function init() {
   if (STATE.scriptUrl) setTimeout(() => loadRequirementsFromSheet(), 800);
   if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
   startAutoSync();
+
+  // Auto-bypass login when running locally (file://) for testing
+  if (window.location.protocol === 'file:') {
+    document.getElementById('login-screen').style.display = 'none';
+    enterPortal({ name: 'Priya (Local)', email: 'priyadharshini@adloggs.com', role: 'admin' });
+    showToast('🔧 Local mode — logged in as admin for testing');
+    return;
+  }
 
   // Check for existing valid session
   const session = loadSession();
