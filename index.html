@@ -2714,14 +2714,6 @@ function init() {
   if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
   startAutoSync();
 
-  // Auto-bypass login when running locally (file://) for testing
-  if (window.location.protocol === 'file:') {
-    document.getElementById('login-screen').style.display = 'none';
-    enterPortal({ name: 'Priya (Local)', email: 'priyadharshini@adloggs.com', role: 'admin' });
-    showToast('🔧 Local mode — logged in as admin for testing');
-    return;
-  }
-
   // Check for existing valid session
   const session = loadSession();
   if (session) {
@@ -2729,7 +2721,6 @@ function init() {
     enterPortal(session);
   } else {
     document.getElementById('login-screen').style.display = 'flex';
-    // Pre-fill email if remembered
     const lastEmail = localStorage.getItem('adloggs_last_email');
     if (lastEmail) document.getElementById('login-email').value = lastEmail;
   }
