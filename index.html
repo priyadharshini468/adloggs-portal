@@ -2191,7 +2191,8 @@ function renderSprint(issues) {
 }
 
 function saveJiraProxy() {
-  const url = document.getElementById('cfg-jira-proxy').value.trim();
+  let url = document.getElementById('cfg-jira-proxy').value.trim().replace(/\/+$/, '');
+  document.getElementById('cfg-jira-proxy').value = url;
   STATE.jiraProxyUrl = url;
   localStorage.setItem('adloggs_jira_proxy', url);
   const badge = document.getElementById('jira-cfg-badge');
@@ -2234,7 +2235,7 @@ async function syncSprint() {
       const controller = new AbortController();
       const timeoutId  = setTimeout(() => controller.abort(), 30000);
 
-      const res = await fetch(STATE.jiraProxyUrl + '/sprint', { signal: controller.signal });
+      const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/, '') + '/sprint', { signal: controller.signal });
       clearTimeout(timeoutId);
 
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2367,7 +2368,7 @@ function renderReleases() {
   if (STATE.jiraProxyUrl) {
     const ctrl = new AbortController();
     const tid2 = setTimeout(() => ctrl.abort(), 10000);
-    fetch(STATE.jiraProxyUrl + '/releases', { signal: ctrl.signal })
+    fetch(STATE.jiraProxyUrl.replace(/\/+$/, '') + '/releases', { signal: ctrl.signal })
       .then(r => { clearTimeout(tid2); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(data => {
@@ -2860,7 +2861,8 @@ async function sendGChatMessage(text) {
   if (!STATE.jiraProxyUrl)    return { ok: false, reason: 'No Cloudflare Worker URL configured in Integrations' };
 
   try {
-    const res = await fetch(STATE.jiraProxyUrl + '/gchat', {
+    const workerBase = STATE.jiraProxyUrl.replace(/\/+$/, '');
+    const res = await fetch(workerBase + '/gchat', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ webhookUrl: STATE.gchatWebhookUrl, text }),
