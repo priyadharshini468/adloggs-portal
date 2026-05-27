@@ -238,7 +238,7 @@
     <div class="nav-item" onclick="nav('sprint',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Current Sprint
-      <span class="nav-badge nb-blue" id="sprint-badge">50</span>
+      <span class="nav-badge nb-blue" id="sprint-badge">197</span>
     </div>
     <div class="nav-item" onclick="nav('releases',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -301,7 +301,6 @@
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-sm" onclick="syncTeamsFromJira()"><span id="teams-sync-icon">↻</span> Sync Teams</button>
-          <button class="btn btn-primary btn-sm" onclick="openModal('add-member-modal')">+ Add Member</button>
         </div>
       </div>
       <div class="section-head">
@@ -478,7 +477,7 @@
       <div class="banner bn-jira" style="background:rgba(62,207,142,0.05);border-color:rgba(62,207,142,0.2)">
         <div class="banner-left">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <span>Live from <strong style="color:var(--green)">Google Sheets</strong> · Updates every time the sheet is saved</span>
+          <span>Live from <strong style="color:var(--green)">Google Docs</strong> · Updates every time the doc is saved</span>
         </div>
       </div>
       <div class="section-head">
@@ -523,7 +522,7 @@
       <div class="card" style="padding:0;overflow:hidden">
         <table class="req-table">
           <thead><tr>
-            <th>#</th><th>Requirement</th><th>By</th><th>Dept</th><th>Date</th><th>Priority</th><th>Status</th><th>Actions</th>
+            <th>#</th><th>Requirement</th><th>By</th><th>Dept</th><th>Date</th><th>Priority</th><th>Status</th><th>Responsible</th><th>Actions</th>
           </tr></thead>
           <tbody id="req-tbody"></tbody>
         </table>
@@ -668,6 +667,51 @@
           <button class="btn btn-ghost btn-sm" onclick="loadRequirementsFromSheet()">↻ Reload Requirements</button>
           <button class="btn btn-ghost btn-sm" onclick="showScriptCode()">📋 Apps Script Code</button>
           <span id="script-status" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <div class="cfg-block">
+        <div class="cfg-title">💬 Google Chat — Space Webhook
+          <span class="cfg-badge" id="gchat-cfg-badge" style="background:rgba(245,166,35,0.12);color:var(--amber)">⚠ Not configured</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px">
+          Add a webhook to send requirement messages directly to a Google Chat Space (e.g. your Engineering or Product space).
+          This is the easiest way to notify the responsible person — one click sends the message.
+        </div>
+        <div style="background:rgba(26,115,232,0.05);border:1px solid rgba(26,115,232,0.15);border-radius:7px;padding:10px 12px;font-size:12px;margin-bottom:12px;line-height:1.8">
+          <strong style="color:var(--text)">How to get a webhook URL:</strong><br>
+          1. Open Google Chat → go to your Space (e.g. "Engineering Team")<br>
+          2. Click the Space name at the top → <strong>Apps & integrations</strong><br>
+          3. Click <strong>Add webhooks</strong> → give it a name (e.g. "Adloggs Portal") → Save<br>
+          4. Copy the webhook URL and paste below
+        </div>
+        <div class="form-group">
+          <div class="form-label">Google Chat Space Webhook URL</div>
+          <input class="input" id="cfg-gchat-webhook" placeholder="https://chat.googleapis.com/v1/spaces/..." />
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveGChatWebhook()">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="testGChatWebhook()">Test</button>
+          <span id="gchat-webhook-status" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+        <div class="divider"></div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">🔔 Auto-Reminder for Open Requirements</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Automatically sends a Google Chat message for all open requirements that have a responsible person assigned, at the configured interval — until they are marked Closed.</div>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <div class="form-label">Send reminder every</div>
+            <select class="input" id="reminder-interval">
+              <option value="0">Disabled</option>
+              <option value="3600000">Every 1 hour</option>
+              <option value="14400000">Every 4 hours</option>
+              <option value="28800000">Every 8 hours</option>
+              <option value="86400000">Every 24 hours</option>
+              <option value="604800000">Every week</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveReminderInterval()" style="align-self:flex-end">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="sendOpenRequirementReminders()" style="align-self:flex-end">Send Now</button>
+          <span id="reminder-status" style="font-size:11px;color:var(--text3);align-self:flex-end"></span>
         </div>
       </div>
 
@@ -832,6 +876,76 @@
   </div>
 </div>
 
+<!-- ASSIGN RESPONSIBLE MODAL -->
+<div class="modal-overlay" id="assign-modal">
+  <div class="modal" style="width:460px">
+    <button class="modal-close" onclick="closeModal('assign-modal')">✕</button>
+    <div style="font-size:10px;color:var(--accent);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px" id="assign-req-id">REQ</div>
+    <div class="modal-title" style="margin-bottom:4px">Assign Responsible Person</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px" id="assign-req-title"></div>
+
+    <div class="form-group">
+      <div class="form-label">Pick from team</div>
+      <select class="input" id="assign-team-select" onchange="onAssignTeamSelect()" style="font-size:12px">
+        <option value="">— Select a team member —</option>
+      </select>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);margin:6px 0">or</div>
+    <div class="form-group">
+      <div class="form-label">Type manually</div>
+      <input class="input" id="assign-manual" placeholder="Enter name" style="font-size:12px" oninput="onAssignManualInput()" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">Google Chat Email (optional — for messaging)</div>
+      <input class="input" id="assign-email" placeholder="name@adloggs.com" style="font-size:12px" />
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+      <button class="btn btn-ghost" onclick="closeModal('assign-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAssignment()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOOGLE CHAT MODAL -->
+<div class="modal-overlay" id="gchat-modal">
+  <div class="modal" style="width:520px">
+    <button class="modal-close" onclick="closeModal('gchat-modal')">✕</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="width:36px;height:36px;border-radius:9px;background:#1a73e8;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      </div>
+      <div>
+        <div class="modal-title" style="margin-bottom:0">Message on Google Chat</div>
+        <div style="font-size:12px;color:var(--text3)" id="gchat-to-label">To: —</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Regarding</div>
+      <input class="input" id="gchat-req-ref" readonly style="background:var(--surface2);color:var(--text2);font-size:12px" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">Message</div>
+      <textarea class="input" id="gchat-message" rows="6" style="resize:vertical;line-height:1.6;font-family:var(--sans)"></textarea>
+    </div>
+    <div style="background:#f0f4ff;border:1px solid #c7d7f5;border-radius:7px;padding:10px 12px;font-size:11px;color:#1e3a5f;margin-bottom:14px;line-height:1.8">
+      <strong>Option A — Send to Space (recommended):</strong> Sends directly to your Google Chat Space. Configure the Space webhook in <em>Integrations → Google Chat</em>.<br>
+      <strong>Option B — Open DM:</strong> Opens Google Chat DM in a new tab + copies the message to clipboard so you can paste and send.
+    </div>
+    <div id="gchat-status" style="display:none;font-size:12px;padding:8px;border-radius:6px;margin-bottom:10px;text-align:center"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="closeModal('gchat-modal')">Cancel</button>
+      <button class="btn btn-ghost" onclick="openGoogleChatDM()" style="display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Open DM + Copy
+      </button>
+      <button class="btn btn-primary" onclick="sendToGChatSpace()" style="background:#1a73e8;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send to Space
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- APPS SCRIPT MODAL -->
 <div class="modal-overlay" id="script-modal">
   <div class="modal" style="width:600px">
@@ -967,66 +1081,203 @@ const TEAMS_FROM_JIRA = [
 // Sprint data — descriptions/attachments populated from live Jira fetch for known issues
 // When Worker syncs live, ALL fields get populated automatically
 const SPRINT_DATA = [
-  {key:'AB-241',summary:'EK Bharat | COD Flow | Check Status | Incorrect message after QR payment',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug',
-   description:'In the COD Flow, when a user scans the QR code and completes the payment, clicking the Check Status button incorrectly displays "Payment not yet received, please try again." even though the payment has already been completed.',
-   attachments:[{filename:'image-20260516-080811.png',mimeType:'image/png',content:'https://adloggss.atlassian.net/browse/AB-241'},{filename:'WhatsApp Video 2026-05-16.mp4',mimeType:'video/mp4',content:'https://adloggss.atlassian.net/browse/AB-241'}],comments:[]},
-  {key:'AB-242',summary:'AD | Agency | COD Settlement | Unpaid COD records not displaying',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',
-   description:'In the COD Settlement page under AD | Agency, unpaid COD records are not appearing as expected. Steps: Login as Agency → Navigate to COD Settlement page → Verify list of COD records. Unpaid COD records are not displayed.',
-   attachments:[{filename:'20260516-0803-32.mp4',mimeType:'video/mp4',content:'https://adloggss.atlassian.net/browse/AB-242'}],comments:[]},
-  {key:'AB-240',summary:'AD | COD Flow | Check Status UI | Clicking status moves to next step',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug',
-   description:'In the COD Flow, clicking the Check Status button causes the process to move to the next stage without showing any response. Expected: display a success or failure message before proceeding.',
-   attachments:[],comments:[]},
-  {key:'AB-239',summary:'AD | Agency/Master Agency | Daily Deployment | Unable to configure',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',
-   description:'Unable to change the Start/End Time in Agency/Master Agency Daily Deployment configuration.',
-   attachments:[{filename:'20260516-0645-19.mp4',mimeType:'video/mp4',content:'https://adloggss.atlassian.net/browse/AB-239'}],comments:[]},
-  {key:'AB-238',summary:'AD | Reports | Rider Report | Duplicate rider names displayed',status:'Backlog',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',
-   description:'In the Rider Report under AD | Reports, searching by Rider Name or Phone Number displays duplicate entries for the same rider. Each rider should be displayed only once.',
-   attachments:[{filename:'image-20260515-110530.png',mimeType:'image/png',content:'https://adloggss.atlassian.net/browse/AB-238'}],comments:[]},
-  {key:'AB-176',summary:'Customer App Onboarding Flow – UI/UX Design in Figma',status:'In Progress',priority:'High',assignee:'dinesh',due:'2026-05-23',type:'Story',description:'Design the complete customer app onboarding flow in Figma including all screens and interactions.',attachments:[],comments:[]},
-  {key:'AB-230',summary:'The Loggi Sight Logo Creation',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Create the official Loggi Sight logo.',attachments:[],comments:[]},
-  {key:'AB-237',summary:'Wallet Screen - Need to add customer order id in the list',status:'In Progress',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Task',description:'Add customer order ID column to the wallet screen list view.',attachments:[],comments:[]},
-  {key:'AB-236',summary:'Swiggy Instamart - Change Support Reasons',status:'Code Review',priority:'Highest',assignee:'Chinna Mani',due:null,type:'Task',description:'Update support reason codes for Swiggy Instamart integration.',attachments:[],comments:[]},
-  {key:'AB-234',summary:'Agency ZOYA Web Client – UI Enhancement (Angular)',status:'To Do',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Story',description:'UI enhancements for the Agency ZOYA web client built in Angular.',attachments:[],comments:[]},
-  {key:'AB-104',summary:'Rider Matrix API Frontend Integration',status:'Back To Dev',priority:'Medium',assignee:'Parthi',due:null,type:'Story',description:'Integrate the Rider Matrix API with the frontend dashboard.',attachments:[],comments:[]},
-  {key:'AB-229',summary:'Design 3 Infographic Creatives for TQIS',status:'Done',priority:'Highest',assignee:'Pravin',due:'2026-05-15',type:'Task',description:'Design 3 infographic creatives for The Quest International School.',attachments:[],comments:[]},
-  {key:'AB-233',summary:'TQIS Website – Clubs & Guiding Statements Page Layout',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-15',type:'Task',description:'Design and implement the Clubs & Guiding Statements page layout for TQIS website.',attachments:[],comments:[]},
-  {key:'AB-214',summary:'Elefant Pagination in scheduled order',status:'READY FOR TESTING',priority:'Highest',assignee:'aravind',due:'2026-05-13',type:'Story',description:'Implement pagination for Elefant orders in the scheduled order screen.',attachments:[],comments:[]},
-  {key:'AB-235',summary:'Ditto Mart - Buyer Configuration support',status:'In Progress',priority:'Medium',assignee:'mani',due:null,type:'Task',description:'Add Ditto Mart buyer configuration support to the platform.',attachments:[],comments:[]},
-  {key:'AB-212',summary:'Customer Config',status:'Back To Dev',priority:'High',assignee:'Sailavasan',due:'2026-05-07',type:'Story',description:'Customer configuration module development.',attachments:[],comments:[]},
-  {key:'AB-24', summary:'Zoya Rider Support WhatsApp Bot',status:'Code Review',priority:'High',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Story',description:'Build a WhatsApp bot for Zoya rider support queries.',attachments:[],comments:[]},
-  {key:'ADL-2489',summary:'Zoya - Database Integration & Live Dashboard',status:'To Do',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-04-01',type:'Story',description:'Integrate Zoya with the database and create a live dashboard.',attachments:[],comments:[]},
-  {key:'AB-232',summary:'Agency Onboarding Complete Flow – Figma Design v2',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-18',type:'Story',description:'Version 2 of the complete agency onboarding flow design in Figma.',attachments:[],comments:[]},
-  {key:'AB-231',summary:'Loggi Sight App Store / Play Store assets',status:'To Do',priority:'Highest',assignee:'dinesh',due:'2026-05-15',type:'Task',description:'Design and prepare all App Store and Play Store assets for Loggi Sight.',attachments:[],comments:[]},
-  {key:'AB-219',summary:'UI Upgradation for Logisight Rider Dashboard',status:'Done',priority:'Medium',assignee:'dinesh',due:null,type:'Story',description:'UI upgrades for the Logisight rider dashboard and order detection screens.',attachments:[],comments:[]},
-  {key:'AB-175',summary:'Customer Onboarding & Configuration Flow – UI/UX',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Story',description:'Complete UI/UX design for customer onboarding and configuration flow.',attachments:[],comments:[]},
-  {key:'AB-196',summary:'Delivery Staff COD Limit Based on Earnings',status:'In Progress',priority:'Medium',assignee:'Karthik K',due:'2026-05-14',type:'Story',description:'Implement COD limit logic for delivery staff based on their earnings history.',attachments:[],comments:[]},
-  {key:'AB-140',summary:'SEO – Daily Backlink Building',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-31',type:'Task',description:'Ongoing daily backlink building activity for Adloggs SEO.',attachments:[],comments:[]},
-  {key:'AB-228',summary:'TQIS – Mandatory Public Disclosure Page',status:'In Progress',priority:'Medium',assignee:'Vijayalavan T',due:'2026-05-14',type:'Task',description:'Build the mandatory public disclosure page for The Quest International School website.',attachments:[],comments:[]},
-  {key:'AB-203',summary:'WheelEye Integration Implementation',status:'In Progress',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-13',type:'Story',description:'Implement WheelEye GPS tracking integration.',attachments:[],comments:[]},
-  {key:'AB-186',summary:'Separate Cron Jobs from EK-Bharat Backend',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-11',type:'Task',description:'Separate all cron jobs from the EK-Bharat backend repository into a standalone service.',attachments:[],comments:[]},
-  {key:'AB-207',summary:'Brozo 3PL Delivery Status API Hit Twice',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-12',type:'Bug',description:'Fixed bug where Brozo 3PL delivery status API was being called twice, causing double charges.',attachments:[],comments:[]},
-  {key:'AB-218',summary:'App.Adloggs Master – List View & UI Enhancement',status:'In Progress',priority:'High',assignee:'Vijayalavan T',due:null,type:'Story',description:'Enhance the list view and overall UI for App.Adloggs Master.',attachments:[],comments:[]},
-  {key:'AB-226',summary:'Add Collection Item List Property in Scheduled Orders API',status:'In Progress',priority:'Highest',assignee:'mani',due:null,type:'Story',description:'Add collection item list property to the scheduled orders API response.',attachments:[],comments:[]},
-  {key:'AB-225',summary:'ONDC Buyer - Uber',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Story',description:'ONDC buyer integration with Uber for last-mile delivery.',attachments:[],comments:[]},
-  {key:'AB-33', summary:'Implement Daily LM Target Tracking System',status:'under testing',priority:'Highest',assignee:'mani',due:null,type:'Story',description:'Build a daily last-mile target tracking system with KPIs per rider.',attachments:[],comments:[]},
-  {key:'AB-183',summary:'Need to Add platform fees in P&L',status:'Done',priority:'Highest',assignee:'mani',due:'2026-05-11',type:'Task',description:'Add platform fees as a line item in the P&L report.',attachments:[],comments:[]},
-  {key:'AB-93', summary:'U30-Based Daily Incentive & Penalty (KFC & Pizza Hut)',status:'Done',priority:'High',assignee:'mani',due:'2026-04-17',type:'Story',description:'Implement U30-based daily incentive and penalty calculation for KFC and Pizza Hut delivery partners.',attachments:[],comments:[]},
-  {key:'AB-199',summary:'XpressBees Integration Implementation',status:'To Do',priority:'High',assignee:'Karthik K',due:null,type:'Story',description:'Implement XpressBees 3PL integration for parcel delivery.',attachments:[],comments:[]},
-  {key:'AB-179',summary:'Logic change from pickup to assignment time',status:'In Progress',priority:'Highest',assignee:'Ranjith',due:'2026-05-13',type:'Task',description:'Change the time tracking logic from pickup time to assignment time for SLA calculations.',attachments:[],comments:[]},
-  {key:'AB-215',summary:'Session Management for Loggi AI',status:'Backlog',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Task',description:'Implement session management for Loggi AI conversations.',attachments:[],comments:[]},
-  {key:'AB-216',summary:'Remove default maximum value in business config',status:'Done',priority:'Medium',assignee:'Raja',due:'2026-05-13',type:'Task',description:'Remove the hardcoded default maximum value from business configuration.',attachments:[],comments:[]},
-  {key:'AB-211',summary:'Update Duplicate Order Validation Logic for Elefant',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task',description:'Update the duplicate order validation logic specifically for Elefant orders.',attachments:[],comments:[]},
-  {key:'AB-210',summary:'Implement New Report in CRM - Orbit',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task',description:'Implement new report type in the CRM Orbit module.',attachments:[],comments:[]},
-  {key:'AB-220',summary:'EK Bharat App | Rider Incentive | Home Page | View Card',status:'Backlog',priority:'Medium',assignee:'aravind',due:null,type:'Story',description:'Add rider incentive view card to the EK Bharat app home page.',attachments:[],comments:[]},
-  {key:'AB-208',summary:'Design for Suggested Route Map Popup for Auto Assign',status:'Done',priority:'Highest',assignee:'dinesh',due:'2026-05-12',type:'Task',description:'Design the suggested route map popup used in the auto-assign flow.',attachments:[],comments:[]},
-  {key:'AB-177',summary:'Monthly Blog Content Creation for Adloggs – 4 Blogs',status:'Done',priority:'Highest',assignee:'Pravin',due:null,type:'Task',description:'Create 4 monthly blog posts for Adloggs content marketing.',attachments:[],comments:[]},
-  {key:'AB-217',summary:'dp_day_time_wise table cron running in main',status:'Backlog',priority:'Medium',assignee:'Venkateswaran E',due:'2026-05-13',type:'Bug',description:'dp_day_time_wise table cron job is running in both main and analytics environments, causing duplicate processing.',attachments:[],comments:[]},
-  {key:'AB-193',summary:'Prevent Scheduled Orders Screen Refresh on Back Nav',status:'READY FOR TESTING',priority:'Highest',assignee:'Parthi',due:'2026-05-12',type:'Story',description:'Prevent the scheduled orders screen from refreshing when user navigates back.',attachments:[],comments:[]},
-  {key:'AB-213',summary:'Schedule order API - Sort, Swap and Rider Capacity',status:'In Progress',priority:'Highest',assignee:'Parthi',due:'2026-05-13',type:'Story',description:'Add sort, swap and rider capacity features to the schedule order API.',attachments:[],comments:[]},
-  {key:'AB-32', summary:'Agency Level Customer Wallet',status:'Hold',priority:'High',assignee:'mani',due:'2026-04-07',type:'Story',description:'Implement agency-level customer wallet functionality.',attachments:[],comments:[]},
-  {key:'AB-190',summary:'Zoho invoice and order report mismatch',status:'In Progress',priority:'Medium',assignee:'Raja',due:'2026-05-11',type:'Task',description:'Investigation and fix for the mismatch between Zoho invoice data and order reports.',attachments:[],comments:[]},
-  {key:'AB-224',summary:'Adloggs – Ek Bharat MOU Word Document Creation',status:'Done',priority:'Highest',assignee:'Vijayalavan T',due:null,type:'Task',description:'Create the MOU Word document for Adloggs and Ek Bharat partnership.',attachments:[],comments:[]},
-  {key:'AB-227',summary:'AD | Master Agency | Customer Config | Order Assignment',status:'Backlog',priority:'Medium',assignee:'Sailavasan',due:null,type:'Bug',description:'Customer config order assignment not working correctly under Master Agency.',attachments:[],comments:[]},
+  {key:'AB-19',summary:'COD Automation',status:'In Progress',priority:'Highest',assignee:'Karthik K',due:'2026-04-10',type:'Story',description:'MyGigster Concept   In \`models.DeliveryStaff\`:  * \`is_mygigster = 0\` → Rider is **not under MyGigster** (inactive under MyGigster)    * \`is_mygig',attachments:[],comments:[]},
+  {key:'AB-20',summary:'ONDC 3PL COnfigurations',status:'under testing',priority:'Medium',assignee:'Sailavasan',due:'2026-04-08',type:'Story',description:'- [x] Delivery partner map changes - [x] In 3PL Mapping, on click of ONDC, the ondc 3pl list to be shown. It can be chosen. But cannot be rearranged i',attachments:[],comments:[]},
+  {key:'AB-21',summary:'Rider Incentive Frameworks',status:'DEV QA',priority:'High',assignee:'Ranjith',due:'2026-04-08',type:'Story',description:'**Condition Based Working (Sample Data)**  |  | **Common Incentive** | **Session Based Incentive** | **Amount to Riders** | | --- | --- | --- | --- |',attachments:[],comments:[]},
+  {key:'AB-22',summary:'Dynamic Customer based Invoice Downloads',status:'under testing',priority:'High',assignee:'Sailavasan',due:'2026-04-28',type:'Story',description:'The invoice has to be shown based on the customer type as SAAS only, Delivery service , Delivery service + SAAS , Subscription only. Now irrespective',attachments:[],comments:[{author:'Vignesh B',date:'2026-05-11',text:'Mismatch identified between P&L report, Order Report, and Customer Invoice counts. Need to analyze t'}]},
+  {key:'AB-23',summary:'ControlX - AI Intelligence',status:'In Progress',priority:'Highest',assignee:'Ramakrishnan Murugan',due:'2026-05-15',type:'Story',description:'1. Design Architechture & Implementation Plan:  Define the complete system design so every developer starts with a shared, unambiguous blueprint.  2.',attachments:[],comments:[{author:'Ramakrishnan Murugan',date:'2026-04-27',text:'Moved to Live for Success Venture and Facing issues of order cancelling even after arrived at pickup'}]},
+  {key:'AB-24',summary:'Zoya Rider Support Whatsapp Bot',status:'Done',priority:'High',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Story',description:'Deploy AI bot (Zoya) in separate WhatsApp groups for customers and riders to monitor and respond to common queries in real time.  Train the bot on FAQ',attachments:[],comments:[{author:'Jai Chandru SS',date:'2026-04-21',text:'Built an Angular support dashboard with real-time alert management, rider chat history, escalation t'},{author:'Jai Chandru SS',date:'2026-04-21',text:'Fixed document GCS URLs'},{author:'Jai Chandru SS',date:'2026-04-21',text:'Agent Takeover feature was implemented to silence the bot when a human agent takes over a rider\'s c'}]},
+  {key:'AB-25',summary:'Customer Onboarding Inefficiency',status:'Done',priority:'Highest',assignee:'Sailavasan',due:'2026-04-09',type:'Story',description:'The absence of a bulk onboarding mechanism requires manual entry of customer data individually, leading to increased operational effort, higher chance',attachments:[],comments:[{author:'Sailavasan',date:'2026-04-06',text:'Shared resources we need'}]},
+  {key:'AB-26',summary:'Lack of Rider-Level Kilometer Optimization',status:'Done',priority:'Highest',assignee:'aravind',due:'2026-04-09',type:'Story',description:'There is currently no system to monitor and influence rider progress toward predefined LM (kilometer) targets. Without a dynamic mechanism, order noti',attachments:[],comments:[{author:'aravind',date:'2026-04-06',text:'We need   bro as a shared resource for Database entry allowance and   for mobile UI Corrections'}]},
+  {key:'AB-27',summary:'Weekly performance API Optimization - Order comparison Report',status:'Done',priority:'Highest',assignee:'Vignesh B',due:'2026-04-09',type:'Story',description:'Weekly Order Comparison Report API Optimization as it is taking higher loading time and causing performance issues.',attachments:[],comments:[]},
+  {key:'AB-32',summary:'Agency Level Customer Wallet',status:'Hold',priority:'High',assignee:'mani',due:'2026-04-07',type:'Story',description:'At the agency level an option has to be provided, such that the wallet balance of all customers under the corresponding agency are viewed in a single',attachments:[],comments:[]},
+  {key:'AB-42',summary:'ControlX UX Design System – UI/UX Creation Using Figma',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design a modern, scalable, and professional UX interface for **ControlX**, focusing on usability, clarity, and consistency across the platform. The go',attachments:[],comments:[{author:'dinesh',date:'2026-04-08',text:'Due to the urgency of the logo task, I’m currently focusing on the Ad logo, which needs to be presen'}]},
+  {key:'AB-43',summary:'Adloggs App – UX Enhancement & UI Modernization',status:'In Progress',priority:'Medium',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'The Adloggs application requires a complete UX enhancement and UI modernization to improve usability, visual consistency, and operational efficiency.',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-07',text:'Master module'},{author:'Vijayalavan Tharmalingam',date:'2026-05-06',text:'I have completed the report list page'}]},
+  {key:'AB-44',summary:'Adloggs Customer Onboarding Flow',status:'Done',priority:'Medium',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'Design and implement a seamless **Customer Onboarding Flow** for the Adloggs platform using Angular. This flow is critical as it serves as the first i',attachments:[],comments:[]},
+  {key:'AB-45',summary:'Creation of new P&L rate card for Uber and Blitz',status:'Done',priority:'High',assignee:'mani',due:'2026-04-07',type:'Story',description:'We need to create a **new P&L rate card** for the following platforms:  1. **Uber** – Define rates based on latest cost structure and agreements. 2. *',attachments:[],comments:[]},
+  {key:'AB-46',summary:'ONDC Order Dump Cleanup',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:null,type:'Task',description:'Due to the seller database reaching a critical storage level, we need to perform a cleanup to avoid any impact on the live system.  As discussed with',attachments:[],comments:[{author:'Sundarapandiyan',date:'2026-04-10',text:'Today I erased the data for August 2025. After that, I discussed it with the server team, and Guna m'}]},
+  {key:'AB-47',summary:'ONDC Configuration UI',status:'Done',priority:'Medium',assignee:'dinesh',due:'2026-04-07',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-48',summary:'Adding Field Ordering Partner',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Task',description:'In adloggs we can choose master agency when on board for bugerking ect.',attachments:[],comments:[{author:'Parthi',date:'2026-04-09',text:'All the flows are working'}]},
+  {key:'AB-49',summary:'SEO – Daily Backlink Building Activity',status:'Done',priority:'Medium',assignee:'Pravin',due:null,type:'Story',description:'This task focuses on improving the website’s domain authority, search engine rankings, and organic traffic through consistent and strategic backlink b',attachments:[],comments:[{author:'Pravin',date:'2026-04-24',text:'Completed as a daily task with allocated hours. Reviewed and approved. Closing the ticket.'}]},
+  {key:'AB-50',summary:'Design Social Media Posters (Instagram, Facebook, LinkedIn)',status:'Done',priority:'Highest',assignee:'Pravin',due:null,type:'Task',description:'Create three high-quality, visually appealing social media posters tailored for **Instagram, Facebook, and LinkedIn**. The goal is to maintain brand c',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-16',text:'No need testing'},{author:'Vijayalavan Tharmalingam',date:'2026-04-16',text:'We gave 2 samples, but all were rejected by management. We\'re trying to create one more poster sam'},{author:'Pravin',date:'2026-04-20',text:'I sent sample reference posters, and the team has selected their preferred styles. so now creating p'},{author:'Pravin',date:'2026-04-24',text:'Task completed, reviewed, and approved. Closing the ticket.'}]},
+  {key:'AB-51',summary:'Adloggs Logo Design',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design a modern, scalable, and brand-aligned logo shape for **Adloggs**, representing _“The Intelligent Operating System for Modern Delivery Infrastru',attachments:[{filename:'WhatsApp Image 2026-04-07 at 8.11.56 PM-20260408-034926.jpeg',mimeType:'image/jpeg',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13166'},{filename:'WhatsApp Image 2026-04-07 at 8.11.57 PM (1)-20260408-034942.',mimeType:'image/jpeg',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13167'},{filename:'WhatsApp Image 2026-04-07 at 8.11.57 PM-20260408-034932.jpeg',mimeType:'image/jpeg',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13168'}],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-08',text:'Nivetha maam has asked for the shape options for out adloggs logo. can you please complete the task?'}]},
+  {key:'AB-53',summary:'Support and Onboarding Work',status:'In Progress',priority:'Medium',assignee:'Chinna Mani',due:'2026-04-30',type:'Story',description:'Upload of newly onboarded custome information and other debugging and support works are carried on.',attachments:[],comments:[{author:'Chinna Mani',date:'2026-04-24',text:'SDC count daily updation.'},{author:'Chinna Mani',date:'2026-04-24',text:'Sumaiya shared a few orders with me and asked for the need data\'s'},{author:'Chinna Mani',date:'2026-05-04',text:'Onboard the customer (KFC - SFIL)'},{author:'Chinna Mani',date:'2026-05-04',text:'Devika shared a few orders with me and asked check the log from creation to current status'},{author:'Chinna Mani',date:'2026-05-04',text:'HariHaran shared a few orders with me and asked for the need data\'s'},{author:'Chinna Mani',date:'2026-05-04',text:'Re: Adloggs Demo @ Wed, Apr 15, 2026 2:00pm – 3:00pm (GMT+05:30) share API key production.'},{author:'Chinna Mani',date:'2026-05-12',text:'Sumaiya shared a few orders with me and asked for the need data\'s'}]},
+  {key:'AB-54',summary:'Customer Onboarding Flow',status:'Done',priority:'Medium',assignee:'raja',due:'2026-04-10',type:'Story',description:'New Customer Onboarding :   * Customers can be onboarded through website or App.  * On their first login to the dashboard, they should be able to choo',attachments:[],comments:[]},
+  {key:'AB-55',summary:'KFC Orders - Repeated Push to riders',status:'Done',priority:'Highest',assignee:'Ranjith',due:'2026-04-08',type:'Story',description:'Currently if KFC orders are not accepted by the riders, the orders are cancelled. This is reducing the order fulfillment.  * Going forward, if the ord',attachments:[],comments:[]},
+  {key:'AB-56',summary:'test workflow in jira',status:'DEV QA',priority:'Medium',assignee:'priyadharshini',due:null,type:'Story',description:'',attachments:[],comments:[]},
+  {key:'AB-57',summary:'Ek Bharat Office Board Designing',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-58',summary:'ID Tag Design',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-59',summary:'Shiprocket Integration Deployed to Dev and Production',status:'Done',priority:'Medium',assignee:'Karthik K',due:'2026-04-09',type:'Task',description:'',attachments:[],comments:[{author:'Karthik K',date:'2026-04-10',text:'Ship rocket Changes in Create Api'}]},
+  {key:'AB-60',summary:'3PL Integration with QWQER – Ready to Ship Status, Testing & Deployment (Dev & Production)',status:'Done',priority:'Medium',assignee:'Karthik K',due:'2026-04-10',type:'Story',description:'Implemented and deployed the 3PL integration with **QWQER**, including handling of the **Ready to Ship** order status across both development and prod',attachments:[],comments:[{author:'Karthik K',date:'2026-04-15',text:'Qwqer integration has been completed. Now we need to create an order in Swiggy and test it. When cre'},{author:'Karthik K',date:'2026-04-17',text:'RTS Flow testing has been completed. Today, we will push this code to the live environment.'}]},
+  {key:'AB-61',summary:'Rider Incentive Logic Implementation',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Task',description:'Implement a flexible **Rider Incentive Calculation System** that supports both **Common Incentive (order-based)** and **Session/Slot-Based Incentives*',attachments:[],comments:[{author:'Parthi',date:'2026-04-10',text:''},{author:'Parthi',date:'2026-04-16',text:'API integration is completed and pushed onto dev'}]},
+  {key:'AB-63',summary:'Shopify Integration',status:'In Progress',priority:'High',assignee:'mani',due:'2026-05-16',type:'Story',description:'## **Shopify Integration – Order Flow Overview**  ### **Purpose**  Enable seamless order flow from the Shopify platform to Adloggs for logistics execu',attachments:[],comments:[]},
+  {key:'AB-65',summary:'Kilogram-Based Pricing + Vehicle Selection + Invoicing – Overview',status:'To Do',priority:'Medium',assignee:'Vignesh B',due:null,type:'Story',description:'## **Kilogram-Based Pricing + Vehicle Selection + Invoicing – Overview**  ### **Purpose**  Enable intelligent order allocation and accurate billing by',attachments:[],comments:[]},
+  {key:'AB-67',summary:'Open Orders - Analytics',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Story',description:'To know the number of orders picked by the riders from the open Orders screen, on click of each order from the open orders screen, data has to be stor',attachments:[],comments:[{author:'aravind',date:'2026-04-13',text:'Have implemented in the mobile app using  google analytics'}]},
+  {key:'AB-68',summary:'MyGigsters Rider Cron Changes',status:'Done',priority:'High',assignee:'Nanthakumar M',due:'2026-04-15',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-69',summary:'AI as standalone Plugin',status:'Done',priority:'Highest',assignee:'aravind',due:null,type:'Story',description:'A feature should act as a plugin or extension or Network Interceptor in any of the web application, which scaps the order data (Orders list, its statu',attachments:[],comments:[]},
+  {key:'AB-70',summary:'Porter - Scrapping',status:'Done',priority:'Highest',assignee:'Sailavasan',due:null,type:'Story',description:'Porter has recently shut down all its API services for accepting the orders and delivering it through its 3PL. But there are lot of customers using Po',attachments:[],comments:[]},
+  {key:'AB-71',summary:'Wheelseye - API - Integration',status:'Done',priority:'Highest',assignee:'Unassigned',due:null,type:'Story',description:'Whellseye - A Truck Company. It is exposing its truck information through APIs. The informations has to be extracted through APIs and to be saved on c',attachments:[],comments:[{author:'Ramakrishnan Murugan',date:'2026-05-11',text:'Created for PAFlogistics Demo and Completed'}]},
+  {key:'AB-72',summary:'Kafka-Based Log Streaming Pipeline Setup for Centralized Logging',status:'Done',priority:'Medium',assignee:'Chandru S',due:'2026-04-15',type:'Task',description:'**Title:** Kafka-Based Log Streaming Pipeline Setup  **Description:**   Set up a centralized logging pipeline using Apache Kafka to collect, stream, a',attachments:[],comments:[{author:'Chandru S',date:'2026-04-20',text:'End-to-end observability stack (Kafka, Prometheus, Grafana, Loki) is set up locally, but external/de'},{author:'Chandru S',date:'2026-04-22',text:'Installed kafka, kafbat ui, prometheus, grafana, loki and the dashboards are completed in the grafan'},{author:'Chandru S',date:'2026-04-28',text:'I completed the local setup. I will deploy it to live today. I was also preparing the report for API'}]},
+  {key:'AB-74',summary:'Cashfree Rider Payout Confirmation Integration',status:'DEV QA',priority:'Medium',assignee:'Karthik K',due:'2026-04-17',type:'Task',description:'This task involves integrating Cashfree payout reports with the rider management system to streamline payout tracking and reconciliation.  The system',attachments:[],comments:[]},
+  {key:'AB-75',summary:'Audit All Event Poster Designs and Create Missing Posters',status:'Done',priority:'Medium',assignee:'Pravin',due:'2026-04-16',type:'Task',description:'Perform a comprehensive audit of all event-related poster designs to ensure completeness, consistency, and quality. Identify missing posters across al',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-16',text:'Let\'s focus on closing at least 4 banners per day. 01-May-26 Friday: International Labour Day 10-Ma'},{author:'Pravin',date:'2026-04-28',text:'today 3 poster done. Dussehra / Vijay Dashami, Engineer’s Day,Friendship day.'},{author:'Pravin',date:'2026-05-05',text:''}]},
+  {key:'AB-76',summary:'11 Labs Replica',status:'In Progress',priority:'Medium',assignee:'Vignesh B',due:null,type:'Story',description:'AI Voice Generation Platform (Text-to-Speech & Voice Cloning System)  ---  ## **Description**  This initiative focuses on developing an AI-powered voi',attachments:[],comments:[]},
+  {key:'AB-78',summary:'AD | Agency / Master Agency / Customer Master / Customer group/ Admin |  - Ordering Partner list not',status:'Done',priority:'Highest',assignee:'Sundarapandiyan',due:null,type:'Bug',description:'**Description:**   In the _Customer Bulk Onboarding_ section under Agency, Master Agency, and Customer Master modules, the Ordering Partner list is no',attachments:[{filename:'20260418-0530-40.7676151.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13315'},{filename:'image-20260415-064743.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13202'}],comments:[{author:'Devika Kandasamy',date:'2026-04-18',text:'Validated, working as expected. SS:'}]},
+  {key:'AB-79',summary:'Zomato Enhancement: Add \"Spillage Issue\" Code & Make issue_code Configurable in Feedback API',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-15',type:'Story',description:'## **Title**  Enhancement: Add \"Spillage Issue\" Code & Make \`issue_code\` Configurable in Feedback API  ---  ## **Description**  This task involves',attachments:[],comments:[]},
+  {key:'AB-80',summary:'Lsp Setup for Aaarambh',status:'Done',priority:'High',assignee:'Sailavasan',due:'2026-04-15',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-81',summary:'Rider Incentive Calculate Framework',status:'under testing',priority:'Medium',assignee:'Parthi',due:null,type:'Task',description:'',attachments:[{filename:'image-20260416-130142.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13247'}],comments:[{author:'Parthi',date:'2026-04-16',text:'Currently, the session-based, slot-based, and both-based calculations are complete.'},{author:'Parthi',date:'2026-04-17',text:'The issue Fixed and pushed onto dev'}]},
+  {key:'AB-82',summary:'AD | Customer Bulk Onboarding – Missing Minimum Guarantee Type Field in Excel Template',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:null,type:'Bug',description:'**Description**  In the Customer Bulk Onboarding module, while uploading the Excel format file, the _“Minimum Guarantee Type”_\\* field is missing in',attachments:[{filename:'20260418-0708-48.1761939.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13318'},{filename:'image-20260415-093111.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13204'}],comments:[{author:'Devika Kandasamy',date:'2026-04-18',text:'Validated, working as expected'}]},
+  {key:'AB-83',summary:'AD | Customer Bulk Onboarding – order_start_time & order_end_time Not Reflected After Upload/ Create',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:null,type:'Bug',description:'### Description  In the Customer Bulk Onboarding module, when order_start_time and order_end_time are updated in the Excel sheet and uploaded, the upd',attachments:[{filename:'20260418-0708-48.1761939.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13317'},{filename:'image-20260415-093851.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13206'}],comments:[{author:'Devika Kandasamy',date:'2026-04-18',text:'Validate, working as expected'}]},
+  {key:'AB-84',summary:'AD | Admin | Customer | Bulk Customer Onboarding – “Upload Another” Button Not Visible to Users',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',description:'In the Bulk Customer Onboarding module, the **Upload Another** button is not visible to users because it is placed at the bottom of the screen. Due to',attachments:[{filename:'image-20260415-104142.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13208'},{filename:'image-20260418-051812.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13313'}],comments:[{author:'Devika Kandasamy',date:'2026-04-18',text:'Validated working as expected, attached SS for reference'}]},
+  {key:'AB-85',summary:'AD | Agency | Customer Bulk Onboarding – Ordering Partner Dropdown Not Visible After Clicking “Uploa',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',description:'n the Customer Bulk Onboarding flow, after uploading a file and clicking the Submit button, a success or failure message is displayed. When the user c',attachments:[{filename:'20260415-1050-23.5407035.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13210'},{filename:'20260418-0525-15.7569640.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13314'}],comments:[{author:'Parthi',date:'2026-04-17',text:'The issue Fixed and pushed onto dev'},{author:'Devika Kandasamy',date:'2026-04-18',text:'Working as expected, closing this bug. SS:'}]},
+  {key:'AB-86',summary:'AD | Master Agency | Customer Bulk Onboarding – Incorrect Label Displayed',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',description:'Description:   An incorrect label is displayed on the Customer Bulk Onboarding page under the Master Agency login.  Steps to Reproduce:  1. Login as M',attachments:[{filename:'20260415-1257-40.2564303.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13212'},{filename:'image-20260417-130237.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13280'}],comments:[{author:'Parthi',date:'2026-04-17',text:'The issue was fixed and pushed onto dev'},{author:'Devika Kandasamy',date:'2026-04-17',text:'Validated, working as expected, attached SS for reference'}]},
+  {key:'AB-87',summary:'Routa - Route Optimization',status:'Backlog',priority:'Medium',assignee:'Sailavasan',due:null,type:'Story',description:'**Title:** Advanced Route Optimization Engine for Hyperlocal and Fleet Operations  **Description:**   Develop a route optimization engine that intelli',attachments:[],comments:[{author:'Parthi',date:'2026-05-04',text:''}]},
+  {key:'AB-89',summary:'Improve Date of Birth Calendar Selection in Delivery Staff Section',status:'READY FOR TESTING',priority:'High',assignee:'Chinna Mani',due:'2026-04-27',type:'Task',description:'The current Date of Birth (DOB) selection experience in the Delivery Staff section is not user-friendly. Users face difficulty selecting older dates d',attachments:[],comments:[]},
+  {key:'AB-90',summary:'Adloggs Logo Presentation & Brand Mockups Design (Figma + Freepik Assets)',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design a modern, professional, and visually compelling **logo presentation and brand mockup system** for _Adloggs_. The goal is to showcase the logo i',attachments:[],comments:[]},
+  {key:'AB-91',summary:'Adloggs Customer Prototype – Enhancements & Feature Updates',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'This task focuses on redesigning and enhancing the **Adloggs Customer Prototype** in Figma to align with modern UI/UX standards and improve usability,',attachments:[],comments:[]},
+  {key:'AB-92',summary:'AD | Customer Bulk Onboarding – Mandatory Field Validation Missing (Phone, Address, Zip Code, Lat/Lo',status:'Done',priority:'Highest',assignee:'Sundarapandiyan',due:null,type:'Bug',description:'**Description**  In the **Customer Bulk Onboarding** feature, users are able to successfully onboard customers even when mandatory fields are missing',attachments:[{filename:'20260418-0741-28.7874652.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13320'},{filename:'image-20260418-075058.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13319'}],comments:[{author:'Devika Kandasamy',date:'2026-04-18',text:'Validated, Working as expected  ss:'}]},
+  {key:'AB-93',summary:'Implement U30-Based Daily Incentive & Penalty Calculation for SFIL KFC & DIL (KFC & Pizza Hut)',status:'Done',priority:'High',assignee:'mani',due:'2026-04-17',type:'Story',description:'We need to implement a **U30-based incentive and penalty system** for delivery orders for specific customers (**SFIL KFC, DIL KFC, and DIL Pizza Hut**',attachments:[],comments:[]},
+  {key:'AB-94',summary:'Update Peak Hour Surge CPO Configuration for Zomato Cities',status:'Done',priority:'Highest',assignee:'mani',due:'2026-04-16',type:'Story',description:'As per the latest communication, there is a change in **peak hour conditions and Surge CPO pricing** for Zomato across multiple cities.  The system ne',attachments:[],comments:[{author:'Devika Kandasamy',date:'2026-04-28',text:'CC:'}]},
+  {key:'AB-95',summary:'AD | Master Agency | Customer Bulk Onboarding – Incorrect Customer Count Displayed on Dashboard',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:null,type:'Bug',description:'Description   In the Customer Bulk Onboarding feature, there is a mismatch between the number of customers uploaded via Excel/CSV and the count displa',attachments:[{filename:'image-20260416-111409.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13246'}],comments:[{author:'Devika Kandasamy',date:'2026-04-17',text:'Not a bug, closing this defect. RCA: because the Excel sheet accepts blank space  cc:'}]},
+  {key:'AB-96',summary:'Disable UPI Option for Rider Payment Details in Application',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Task',description:'Currently, all new riders are entering UPI details in the application for payouts. This is leading to inconsistencies and potential issues in payment',attachments:[],comments:[{author:'Devika Kandasamy',date:'2026-04-28',text:'verified, working as expected. .. FE need to handle upi'}]},
+  {key:'AB-97',summary:'Agency Onboarding Flow Design – Figma',status:'Hold',priority:'Medium',assignee:'dinesh',due:null,type:'Task',description:'Design a complete **Agency Onboarding Flow** in Figma that enables delivery/logistics agencies to seamlessly register, verify, and start using the Adl',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-28',text:'What is the status of agency onboarding flow?'}]},
+  {key:'AB-98',summary:'ControlX Complete Frontend & UX Development – Angular with Custom UI Components',status:'Done',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'Develop a fully responsive, scalable, and modern frontend architecture for the ControlX platform using Angular. The focus is on building a high-perfor',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-24',text:'Devika Kandasamy, Please UI/UX Version 1 has been completed from our end. If everything is ready fro'}]},
+  {key:'AB-99',summary:'Handle Customer Invoice Load Using Batch Orders',status:'DEV QA',priority:'Highest',assignee:'Ranjith',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-100',summary:'Cancel Uber Reassigned Orders for Swiggy and Zomato Customers',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-15',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-101',summary:'Pricing Pattern Upload Error',status:'READY FOR TESTING',priority:'High',assignee:'Parthi',due:null,type:'Task',description:'**Title:** Pricing Pattern Upload Error – “At least one slot must be completely filled”  **Description:**   While uploading the **Pricing Pattern**, t',attachments:[{filename:'image-20260418-061459.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13316'}],comments:[{author:'Parthi',date:'2026-04-18',text:'All Flows and all items are fixed and pushed onto development'}]},
+  {key:'AB-102',summary:'AWS to GCP Migration for ClickHouse and Superset',status:'Done',priority:'Medium',assignee:'Vignesh B',due:'2026-04-21',type:'Task',description:'- [x] Migrate ClickHouse from Amazon Web Services to Google Cloud Platform - [x] Migrate Apache Superset from Amazon Web Services to Google Cloud Plat',attachments:[],comments:[]},
+  {key:'AB-103',summary:'Seller–Rapido Cron Health Monitoring',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:null,type:'Task',description:'Implement a monitoring mechanism for all Seller–Rapido cron jobs to ensure they are running as expected without failures or delays. The system should',attachments:[],comments:[{author:'Sundarapandiyan',date:'2026-04-21',text:'Yesterday(20-04-2026) I completed the order dump and order flow dump. Today(21-04-2026) I am running'},{author:'Sundarapandiyan',date:'2026-04-21',text:'Yesterday(20-04-2026) I completed the order dump and order flow dump. Today(21-04-2026) I am running'}]},
+  {key:'AB-104',summary:'Rider Matrix API Frontend Integration',status:'Back To Dev',priority:'Medium',assignee:'Parthi',due:null,type:'Task',description:'Rider Allocation module by exposing the required APIs and connecting them with the frontend. This module will handle the assignment of riders based on',attachments:[],comments:[{author:'Parthi',date:'2026-04-21',text:'API integration and all files are moved to the main environment, and now Vijayalavan\'s support is n'}]},
+  {key:'AB-106',summary:'uEngage buyer Issue Support',status:'Done',priority:'Medium',assignee:'Sailavasan',due:'2026-04-22',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-107',summary:'Service Availability Check Not Working Correctly',status:'Done',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Task',description:'**Description:**   There is an issue with the service availability check functionality in the application. The system is either incorrectly validating',attachments:[],comments:[]},
+  {key:'AB-112',summary:'EK Bharat -App | Report page | - Earn Your Incentive Not displayed on the screen',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'EK Bharath application Earn Your incentive not displayed on the screen    ‌  Actual output:  ![](blob:https://media.staging.atl-paas.net/?type=file&lo',attachments:[{filename:'image-20260420-100920.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13354'},{filename:'image-20260420-100930.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13353'}],comments:[]},
+  {key:'AB-113',summary:'Adloggs Dashboard | Pricing Pattern | Incorrect Incentive Mode Displayed in Mobile App',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'Description:   In the Adloggs Dashboard, the user sets up the pricing pattern as Session-based. However, in the mobile application, it is displayed as',attachments:[],comments:[]},
+  {key:'AB-114',summary:'Ek Bharath |Pricing Pattern | Incentive Mode -Both | And Condition | Displaying incorrect Incentive',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'Ek Bharath |Pricing Pattern | Incentive Mode -Both | And Condition | Displaying incorrect Incentive amount  Actual Output:  Displaying incorrect Incen',attachments:[{filename:'image-20260420-131502.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13391'},{filename:'image-20260420-131600.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13392'},{filename:'image-20260420-131620.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13390'}],comments:[]},
+  {key:'AB-115',summary:'The Shadowfax scheduled time logic has been updated.',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-18',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-116',summary:'Ola LLM Llama Mavric Model Migration',status:'Done',priority:'Medium',assignee:'Unassigned',due:null,type:'Story',description:'',attachments:[],comments:[]},
+  {key:'AB-117',summary:'Ad | Pricing pattern | Displaying incorrect Error message on the screen',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',description:'Description:   When creating a new pricing pattern without filling the mandatory field Target LM\\*, the system displays an incorrect error message.',attachments:[{filename:'image-20260421-043049.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13426'}],comments:[{author:'Parthi',date:'2026-04-21',text:'As of now, I am just giving a sample design, and I need the approved design for the Calculator View'}]},
+  {key:'AB-118',summary:'Ola LLM Llama Mavric Model Migration',status:'Done',priority:'High',assignee:'Jai Chandru SS',due:'2026-04-22',type:'Story',description:'* Evaluate current Rag and Whatsapp Bots to identify changes needed for Gemma model. * Test thoroughly to ensure Gemma model fits existing bot functio',attachments:[],comments:[]},
+  {key:'AB-120',summary:'Multiple Order Flow Concepts for Ek Bharat - Multiple Order Allocation',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'1. Order Flow Concepts     Single Pickup → Multiple Drop (SPMD): One location, many deliveries     Multiple Pickup → Single Drop (MPSD): Collect from',attachments:[],comments:[]},
+  {key:'AB-121',summary:'Zomato order masked number fetch API logic has been implemented for ONDC Rapido Seller and Buyer.',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-21',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-122',summary:'E-Commerce Courier Dashboard Design',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design and develop a modern, scalable **E-Commerce Courier Dashboard** that provides operations teams, logistics managers, and support teams with real',attachments:[],comments:[]},
+  {key:'AB-124',summary:'Add-ons have been added to the user session payload.',status:'Done',priority:'Medium',assignee:'Ranjith',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-125',summary:'Change 3PL Order Pickup Date-Time Threshold from Greater Than 12 Minutes to 2 Minutes',status:'Code Review',priority:'Medium',assignee:'Karthik K',due:'2026-04-22',type:'Task',description:'Update the 3PL order pickup date-time validation logic to change the threshold from **greater than 12 minutes** to **2 minutes**.  **Current Behavior:',attachments:[],comments:[]},
+  {key:'AB-126',summary:'EK_Bharat App | Incentive Alert /Notification | Incorrect Time Displayed',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'Description:   In the Incentive Alert module, the time displayed for applicable riders does not match the time configured in the pricing pattern.  Ste',attachments:[{filename:'image-20260421-065731.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13428'}],comments:[]},
+  {key:'AB-127',summary:'EK-Bharat App | Report Page | Incorrect Session Displayed',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'Description:   In the Adloggs Dashboard, the pricing pattern is configured only for Lunch Peak (LP). However, in the EK-Bharat mobile application Repo',attachments:[{filename:'image-20260421-080229.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13430'}],comments:[]},
+  {key:'AB-128',summary:'EK-Bharat | Report Page | Displaying incorrect Incentive Amount',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'**Description:**   In the Adloggs Dashboard, the pricing pattern is configured with **Incentive Mode: Both** and **Session Criteria: AND**. Based on t',attachments:[{filename:'WhatsApp Video 2026-04-21 at 1.51.36 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13432'}],comments:[]},
+  {key:'AB-129',summary:'EK Bharat App | Report Page (Today) | Delivered Orders Not Displayed',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'**Description:**   In the EK Bharat mobile application, the **Report Page → Today** section is not displaying the rider’s delivered orders.  **Steps t',attachments:[{filename:'WhatsApp Video 2026-04-21 at 4.30.30 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13434'}],comments:[]},
+  {key:'AB-130',summary:'Create Election Campaign Wish & “Happy Election” Poster',status:'Done',priority:'Highest',assignee:'Pravin',due:'2026-04-22',type:'Task',description:'Design a visually appealing poster for an election campaign that conveys positive messaging, civic responsibility, and encouragement to vote. The post',attachments:[],comments:[{author:'Pravin',date:'2026-04-24',text:'completed.'},{author:'Pravin',date:'2026-04-24',text:'done'}]},
+  {key:'AB-132',summary:'Ek Bharat | Rider Incentive | Incorrect Incentive Display When LP Condition Not Satisfied',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'Description:   There is an issue in the incentive calculation logic for the 144 pricing pattern when both conditions (BF and LP) are involved.  Scenar',attachments:[{filename:'image-20260424-102030.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13470'},{filename:'image-20260424-102040.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13472'},{filename:'image-20260424-102055.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13471'}],comments:[]},
+  {key:'AB-133',summary:'Title: AD | Agency | Pricing Pattern | Target Last Mile not retained after save',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-27',type:'Bug',description:'Description:   When a user enters a value in the Target Last Mile field and saves the pricing pattern, the value is not retained. Reopening the same p',attachments:[{filename:'20260427-0619-34.7703382.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13506'}],comments:[{author:'Ranjith',date:'2026-05-11',text:'There was a branch mismatch. It was fixed after merging the branch.'}]},
+  {key:'AB-134',summary:'Label Update Required in RCS Screen for ONDC and in IGM',status:'READY FOR TESTING',priority:'Medium',assignee:'Chinna Mani',due:'2026-04-27',type:'Task',description:'There is a requirement to update the labels displayed in the RCS screen for both ONDC and IGM sections. The current labels are either incorrect, incon',attachments:[],comments:[{author:'Chinna Mani',date:'2026-04-30',text:'The Ondc order creation issue is from the backend; they are checking'}]},
+  {key:'AB-136',summary:'EK Bharat | Order Report / Home Screen | Incentive amount mismatch between screens',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'Description:   There is a discrepancy in the Incentive Amount displayed between the Home Screen and the Order Report page.  On the Home Screen, the in',attachments:[{filename:'WhatsApp Video 2026-04-27 at 6.38.09 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13542'}],comments:[]},
+  {key:'AB-137',summary:'AD-Prod | Live Order | State/Districts Filter dropdown displays duplicate state names',status:'Backlog',priority:'Medium',assignee:'Ranjith',due:null,type:'Bug',description:'Description:   In the Live Order module, the State filter dropdown is displaying duplicate entries for the same state. The same state name appears mul',attachments:[{filename:'20260427-1534-39.0387771.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13543'}],comments:[]},
+  {key:'AB-138',summary:'Conduct Knowledge Transfer (KT) Session for MyGisters Module',status:'Done',priority:'Medium',assignee:'Karthik K',due:'2026-04-27',type:'Task',description:'Perform a structured Knowledge Transfer (KT) session for the **MyGisters** component to ensure proper understanding and continuity within the team.  *',attachments:[],comments:[]},
+  {key:'AB-139',summary:'Create Documentation for Directoo and XpressBees Review',status:'Done',priority:'Medium',assignee:'Karthik K',due:'2026-04-27',type:'Task',description:'Prepare comprehensive documentation for the **Directoo** and **XpressBees** integrations, followed by an internal review to ensure accuracy and comple',attachments:[],comments:[]},
+  {key:'AB-140',summary:'SEO – Daily Backlink Building Activity',status:'In Progress',priority:'High',assignee:'Pravin',due:'2026-05-31',type:'Task',description:'This task focuses on improving the website’s domain authority, search engine rankings, and organic traffic through consistent and strategic backlink b',attachments:[],comments:[{author:'Pravin',date:'2026-05-05',text:'Created multiple quality backlinks for Adloggs using content, bookmarking, and document-sharing plat'},{author:'Vijayalavan Tharmalingam',date:'2026-05-09',text:'share the submitted backlink here.'},{author:'Pravin',date:'2026-05-13',text:'Completed backlink creation activities for Adloggs using platforms such as Tumblr, Hashnode,   ,   ,'},{author:'Pravin',date:'2026-05-18',text:'Completed backlink creation activities for Adloggs using platforms such as Tumblr, Hashnode,   ,   ,'}]},
+  {key:'AB-141',summary:'Implement DEV Log Streaming, Storage, and Live Monitoring (Kafka → Loki → Grafana), ClickHouse Valid',status:'Done',priority:'Medium',assignee:'Vignesh B',due:'2026-04-28',type:'Task',description:'Design and implement an end-to-end logging pipeline to support **real-time log streaming, storage, querying, and visualization**. The system will stre',attachments:[],comments:[]},
+  {key:'AB-142',summary:'Implement Latency Tracking and Monitoring for Seller APIs',status:'Done',priority:'Medium',assignee:'Vignesh B',due:'2026-04-28',type:'Task',description:'Set up end-to-end latency measurement, tracking, and monitoring for all Seller-facing APIs to ensure performance visibility and SLA compliance. This i',attachments:[],comments:[]},
+  {key:'AB-143',summary:'Trip Management & WheelsEye Integration',status:'In Progress',priority:'High',assignee:'Sundarapandiyan',due:null,type:'Task',description:'**Description:**  This task involves the design and development of the **ControlX Trip Management Module** for long-haul trucking operations, integrat',attachments:[],comments:[]},
+  {key:'AB-144',summary:'EK Bharat | Bank Details Data Not Saved in Rider App',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'### **Description:**  Bank details entered by the rider in the EK Bharat Rider app are not being saved or displayed after submission.  ### **Precondit',attachments:[{filename:'image-20260428-080023.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13578'},{filename:'image-20260428-100736.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13580'},{filename:'WhatsApp Video 2026-04-28 at 1.29.12 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13579'}],comments:[{author:'Devika Kandasamy',date:'2026-04-28',text:'Not a Bug, working as expected In the bank details page, we need to enter valid data, then only the'},{author:'aravind',date:'2026-04-28',text:'It was Backend issue need to be fixed from their end'}]},
+  {key:'AB-145',summary:'Rider Matrix Dashboard – Frontend Development',status:'Done',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'The Rider Matrix is a core module of the delivery control tower system, designed to monitor, analyze, and manage rider performance and availability in',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-28',text:'I have completed the rider matrix dashboard page. Only pending is details page and responsiveness fo'}]},
+  {key:'AB-146',summary:'RTO Delivered & Start Time and End Time In 3pl Map',status:'Done',priority:'Highest',assignee:'Parthi',due:null,type:'Task',description:'',attachments:[{filename:'image-20260428-104542.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13581'}],comments:[{author:'Parthi',date:'2026-04-28',text:'RTO-delivered is in the dev environment. 3pl mapping start time, end time, and order value are desig'},{author:'Parthi',date:'2026-04-28',text:''},{author:'Devika Kandasamy',date:'2026-05-08',text:'Validated, working as expected'}]},
+  {key:'AB-147',summary:'Remove UPI Field from Delivery Staff Dashboard for EK Bharat',status:'READY FOR TESTING',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Task',description:'**Description:**   The UPI field should be removed from the Delivery Staff dashboard specifically for the **EK Bharat** application.  Currently, deliv',attachments:[],comments:[{author:'aravind',date:'2026-05-12',text:'Remvoe upi field for Ek-bharat'}]},
+  {key:'AB-148',summary:'Chrome Extension to Control X-Flow Prototype',status:'Done',priority:'Medium',assignee:'dinesh',due:null,type:'Task',description:'Develop a Chrome Extension that enables users to control and interact with the X-Flow prototype seamlessly. The extension will act as a control layer,',attachments:[],comments:[]},
+  {key:'AB-149',summary:'Dashboard Pricing Pattern UI Design',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design and implement a modern, scalable, and user-friendly pricing UI pattern within the dashboard. The pricing section should clearly communicate dif',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-29',text:'close this task before lunch'}]},
+  {key:'AB-150',summary:'Support Server Team for Cron Job Configuration During AWS to GCP Migration',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Task',description:'Provided support to the server team for configuring and validating cron jobs as part of the server migration from AWS to GCP.  **Scope of Work:**  * A',attachments:[],comments:[{author:'aravind',date:'2026-05-04',text:'Done'}]},
+  {key:'AB-151',summary:'Ek Bharat Incentive Flow screens Design',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design a seamless and intuitive incentive flow experience for the _Ek Bharat_ platform. The goal is to create a user-centric interface that clearly co',attachments:[],comments:[]},
+  {key:'AB-152',summary:'Upgrade Application to Support 16KB Page Size',status:'Done',priority:'High',assignee:'aravind',due:null,type:'Task',description:'**Description:**   Upgrade the application to support **16KB memory page size** as per latest platform requirements and ensure compatibility across al',attachments:[],comments:[{author:'Devika Kandasamy',date:'2026-05-08',text:'Validated, working as expected'}]},
+  {key:'AB-153',summary:'Adloggs App Authentication UI/UX & Frontend Enhancement Revamp',status:'under testing',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'Revamp the authentication module of the Adloggs application with a modern, scalable, and user-centric UI/UX design. The goal is to improve usability,',attachments:[],comments:[]},
+  {key:'AB-154',summary:'AD |Agency  | Customer 3PL Mapping | Changes are not reflected after update - Start Time/End Time &',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-30',type:'Bug',description:'### **Description:**  When updating the Start Time, End Time, and Order Value in Customer 3PL Mapping, the changes are not saved after clicking the up',attachments:[{filename:'20260430-0708-54.6883748.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13615'}],comments:[{author:'Ranjith',date:'2026-04-30',text:'Backend is working fine. The frontend payload structure changed, which is why the error occurred. We'}]},
+  {key:'AB-155',summary:'AD | Agency | Customer 3PL Mapping | Incorrect Validation for Start Time and End Time',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',description:'**Description:**  The system shows an incorrect validation error when the user enters a valid Start Time and End Time combination. As per logic, End T',attachments:[{filename:'image-20260430-090959.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13617'}],comments:[{author:'Devika Kandasamy',date:'2026-05-11',text:'validated, working as expected'}]},
+  {key:'AB-156',summary:'Start time, end time, and max_order_value fields have been added to delivery partner user mapping an',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-29',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-157',summary:'Implement Scheduled Orders Support with API Creation, Rider Assignment, Webhooks, and Proof Uploads',status:'Done',priority:'Highest',assignee:'aravind',due:null,type:'Story',description:'**Description:**   Implement scheduled orders functionality with feature parity similar to existing on-demand orders.  **Requirements:**  1. **Order C',attachments:[],comments:[]},
+  {key:'AB-160',summary:'ControlX Forensics – Intelligent Order Trace & Decision Audit System',status:'Done',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'ControlX Forensics is a critical module within the Control Tower that enables deep visibility into the lifecycle of every order flowing through the sy',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-05-06',text:'I have completed the controlX ui part.'}]},
+  {key:'AB-161',summary:'AD | Elefant | scheduled Order | club_order_name Should be unique',status:'Done',priority:'Medium',assignee:'mani',due:null,type:'Bug',description:'### **Description:**  While creating scheduled orders via API, the system allows duplicate \`club_order_name\` values. This leads to ambiguity, making',attachments:[{filename:'image-20260504-161332.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13653'},{filename:'image-20260504-161425.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13652'}],comments:[]},
+  {key:'AB-162',summary:'AD Rider App | Elefant | Scheduled Order | Delivery Proof and Delivered Item Options Not Displayed i',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'### Description:  In the AD Rider App (APK), after reaching the delivery location, the Delivery Proof and Delivered Item confirmation (checkbox) optio',attachments:[{filename:'WhatsApp Video 2026-05-04 at 10.09.16 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13655'}],comments:[]},
+  {key:'AB-163',summary:'AD Rider App | Elefant | Scheduled Order | Unpicked Items Displayed Incorrectly at  RTO Verification',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'### Description:  Unpicked items are being displayed incorrectly across multiple stages in the Rider App. Items that were not picked up during the pic',attachments:[{filename:'WhatsApp Video 2026-05-04 at 10.09.16 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13657'}],comments:[]},
+  {key:'AB-164',summary:'Fix Uber Query Order Fetch Logs Issue',status:'Done',priority:'Medium',assignee:'Vignesh B',due:'2026-04-30',type:'Task',description:'There is an issue with fetching order logs related to Uber queries from our system. The logs are either incomplete, inconsistent, or not being capture',attachments:[],comments:[{author:'Vignesh B',date:'2026-05-11',text:'Uber Query Order Fetch Logs in grafana no need to testing'}]},
+  {key:'AB-165',summary:'Control X with Zoya Voice Support Demo Integration',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Task',description:'Develop and integrate a voice support demo feature for “Control X” using Zoya Voice Assistant capabilities. The objective is to demonstrate an AI-powe',attachments:[],comments:[]},
+  {key:'AB-166',summary:'AD | Live Order | Order Items | Incorrect Count for Collected, Delivered, Collection at Delivery & R',status:'Done',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',description:'### **Description:**  In the Live Order section, the item counts displayed for **Collected**, **Delivered**, **Collection at Delivery**, and **RTO** a',attachments:[{filename:'image-20260506-074859.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13691'}],comments:[]},
+  {key:'AB-167',summary:'AD | Customer | Settings | 3PL Setup | Unable to Inactivate 3PL Partner',status:'Backlog',priority:'Medium',assignee:'Ranjith',due:null,type:'Bug',description:'### **Description:**  In the Customer Settings under 3PL Setup, users are unable to successfully inactivate a 3PL partner. Even after marking the part',attachments:[{filename:'image-20260506-100410.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13693'}],comments:[]},
+  {key:'AB-168',summary:'App.Adloggs – Order Counts Popup Modal UI/UX Enhancement',status:'under testing',priority:'Medium',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'Enhance the existing Order Counts Popup Modal in the [Adloggs](https://adloggs.com/?utm_source=chatgpt.com) web application to deliver a more modern,',attachments:[],comments:[]},
+  {key:'AB-169',summary:'Blitz Rain Surge Add-on Integration in Swiggy',status:'Done',priority:'Medium',assignee:'Karthik K',due:'2026-05-07',type:'Task',description:'Implement support for adding the “Rain Surge” fee/add-on in the Swiggy Blitz flow during adverse weather conditions.  ### Notes  * Coordinate with pri',attachments:[{filename:'Rain Surge.pdf',mimeType:'application/pdf',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13726'},{filename:'Rain Surge (29be15c1-7ee8-46e6-9e65-ecaca0c98b65).pdf',mimeType:'application/pdf',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13727'}],comments:[]},
+  {key:'AB-173',summary:'3PL Mapping Popup Active Sort Order Enhancement & Delivery Staff Weekday Invalid Time Issue Fix',status:'READY FOR TESTING',priority:'Medium',assignee:'Parthi',due:'2026-05-08',type:'Task',description:'Implement enhancements and fixes related to 3PL mapping configuration and delivery staff weekday time handling.  ### Scope  * Add active sort order su',attachments:[],comments:[]},
+  {key:'AB-174',summary:'Fix Seller Order Creation Issue in On_Confirm Status',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-08',type:'Task',description:'Investigate and fix the issue where seller orders are not getting created during the \`on_confirm\` status flow.  ### Scope  * Analyze \`on_confirm\`',attachments:[],comments:[]},
+  {key:'AB-175',summary:'Customer Onboarding & Configuration Flow – UI/UX Design in Figma',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Task',description:'Design a complete and professional customer onboarding and configuration flow in Figma for the platform. The flow should provide a seamless user exper',attachments:[],comments:[]},
+  {key:'AB-176',summary:'The Customer App Onboarding Flow – UI/UX Design in Figma',status:'In Progress',priority:'High',assignee:'dinesh',due:'2026-05-23',type:'Task',description:'Design a complete and modern wallet flow for the customer application in Figma. The wallet module should provide users with a seamless experience for',attachments:[],comments:[]},
+  {key:'AB-177',summary:'Monthly Blog Content Creation for Adloggs  – 4 Blogs',status:'Done',priority:'Highest',assignee:'Pravin',due:null,type:'Task',description:'Create and publish 4 high-quality, SEO-friendly blogs for [Adloggs](https://adloggs.com?utm_source=chatgpt.com) within this month. The blogs should al',attachments:[],comments:[{author:'Pravin',date:'2026-05-13',text:'Completed the following 4 blogs as part of the assigned content task: All blog contents have been co'}]},
+  {key:'AB-178',summary:'App Comparing Delivery platform',status:'Code Review',priority:'High',assignee:'aravind',due:'2026-05-13',type:'Story',description:'**Description:**   This feature aims to enable riders to view incoming order notifications from multiple delivery partner applications installed on th',attachments:[],comments:[]},
+  {key:'AB-179',summary:'Logic change from pickup to assignment time',status:'DEV QA',priority:'Highest',assignee:'Ranjith',due:'2026-05-13',type:'Story',description:'All logic should be changed from pickup time to assignment time.  * No of Orders done * Surge Calculation * Order Amount * Incentive Calculation etc *',attachments:[{filename:'DS Timing change APIS.docx',mimeType:'application/vnd.openxmlformats-officedoc',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13760'}],comments:[{author:'Ranjith',date:'2026-05-14',text:'1. https://dev.adloggs.com/aadsapp/dsorderreport - GET Api 2. https://dev.adloggs.com/aadsapp/dsorde'}]},
+  {key:'AB-180',summary:'WheelsEye Truck Trip & Recurring Vehicle Management Integration in ControlX Service',status:'In Progress',priority:'Medium',assignee:'Ramakrishnan Murugan',due:'2026-05-14',type:'Story',description:'Implement WheelsEye Truck Trip Management integration inside ControlX Service to support long-haul truck monitoring, recurring vehicle scheduling, and',attachments:[],comments:[]},
+  {key:'AB-184',summary:'Wellness Forever - Shipsy orders Management flow controlx',status:'Done',priority:'Medium',assignee:'Ramakrishnan Murugan',due:null,type:'Story',description:'',attachments:[],comments:[]},
+  {key:'AB-185',summary:'Adloggs MCP server for Claude and other Ai chats',status:'In Progress',priority:'Medium',assignee:'Muthu Rajeshwari M',due:null,type:'Story',description:'',attachments:[],comments:[]},
+  {key:'AB-186',summary:'Separate Cron Jobs from EK-Bharat Backend Repository and Deploy as Independent Service',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-11',type:'Task',description:'Currently, cron jobs are maintained inside the main EK-Bharat backend repository. To improve maintainability, deployment isolation, scalability, and o',attachments:[],comments:[{author:'Sundarapandiyan',date:'2026-05-11',text:'Today morning (2026-05-11), I requested repository access from    . Once I receive the repository ac'}]},
+  {key:'AB-187',summary:'Loggi AI new updates Fastest, Cheapest, Best 3pl Prediction Module',status:'In Progress',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-14',type:'Story',description:'- [ ] UI Upgrade - [ ] Server Capacity Revalidation - [ ] Daily model upgradation from previous model - [ ] Model atleast 3 months data - [ ] Create s',attachments:[],comments:[]},
+  {key:'AB-188',summary:'mygister incentive update cron',status:'DEV QA',priority:'Medium',assignee:'raja',due:'2026-05-11',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-189',summary:'Completed end-to-end testing for Swiggy Instamart integration in the development environment along w',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-28',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-190',summary:'zoho invoice and order report mismatch - discussion and correction with sundar and silavasan',status:'In Progress',priority:'Medium',assignee:'raja',due:'2026-05-11',type:'Task',description:'',attachments:[],comments:[{author:'raja',date:'2026-05-13',text:'we sent to live invoice to abi. we are waiting they check and confirm this.'}]},
+  {key:'AB-191',summary:'Migrating python service Zoya Rider Support Bot, Controlx service to python-server',status:'Done',priority:'Medium',assignee:'Ramakrishnan Murugan',due:'2026-05-12',type:'Story',description:'',attachments:[],comments:[]},
+  {key:'AB-192',summary:'Cashfree Integration – Recron UI Data Import & Rider Payout Status Update',status:'Backlog',priority:'Medium',assignee:'Parthi',due:'2026-05-11',type:'Task',description:'Integrate the Cashfree payout/import process with the Recron UI module to fetch and import Cashfree transaction data into our system and automatically',attachments:[],comments:[]},
+  {key:'AB-193',summary:'Prevent Scheduled Orders Screen Refresh on Back Navigation',status:'READY FOR TESTING',priority:'Highest',assignee:'Parthi',due:'2026-05-12',type:'Task',description:'**Description:**   In the **Scheduled Orders** screen, when a user clicks on any order to view its details and then navigates back to the Scheduled Or',attachments:[],comments:[]},
+  {key:'AB-194',summary:'Ordering Partner Failed Status Retry Handling and Separate Cron Implementation for KFC, Other Orderi',status:'Done',priority:'Medium',assignee:'Ranjith',due:null,type:'Task',description:'Ordering partner status update API was receiving failed responses. Implemented a retry mechanism to retry the same status update up to 5 times. Failed',attachments:[],comments:[]},
+  {key:'AB-198',summary:'Implemented Zomato Logic for Uber 3PL ONDC Flow in Swiggy Orders',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-05-06',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-199',summary:'XpressBees Integration Implementation',status:'To Do',priority:'High',assignee:'Karthik K',due:null,type:'Task',description:'Implement integration with the XpressBees courier/shipping service to support shipment creation, tracking, status synchronization, and logistics workf',attachments:[],comments:[{author:'Karthik K',date:'2026-05-14',text:'Yesterday, Ranjith was fully occupied with live work, so we couldn’t discuss properly. We need to di'}]},
+  {key:'AB-200',summary:'ONDC Order Pricing Duplicate and Yulu Update Issue Fixes',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-05-09',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-202',summary:'Add Suggested Route Map Popup for Auto Assign in Scheduled Orders',status:'In Progress',priority:'Medium',assignee:'Parthi',due:'2026-05-13',type:'Story',description:'**Description:**   In the **Scheduled Orders** screen, during the **Auto Assign** process, the system should display a popup containing the **suggeste',attachments:[],comments:[]},
+  {key:'AB-203',summary:'WheelEye Integration Implementation',status:'In Progress',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-13',type:'Task',description:'Implement integration with WheelEye to support vehicle/fleet tracking, shipment monitoring, and logistics data synchronization within the platform.  #',attachments:[],comments:[]},
+  {key:'AB-204',summary:'Adloggs LLM api service providing python',status:'In Progress',priority:'Medium',assignee:'Ramakrishnan Murugan',due:null,type:'Story',description:'',attachments:[],comments:[]},
+  {key:'AB-205',summary:'ONDC 3pl setup - task with sailavason',status:'In Progress',priority:'Medium',assignee:'raja',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-206',summary:'Initiate Partnership Integration Discussion with TEV Logistics in ONDC Buyer',status:'Done',priority:'Highest',assignee:'mani',due:'2026-05-11',type:'Task',description:'As discussed, please note the **BPP ID** for TEV Logistics integration:  \`tev.ondc-lsp.prosquad.ai\`  This BPP ID will be used for ONDC network-level',attachments:[],comments:[]},
+  {key:'AB-207',summary:'Brozo 3PL Delivery Status API Hit Twice Causing Double Debit in Customer Wallet',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-12',type:'Task',description:'The Brozo 3PL delivery status webhook/API is getting triggered twice for the same order. Due to this duplicate callback, the wallet debit logic is als',attachments:[],comments:[]},
+  {key:'AB-209',summary:'CRM Migration - Orbit',status:'Done',priority:'High',assignee:'mani',due:'2026-05-12',type:'Task',description:'CRM Migration - Orbit table 1 to orbit table 2',attachments:[],comments:[]},
+  {key:'AB-210',summary:'Implement New Report in CRM - Orbit',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task',description:'Need to Implement report in CRM - Orbit',attachments:[],comments:[]},
+  {key:'AB-211',summary:'Update Duplicate Order Validation Logic for Elefant Orders',status:'Done',priority:'High',assignee:'mani',due:null,type:'Task',description:'Currently, the duplicate order validation is restricting order creation for all existing order IDs.  For **Elefant**, the duplicate order validation s',attachments:[],comments:[]},
+  {key:'AB-212',summary:'Customer Config',status:'Back To Dev',priority:'High',assignee:'Sailavasan',due:'2026-05-07',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-213',summary:'Schedule order API - Sort, Swap and Rider Capacity',status:'In Progress',priority:'Highest',assignee:'Parthi',due:'2026-05-13',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-214',summary:'Elefant Pagination in scheduled order',status:'Done',priority:'Highest',assignee:'aravind',due:'2026-05-13',type:'Task',description:'Pagination in Schedule order and live orders',attachments:[],comments:[]},
+  {key:'AB-215',summary:'Session Management for Loggi AI',status:'Backlog',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Story',description:'',attachments:[],comments:[{author:'Jai Chandru SS',date:'2026-05-14',text:'Session management implemented, URL token auth verified through adloggs , user info (name) stored in'}]},
+  {key:'AB-216',summary:'remove default maximum value in business config',status:'Done',priority:'Medium',assignee:'raja',due:'2026-05-13',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-217',summary:'dp_day_time_wise table cron running in main and analytics db',status:'Done',priority:'Medium',assignee:'Venkateswaran E',due:'2026-05-13',type:'Story',description:'',attachments:[],comments:[{author:'Venkateswaran E',date:'2026-05-18',text:'runned for dates[May - 14,15,16,17] for two tables in two Databases'}]},
+  {key:'AB-218',summary:'App.Adloggs Master – List View & UI Enhancement',status:'under testing',priority:'High',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'Enhance the overall list view interface and UI experience in the App.Adloggs Master module to provide a more modern, user-friendly, responsive, and vi',attachments:[],comments:[]},
+  {key:'AB-219',summary:'UI Upgradation for Logisight Rider Dashboard & Order Detection Screens',status:'Done',priority:'Medium',assignee:'dinesh',due:null,type:'Task',description:'Upgrade the current Logisight rider dashboard UI to improve visual hierarchy, readability, user engagement, and overall user experience during order d',attachments:[{filename:'Screenshot_20260513-151353_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13807'},{filename:'Screenshot_20260513-151414_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13809'},{filename:'Screenshot_20260513-151425_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13811'},{filename:'Screenshot_20260513-151429_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13808'},{filename:'Screenshot_20260513-151434_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13806'},{filename:'Screenshot_20260513-151453_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13810'},{filename:'Screenshot_20260513-151505_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13812'},{filename:'Screenshot_20260513-151548_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13813'}],comments:[]},
+  {key:'AB-220',summary:'EK Bharat App | Rider Incentive | Home Page | View Card Not Visible in the Application',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Bug',description:'Description:   The Rider Incentive View Card is not visible on the Home Page of the EK Bharat application.  Expected Result:   The Rider Incentive Vie',attachments:[{filename:'image-20260513-124917.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13817'},{filename:'WhatsApp Video 2026-05-13 at 6.18.28 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13816'}],comments:[]},
+  {key:'AB-224',summary:'Adloggs – Ek Bharat MOU Word Document Creation',status:'Done',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'The objective of this task is to design and develop a professional, well-structured, and editable Microsoft Word document for the Memorandum of Unders',attachments:[],comments:[]},
+  {key:'AB-225',summary:'ONDC Buyer - Uber',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Task',description:'In ONDC-Buyer - uber doesn’t recieve on_search and on_confirm in delhi cluster',attachments:[],comments:[{author:'mani',date:'2026-05-14',text:'10.30 we had a call uber team they have faced some issue from their end. At 3.30 they have fixed t'}]},
+  {key:'AB-226',summary:'Add Collection Item List Property in Scheduled Orders API - Elefant',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Task',description:'**Description:**   The Scheduled Orders List API needs to be enhanced to include a new property for sending the collection item list in the response.',attachments:[],comments:[]},
+  {key:'AB-227',summary:'AD | Master Agency / Agency | Customer Config | Order Allow Start Time & Order Allow End Time are no',status:'In Progress',priority:'Medium',assignee:'Sailavasan',due:null,type:'Bug',description:'Description:   The “Order Allow Start Time” and “Order Allow End Time” values are not getting updated in the customer configuration when updating cust',attachments:[],comments:[]},
+  {key:'AB-228',summary:'The Quest International School – Mandatory Public Disclosure Club Pages Development in WordPress',status:'under testing',priority:'Medium',assignee:'Vijayalavan Tharmalingam',due:'2026-05-14',type:'Task',description:'Develop and integrate the “Mandatory Public Disclosure – Club Pages” section for The Quest International School using WordPress.  The objective of thi',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-05-18',text:'I have completed all the requested support activities. The completed items are listed below:'}]},
+  {key:'AB-229',summary:'Design 3 Infographic Creatives for The Quest International School – Asserts Creations',status:'Done',priority:'Highest',assignee:'Pravin',due:'2026-05-15',type:'Task',description:'Create 3 professional and visually engaging infographic creatives for **The Quest International School** under the **Asserts Creations** branding requ',attachments:[],comments:[]},
+  {key:'AB-230',summary:'The Loggi Sight Logo Creation',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design and create a professional, modern, and memorable logo for the brand/product named **“Loggi Sight.”** The logo should visually represent innovat',attachments:[{filename:'01.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13890'},{filename:'02.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13891'},{filename:'418066919.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13889'},{filename:'418066920.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13892'}],comments:[]},
+  {key:'AB-231',summary:'Design and Prepare Loggi Sight App Store, Play Store, and Application Icons',status:'Done',priority:'Highest',assignee:'dinesh',due:'2026-05-30',type:'Task',description:'Create professional and brand-consistent application icons and store listing assets for the Loggi Sight mobile application. The task includes designin',attachments:[],comments:[]},
+  {key:'AB-232',summary:'Agency Onboarding Complete Flow – Figma Design Version',status:'In Progress',priority:'Highest',assignee:'dinesh',due:'2026-05-30',type:'Task',description:'Design a complete and professional onboarding flow for agencies in Figma. The onboarding process should provide a smooth user experience from account',attachments:[],comments:[]},
+  {key:'AB-233',summary:'TQIS Website – Clubs & Guiding Statements Page Layout Design and UI Enhancement',status:'Done',priority:'High',assignee:'Pravin',due:'2026-05-15',type:'Task',description:'Design and develop modern, responsive, and professional page layouts for the following TQIS website pages:  * [TQIS Clubs Page](https://tqis.in/clubs/',attachments:[],comments:[{author:'Pravin',date:'2026-05-18',text:'done'}]},
+  {key:'AB-234',summary:'Agency ZOYA Web Client – UI Enhancement (Angular)',status:'In Progress',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'Enhance the overall User Interface (UI) and User Experience (UX) of the AgencyZ OYA Web Client built with Angular. The objective is to improve the vis',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-05-15',text:'I have started the task'}]},
+  {key:'AB-235',summary:'Ditto Mart - Buyer Configuration support',status:'Code Review',priority:'Medium',assignee:'mani',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-236',summary:'Swiggy Instamart - Change Support Reasons',status:'READY FOR TESTING',priority:'Highest',assignee:'Chinna Mani',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-237',summary:'Wallet Screen - Need to add customer order id in the list',status:'READY FOR TESTING',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-238',summary:'AD | Reports | Rider Report | Duplicate rider names displayed on search',status:'Code Review',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Bug',description:'**Description:**   In the Rider Report under AD | Reports, searching by **Rider Name** or **Phone Number** displays duplicate entries for the same rid',attachments:[{filename:'image-20260515-110530.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13854'},{filename:'image-20260521-102602.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13930'},{filename:'Screenshot from 2026-05-21 15-55-30.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13929'}],comments:[{author:'Chinna Mani',date:'2026-05-21',text:'Resolved. Please check and confirm'}]},
+  {key:'AB-239',summary:'AD | Agency /Master Agency | Daily Deployment | Unable to change the start/End Time',status:'In Progress',priority:'Medium',assignee:'Chinna Mani',due:null,type:'Bug',description:'',attachments:[{filename:'20260516-0645-19.7038759.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13888'}],comments:[]},
+  {key:'AB-240',summary:'AD | COD Flow | Check Status UI | Clicking status moves to next stage without response',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug',description:'**Description:**   In the COD Flow, when a user clicks the **Check Status** button, the UI should display a success or failure message. Currently, cli',attachments:[],comments:[]},
+  {key:'AB-241',summary:'EK Bharat | COD Flow | Check Status | Incorrect message after QR payment Done',status:'Backlog',priority:'Medium',assignee:'Vignesh B',due:null,type:'Bug',description:'**Description:**   In the COD Flow, when a user scans the QR code and completes the payment, clicking the **Check Status** button incorrectly displays',attachments:[{filename:'image-20260516-080811.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13896'},{filename:'WhatsApp Video 2026-05-16 at 1.32.08 PM.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13893'}],comments:[]},
+  {key:'AB-242',summary:'AD | Agency | COD Settlement | Unpaid COD records not displayed',status:'To Do',priority:'Medium',assignee:'Parthi',due:null,type:'Bug',description:'**Description:**   In the **COD Settlement** page under AD | Agency, unpaid COD records are **not appearing** as expected.  **Steps to Reproduce:**  1',attachments:[{filename:'20260516-0803-32.7207844.mp4',mimeType:'video/mp4',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13895'}],comments:[]},
+  {key:'AB-243',summary:'Controlx - Onboarding Window backend and Angular logic for admin and super admin',status:'In Progress',priority:'Medium',assignee:'Venkateswaran E',due:null,type:'Story',description:'',attachments:[],comments:[]},
+  {key:'AB-244',summary:'Qwqer – Add Rain Surge and Tip Amount in Order Fare Details',status:'Code Review',priority:'Medium',assignee:'Karthik K',due:'2026-05-14',type:'Task',description:'Implement support for displaying and processing **Rain Surge** charges and **Tip Amount** in the Qwqer order/payment flow.  ### Scope  * Add \`rain_su',attachments:[],comments:[]},
+  {key:'AB-249',summary:'Engaje App – Upgrade Flutter Version and Resolve Android/iOS Policy Violations',status:'To Do',priority:'Medium',assignee:'Vignesh B',due:'2026-05-22',type:'Task',description:'Upgrade the Engaje mobile application to the latest stable Flutter version and resolve all Android and iOS platform policy violations to ensure succes',attachments:[],comments:[]},
+  {key:'AB-250',summary:'Competitor Analysis for Delivery Platform',status:'Done',priority:'High',assignee:'Pravin',due:null,type:'Task',description:'Conduct a comprehensive competitor analysis for the delivery platform market to understand current industry trends, business models, feature offerings',attachments:[],comments:[]},
+  {key:'AB-251',summary:'DS Assignment Distance Mismatch Fix in OSRM Using Reverse & Haversine Fallback',status:'In Progress',priority:'High',assignee:'Ranjith',due:'2026-05-19',type:'Task',description:'Observed distance mismatch issues during DS assignment calculation in OSRM responses.  Implemented validation using reverse distance calculation. If t',attachments:[],comments:[]},
+  {key:'AB-252',summary:'Remove Orders Older Than 3 Days from Integration Table',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-05-13',type:'Task',description:'Implemented cleanup for completed orders in the integration table.  Orders with completed status older than 3 days will now be removed from the integr',attachments:[],comments:[]},
+  {key:'AB-253',summary:'OP Order Log Updates, DP Service API Logging & Uber Rider Block Disable for Swiggy Orders',status:'Done',priority:'High',assignee:'Ranjith',due:'2026-05-15',type:'Task',description:'Implemented multiple updates related to order processing and logging:  * Added changes for OP order creation logs. * Shadowfax - Added request/respons',attachments:[],comments:[]},
+  {key:'AB-254',summary:'Implement Store-Bound Rider Allocation & Multi-Channel Dispatch Logic for KFC Orders',status:'To Do',priority:'Highest',assignee:'aravind',due:null,type:'Task',description:'Develop and implement a dedicated store-bound rider dispatch model for KFC outlets to support intelligent assignment of orders from KFC Direct, Swiggy',attachments:[],comments:[]},
+  {key:'AB-256',summary:'Implement ONDC 3PL Config Payload Transformation',status:'Code Review',priority:'High',assignee:'Chinna Mani',due:null,type:'Task',description:'Implement ONDC 3PL Config Payload Transformation',attachments:[],comments:[]},
+  {key:'AB-257',summary:'Discussion with the Dispatch ONDC team regarding integration flow, dispatch handling, and pending im',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Task',description:'Conducted a meeting with the Dispatch ONDC team to discuss the current integration flow and operational requirements related to order dispatch and log',attachments:[],comments:[]},
+  {key:'AB-258',summary:'CRM Orbit Database Migaration',status:'Done',priority:'Highest',assignee:'mani',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-259',summary:'The Quest International School – Premium Infographic & Club and Activity Page Design',status:'Done',priority:'High',assignee:'Pravin',due:'2026-05-18',type:'Task',description:'Design and develop a highly engaging, modern, and visually compelling infographic-based landing page for **The Quest International School**. The page',attachments:[],comments:[{author:'Pravin',date:'2026-05-21',text:'task done'}]},
+  {key:'AB-260',summary:'Support to Testing Team – L1',status:'To Do',priority:'Highest',assignee:'Pravin',due:'2026-05-22',type:'Task',description:'Provide Level 1 (L1) support to the testing team by assisting with functional validation, issue verification, environment checks, data validation, and',attachments:[],comments:[]},
+  {key:'AB-261',summary:'Adloggs Backlink Building Through Medium & External Blog Platforms',status:'Done',priority:'Medium',assignee:'Pravin',due:'2026-05-20',type:'Task',description:'Create and publish high-quality blog content about the Adloggs platform on Medium and other relevant external blogging platforms to improve SEO rankin',attachments:[],comments:[]},
+  {key:'AB-262',summary:'Elefant Cancellation Flow',status:'Done',priority:'High',assignee:'mani',due:'2026-05-21',type:'Task',description:'Elefant Cancelation from API hit',attachments:[],comments:[]},
+  {key:'AB-263',summary:'The App.adloggs - Receivables - module',status:'In Progress',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:'2026-05-21',type:'Task',description:'The Receivables Module in App.adloggs is responsible for managing and tracking all incoming payments, outstanding invoices, payment statuses, settleme',attachments:[],comments:[]},
+  {key:'AB-264',summary:'PNL - Cron Manual Run - 20/05/2026',status:'Done',priority:'Highest',assignee:'mani',due:'2026-05-21',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-265',summary:'Enhance UI/UX for Settings Module in Adloggs Web Application - Countries States Cities Cluster Vehic',status:'To Do',priority:'Highest',assignee:'Vijayalavan Tharmalingam',due:'2026-05-25',type:'Task',description:'Redesign and enhance the UI/UX of the Settings module in the Adloggs web application to achieve a modern, highly professional, scalable, and visually',attachments:[],comments:[]},
 ];
 
 const RELEASES_DATA = [
@@ -1038,16 +1289,17 @@ const RELEASES_DATA = [
 
 // Requirements loaded from the actual Google Sheet content
 const SHEET_REQUIREMENTS = [
-  {id:'REQ-001',title:'API Response changes — Shiprocket serviceability JSON to query params',desc:'Change serviceability response format for Shiprocket — from JSON to query params in the URL.',by:'Priya',dept:'Product',date:'3 Apr 2026',priority:'High',status:'accepted',client:'Shiprocket',impact:'High',bizImpact:'Moderate',
-   attachments:[{filename:'Shiprocket Reference Doc',url:'https://drive.google.com/open?id=12ipFwxx2IRJEgSVakUy9yxr4DRi-FrhJ'}]},
-  {id:'REQ-002',title:'Bulk Onboarding - Import Option',desc:'Bulk import for clients with multiple outlets to reduce manual onboarding time.',by:'Swathi Iyyappan',dept:'Business',date:'6 Apr 2026',priority:'Critical',status:'accepted',client:'Multiple outlets',impact:'Very High',bizImpact:'—',attachments:[]},
-  {id:'REQ-003',title:'Shopify Integration',desc:'Shopify integration is a blocker for new sign-ups using Shopify.',by:'Swathi Iyyappan',dept:'Business',date:'7 Apr 2026',priority:'Critical',status:'accepted',client:'Shopify clients',impact:'High',bizImpact:'0',attachments:[]},
-  {id:'REQ-004',title:'Rider payment source visibility in Weekly Payout Report',desc:'Need payment source (Mygigster vs other) per rider on weekly report to reduce reconciliation errors.',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'new',client:'—',impact:'High',bizImpact:'No revenue impact — saves manual reconciliation time',attachments:[]},
-  {id:'REQ-005',title:'Payment Reference number (UTR) on Rider Payout Report',desc:'Capture UTR for all rider payments from Mygigster or Cashfree against each rider on the payout report.',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'Medium',status:'new',client:'—',impact:'High',bizImpact:'No revenue impact — reduces Ops dependency on Finance',attachments:[]},
-  {id:'REQ-006',title:'Dev Environment for Control X',desc:'Test account for Control X even when under development, for demos.',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'Internal',impact:'Very High',bizImpact:'0',attachments:[]},
-  {id:'REQ-007',title:'Add order price in Book Order (for Tip feature)',desc:'Add order price during manual order creation to enable tip functionality.',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'—',impact:'High',bizImpact:'0',attachments:[]},
-  {id:'REQ-008',title:'Filter option to download Issue Orders from Basic Order Report',desc:'Download-only filter for issue orders in Basic Order Report to proactively fix fraud/3PL issues.',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'review',client:'—',impact:'High',bizImpact:'Fraud reduction + cost savings',attachments:[]},
-  {id:'REQ-009',title:'COD Remittance at Store Level — Order-wise option',desc:'Dedicated rider deployment at Wellness Forever for COD orders; order-wise visibility at store level.',by:'Bharat',dept:'Business',date:'11 May 2026',priority:'High',status:'new',client:'Wellness Forever',impact:'Medium',bizImpact:'55% wallet share in COD',attachments:[]},
+  {id:'REQ-001',title:'API Response changes — Shiprocket serviceability JSON to query params',desc:'There is a request from shiprocket to change the serviceability response from json to query params (In the URL only).',by:'Priya',dept:'Product',date:'3 Apr 2026',priority:'High',status:'accepted',client:'Shiprocket',impact:'High',bizImpact:'Moderate',email:'priyadharshini@adloggs.com',attachments:[{filename:'Shiprocket Reference Doc',url:'https://drive.google.com/open?id=12ipFwxx2IRJEgSVakUy9yxr4DRi-FrhJ'}],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-002',title:'Bulk Onboarding - Import Option',desc:'We need to do when cx is having many outlets',by:'Swathi Iyyappan',dept:'Business',date:'6 Apr 2026',priority:'Critical',status:'accepted',client:'For client who have multiple outlets',impact:'High',bizImpact:'Very High and time consuming',email:'swathi@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-003',title:'Shopify Integration',desc:'Cx who are integrated with shopify it is being the blocker',by:'Swathi Iyyappan',dept:'Business',date:'7 Apr 2026',priority:'Critical',status:'accepted',client:'Cx who are integrated with shopify',impact:'High',bizImpact:'This impacts new sign up who is using shopify',email:'swathi@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-004',title:'Rider payment source visibility in Weekly Payout Report',desc:'Need whether the payments to a particular rider id are processed from Mygigster or any other payment source on the Weekly Rider payout report',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'new',client:'—',impact:'High',bizImpact:'No Revenue impact, this saves time spent on manual reconciliation',email:'abinaya@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-005',title:'Payment Reference number (UTR) on Rider Payout Report',desc:'Rider payment done for any particular week for any Rider from Mygigster or Cashfree, the payment reference number needs to get captured against the same rider on the same report',by:'Abinaya',dept:'Product',date:'20 Apr 2026',priority:'Medium',status:'new',client:'—',impact:'High',bizImpact:'No revenue impact, but it is easier for Ops team to manage',email:'abinaya@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-006',title:'Dev Environment for Control X',desc:'Even if control X is under development it should be easily accessible for demonstrating',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'Internal',impact:'High',bizImpact:'Very important',email:'swathi@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-007',title:'Add order price in Book Order (for Tip feature)',desc:'Add order price while manual creation of order to make the Tip added',by:'Swathi Iyyappan',dept:'Business',date:'20 Apr 2026',priority:'Critical',status:'new',client:'—',impact:'High',bizImpact:'Very important',email:'swathi@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-008',title:'Filter option to download Issue Orders from Basic Order Report',desc:'Need a filter option to download only the Issue orders from Basic Order Report',by:'Abinaya',dept:'Finance',date:'20 Apr 2026',priority:'High',status:'new',client:'—',impact:'High',bizImpact:'Revenue impact none, Customer Satisfaction and Fraud reduction high',email:'abinaya@adloggs.com',attachments:[],comments:[{author:'Priya',date:'18 May 2026',text:'After downloading the excel, please add the filters in the excel only, for better performance. If added in the dashboard, it leads to performance downtime due to database indexing.'}],responsible:'',responsibleEmail:''},
+  {id:'REQ-009',title:'COD Remittance at Store Level — Order-wise option',desc:'We need to start a dedicated rider deployment at Wellness Forever client to cater their COD orders',by:'Bharat',dept:'Business',date:'11 May 2026',priority:'High',status:'new',client:'Wellness Forever',impact:'Medium',bizImpact:'To increase the fulfillment of COD order as client has 55% of the Wallet share as COD',email:'bharat@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
+  {id:'REQ-010',title:'Portal sync test',desc:'test',by:'Priya',dept:'Product',date:'18 May 2026',priority:'Critical',status:'new',client:'test',impact:'High',bizImpact:'high',email:'priyadharshini@adloggs.com',attachments:[{filename:'Test Attachment',url:'https://drive.google.com/open?id=1f2B48hcwhsYqL_AFGCclz1V_DaO4vwtq'}],comments:[{author:'Priya',date:'18 May 2026',text:'test'},{author:'Priya',date:'18 May 2026',text:'testing in progress'},{author:'Priya',date:'18 May 2026',text:'testtttt'}],responsible:'',responsibleEmail:''},
+  {id:'REQ-011',title:'Mygigster - SDC, Penalty & Platform fee',desc:'For Mygigster to provide report with all relevant details, SDC, Penalty to be provided as separate columns in the database table. Also Platform fee should be added in the table.',by:'Priyadharshini',dept:'Product',date:'20 May 2026',priority:'Critical',status:'new',client:'—',impact:'Medium',bizImpact:'Required for consolidated data view on payments',email:'priyadharshini@adloggs.com',attachments:[],comments:[],responsible:'',responsibleEmail:''},
 ];
 
 // ================================================================
@@ -1062,7 +1314,9 @@ const STATE = {
   addingToTeam: null,
   timers: {},
   jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || 'https://jira-proxy.priyadharshini.workers.dev',
-  sheetsInterval: parseInt(localStorage.getItem('adloggs_sheets_interval') || '120000'),
+  gchatWebhookUrl:  localStorage.getItem('adloggs_gchat_webhook') || '',
+  reminderInterval: parseInt(localStorage.getItem('adloggs_reminder_interval') || '0'),
+  reminderTimer:    null,
 };
 
 // ================================================================
@@ -1331,7 +1585,6 @@ function renderTeams() {
           <div class="m-title">${esc(m.title||'')}${m.issues ? `<span class="jira-tag">${m.issues} issues</span>` : ''}</div>
         </div>
         <div class="m-dot s-${m.status||'offline'}"></div>
-        <button class="action-icon" style="font-size:10px;width:22px;height:22px;margin-left:4px" onclick="moveMemberToShared('${team.id}','${esc(m.name)}',event)" title="Move to Shared Resources">→</button>
       </div>`).join('');
 
     const isShared = team.id === 'shared';
@@ -1345,7 +1598,6 @@ function renderTeams() {
           </div>
           <div class="team-actions">
             ${!isShared ? `<span style="font-size:10px;color:var(--text3);padding:2px 6px;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.15);border-radius:4px">Jira</span>` : ''}
-            <button class="btn btn-ghost btn-sm" onclick="openAddToTeam('${team.id}')">+ Member</button>
           </div>
         </div>
         <div class="team-members">${membersHtml||'<div style="padding:7px 0;font-size:11px;color:var(--text3)">No members yet</div>'}</div>
@@ -1956,7 +2208,10 @@ async function testJiraProxy() {
   if (!url) { el.style.color='var(--red)'; el.textContent='✗ No URL set'; return; }
   el.style.color='var(--text3)'; el.textContent='⏳ Testing...';
   try {
-    const res = await fetch(url + '/ping', { signal: AbortSignal.timeout(8000) });
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(url + '/ping', { signal: controller.signal });
+    clearTimeout(tid);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -1975,11 +2230,16 @@ async function syncSprint() {
 
   try {
     if (STATE.jiraProxyUrl) {
-      // Real live call via Cloudflare Worker proxy
-      const res = await fetch(STATE.jiraProxyUrl + '/sprint', { signal: AbortSignal.timeout(12000) });
+      // Manual timeout using AbortController (avoids AbortSignal.timeout browser issues)
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 30000);
+
+      const res = await fetch(STATE.jiraProxyUrl + '/sprint', { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const raw = data.issues || [];
+      const raw  = data.issues || [];
 
       if (raw.length > 0) {
         // Parse Jira API response into our internal format
@@ -2036,7 +2296,11 @@ async function syncSprint() {
         const names = [...new Set(SPRINT_DATA.map(i=>i.assignee).filter(Boolean))].sort();
         names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
 
-        showToast(`Sprint synced live from Jira — ${SPRINT_DATA.length} issues ✓`);
+        // Update sprint badge with live count
+        const badge = document.getElementById('sprint-badge');
+        if (badge) badge.textContent = SPRINT_DATA.length;
+
+        showToast(`✓ Synced ${SPRINT_DATA.length} issues live from Jira`);
       }
     } else {
       // No proxy → use baked-in data, just refresh UI
@@ -2101,7 +2365,10 @@ function renderReleases() {
   };
 
   if (STATE.jiraProxyUrl) {
-    fetch(STATE.jiraProxyUrl + '/releases', { signal: AbortSignal.timeout(10000) })
+    const ctrl = new AbortController();
+    const tid2 = setTimeout(() => ctrl.abort(), 10000);
+    fetch(STATE.jiraProxyUrl + '/releases', { signal: ctrl.signal })
+      .then(r => { clearTimeout(tid2); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(data => {
         // Jira versions API returns an array directly
@@ -2178,7 +2445,8 @@ async function loadRequirementsFromSheet() {
       STATE.requirements = data.requirements;
       STATE.lastSheetSync = new Date();
       dot.style.background = 'var(--green)'; dot.style.animation = 'pulse 2s infinite';
-      label.textContent = `Synced ${fmt(new Date())} · ${data.sheetName||''} · ${data.requirements.length} rows`;
+      label.textContent = `Synced ${fmt(new Date())} · ${data.requirements.length} requirements`;
+      document.getElementById('req-badge').textContent = data.requirements.filter(r => r.status === 'new' || !r.status).length;
       renderRequirements();
       showToast(`${data.requirements.length} requirements loaded ✓`);
     } else {
@@ -2219,6 +2487,15 @@ function renderRequirements() {
       ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;margin-left:4px">💬 ${(req.comments||[]).length}</span>`
       : '';
     const reqJson = JSON.stringify(req).replace(/"/g,'&quot;');
+    const responsible = req.responsible || '';
+    const respDisplay = responsible
+      ? `<div style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation();openAssignModal(${reqJson})" title="Click to reassign">
+           <div style="width:22px;height:22px;border-radius:50%;background:var(--accent2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${responsible.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+           <span style="font-size:11px;font-weight:500;color:var(--accent);text-decoration:underline;text-underline-offset:2px">${esc(responsible)}</span>
+           <span style="font-size:9px;color:var(--text3)">✏️</span>
+         </div>`
+      : `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="event.stopPropagation();openAssignModal(${reqJson})">+ Assign</button>`;
+
     tbody.innerHTML += `
       <tr data-status="${status}" onclick="openReqDetail(${reqJson})"
           style="cursor:pointer" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background=''">
@@ -2232,9 +2509,11 @@ function renderRequirements() {
         <td style="font-size:11px;color:var(--text3);white-space:nowrap">${req.date||''}</td>
         <td><span class="tag ${priCls}">${req.priority||'—'}</span></td>
         <td><span class="req-status rs-${status}">${STATUS_LABELS[status]||status}</span></td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap">${respDisplay}</td>
         <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">
           <button class="action-icon" title="View detail" onclick="openReqDetail(${reqJson})">👁</button>
           <button class="action-icon" title="Send Email" onclick="openEmailModal(${reqJson})">✉️</button>
+          ${responsible ? `<button class="action-icon" title="Message on Google Chat" onclick="openGChatModal(${reqJson})">💬</button>` : ''}
           <button class="action-icon" title="Cycle status" onclick="cycleStatus(this,'${esc(req.id)}')">🔄</button>
           <button class="action-icon" title="Move to sprint" onclick="moveToSprint('${esc(req.id)}')">🚀</button>
         </div></td>
@@ -2259,17 +2538,28 @@ function filterReqs(btn, status) {
 }
 
 async function cycleStatus(btn, reqId) {
-  const row = btn.closest('tr');
+  const row   = btn.closest('tr');
   const badge = row.querySelector('.req-status');
-  const cur = STATUS_CYCLE.findIndex(s => badge.classList.contains('rs-'+s));
-  const next = STATUS_CYCLE[(cur+1) % STATUS_CYCLE.length];
-  badge.className = 'req-status rs-'+next;
+  const cur   = STATUS_CYCLE.findIndex(s => badge.classList.contains('rs-'+s));
+  const next  = STATUS_CYCLE[(cur+1) % STATUS_CYCLE.length];
+  badge.className   = 'req-status rs-'+next;
   badge.textContent = STATUS_LABELS[next];
   row.dataset.status = next;
+
   const req = STATE.requirements.find(r => r.id === reqId);
-  if (req) { req.status = next; await writeBackStatus(reqId, next); }
+  if (req) { req.status = next; }
+
+  // Write back to sheet
+  await writeBackStatus(reqId, next);
   updateReqCounts(STATE.requirements);
   showToast('Status → ' + STATUS_LABELS[next]);
+
+  // Send GChat notification if not closed and responsible person assigned
+  if (next !== 'closed' && req && req.responsible && STATE.gchatWebhookUrl) {
+    const mention = req.responsibleEmail ? `<${req.responsibleEmail}>` : req.responsible;
+    const message = `🔄 *Requirement Status Updated*\n\n*[${reqId}] ${req.title}*\n\nStatus changed to: *${STATUS_LABELS[next]}*\n\nHi ${mention}, please check and take necessary action.\n— Adloggs Portal`;
+    sendGChatMessage(message); // fire and forget
+  }
 }
 
 async function moveToSprint(reqId) {
@@ -2394,8 +2684,222 @@ async function addRequirement() {
 }
 
 // ================================================================
-// MODALS
+// ASSIGN RESPONSIBLE PERSON
 // ================================================================
+
+// Build flat list of all team members for the dropdown
+function getAllTeamMembers() {
+  const members = [];
+  // From pods
+  TEAMS_FROM_JIRA.forEach(team => {
+    team.members.forEach(m => {
+      members.push({ name: m.name, team: team.name });
+    });
+  });
+  // From Users sheet (STATE.requirements submitters + known users)
+  const knownUsers = [
+    { name: 'Priya',           team: 'Product' },
+    { name: 'Swathi Iyyappan', team: 'Business' },
+    { name: 'Abinaya',         team: 'Finance' },
+    { name: 'Bharat',          team: 'Business' },
+    { name: 'Vinay',           team: 'Business' },
+    { name: 'Saurabh',         team: 'Stakeholder' },
+    { name: 'Vignesh Murugan', team: 'Admin' },
+    { name: 'Raja',            team: 'Admin' },
+  ];
+  knownUsers.forEach(u => {
+    if (!members.find(m => m.name.toLowerCase() === u.name.toLowerCase())) {
+      members.push(u);
+    }
+  });
+  return members.sort((a,b) => a.name.localeCompare(b.name));
+}
+
+let ASSIGN_REQ_ID = null;
+
+function openAssignModal(req) {
+  ASSIGN_REQ_ID = req.id;
+  document.getElementById('assign-req-id').textContent   = req.id;
+  document.getElementById('assign-req-title').textContent = req.title;
+  document.getElementById('assign-manual').value = req.responsible || '';
+  document.getElementById('assign-email').value  = req.responsibleEmail || '';
+
+  // Populate team dropdown
+  const sel = document.getElementById('assign-team-select');
+  sel.innerHTML = '<option value="">— Select a team member —</option>';
+  getAllTeamMembers().forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.name;
+    opt.textContent = `${m.name} (${m.team})`;
+    if (m.name === req.responsible) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  openModal('assign-modal');
+}
+
+function onAssignTeamSelect() {
+  const val = document.getElementById('assign-team-select').value;
+  if (!val) return;
+  document.getElementById('assign-manual').value = val;
+  // Known email map
+  const emailMap = {
+    'Priya':            'priyadharshini@adloggs.com',
+    'Swathi Iyyappan':  'swathi@adloggs.com',
+    'Abinaya':          'abinaya@adloggs.com',
+    'Bharat':           'bharat@adloggs.com',
+    'Vinay':            'vinay@adloggs.com',
+    'Saurabh':          'saurabh@adloggs.com',
+    'Vignesh Murugan':  'vignesh@adloggs.com',
+    'Raja':             'raja@adloggs.com',
+  };
+  const known = emailMap[val];
+  if (known) {
+    document.getElementById('assign-email').value = known;
+  } else {
+    // Guess from name: firstname@adloggs.com
+    const parts = val.toLowerCase().split(' ');
+    document.getElementById('assign-email').value = parts[0] + '@adloggs.com';
+  }
+}
+
+function onAssignManualInput() {
+  // Clear dropdown selection if typing manually
+  document.getElementById('assign-team-select').value = '';
+}
+
+async function saveAssignment() {
+  const name  = document.getElementById('assign-manual').value.trim();
+  const email = document.getElementById('assign-email').value.trim();
+  if (!name) { showToast('Please enter a name'); return; }
+
+  // Update in STATE
+  const req = STATE.requirements.find(r => r.id === ASSIGN_REQ_ID);
+  if (req) {
+    req.responsible      = name;
+    req.responsibleEmail = email;
+  }
+
+  // Save to sheet
+  if (STATE.scriptUrl && ASSIGN_REQ_ID) {
+    try {
+      await fetch(`${STATE.scriptUrl}?action=assignPerson&id=${encodeURIComponent(ASSIGN_REQ_ID)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`, { redirect:'follow' });
+    } catch(e) { /* silent */ }
+  }
+
+  closeModal('assign-modal');
+  renderRequirements();
+
+  // Auto-send Google Chat notification via Apps Script
+  if (STATE.gchatWebhookUrl && req) {
+    const mention = email ? `<${email}>` : name;
+    const message = `👤 *Requirement Assigned*\n\n*[${req.id}] ${req.title}*\n\nHi ${mention}, you have been assigned as the responsible person.\n\n• *Raised by:* ${req.by} (${req.dept})\n• *Priority:* ${req.priority}\n• *Status:* ${req.status}\n• *Client:* ${req.client||'—'}\n\nPlease review and share an update. — Adloggs Portal`;
+    const result = await sendGChatMessage(message);
+    if (result.ok) {
+      showToast(`${name} assigned to ${ASSIGN_REQ_ID} ✓ — notified in Google Chat`);
+    } else {
+      showToast(`${name} assigned to ${ASSIGN_REQ_ID} ✓ (Chat: ${result.reason})`);
+    }
+  } else {
+    showToast(`${name} assigned to ${ASSIGN_REQ_ID} ✓`);
+  }
+}
+
+// ================================================================
+// GOOGLE CHAT
+// ================================================================
+function openGChatModal(req) {
+  const responsible      = req.responsible || '';
+  const responsibleEmail = req.responsibleEmail || '';
+  const session          = { name: 'Priya' }; // use logged-in user name when available
+
+  document.getElementById('gchat-to-label').textContent  = `To: ${responsible}${responsibleEmail ? ' · ' + responsibleEmail : ''}`;
+  document.getElementById('gchat-req-ref').value          = `[${req.id}] ${req.title}`;
+  // Build @mention — Google Chat uses email-based mentions in webhook messages
+  const mention = responsibleEmail ? `<${responsibleEmail}>` : responsible;
+  document.getElementById('gchat-message').value =
+`📋 *[${req.id}] ${req.title}*
+
+Hi ${mention}, you have been assigned as the responsible person for this requirement.
+
+• *Raised by:* ${req.by} (${req.dept})
+• *Priority:* ${req.priority}
+• *Status:* ${req.status}
+• *Client:* ${req.client || '—'}
+
+Please review and share an update.
+
+— ${session.name}`;
+
+  // Store for openGoogleChat
+  document.getElementById('gchat-modal').dataset.email = responsibleEmail;
+  openModal('gchat-modal');
+}
+
+function openGoogleChatDM() {
+  const email   = document.getElementById('gchat-modal').dataset.email || '';
+  const message = document.getElementById('gchat-message').value.trim();
+
+  // Copy message to clipboard first
+  navigator.clipboard?.writeText(message).catch(()=>{});
+
+  if (email) {
+    // Try to open DM directly — works if user is signed in to Google Chat
+    window.open(`https://mail.google.com/chat/u/0/#chat/dm/${encodeURIComponent(email)}`, '_blank');
+  } else {
+    window.open('https://mail.google.com/chat/', '_blank');
+  }
+  showToast('Google Chat opened — message copied to clipboard, paste & send ✓');
+  closeModal('gchat-modal');
+}
+
+// Central function — all GChat messages go via Cloudflare Worker /gchat
+// Worker runs server-side, no CORS issues, can call any URL
+async function sendGChatMessage(text) {
+  if (!STATE.gchatWebhookUrl) return { ok: false, reason: 'No webhook URL configured in Integrations → Google Chat' };
+  if (!STATE.jiraProxyUrl)    return { ok: false, reason: 'No Cloudflare Worker URL configured in Integrations' };
+
+  try {
+    const res = await fetch(STATE.jiraProxyUrl + '/gchat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ webhookUrl: STATE.gchatWebhookUrl, text }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.sent) throw new Error(data.error || 'Failed to send');
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, reason: e.message };
+  }
+}
+
+async function sendToGChatSpace() {
+  const message  = document.getElementById('gchat-message').value.trim();
+  const statusEl = document.getElementById('gchat-status');
+  if (!message) { showToast('Message is empty'); return; }
+  if (!STATE.gchatWebhookUrl) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#fee2e2'; statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '✗ No webhook configured — go to Integrations → Google Chat';
+    return;
+  }
+  statusEl.style.display = 'block';
+  statusEl.style.background = '#fef3c7'; statusEl.style.color = 'var(--amber)';
+  statusEl.textContent = '⏳ Sending via Apps Script...';
+  const result = await sendGChatMessage(message);
+  if (result.ok) {
+    statusEl.style.background = '#d1fae5'; statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '✓ Message sent to Google Chat Space!';
+    showToast('Sent to Google Chat ✓');
+    setTimeout(() => closeModal('gchat-modal'), 1500);
+  } else {
+    statusEl.style.background = '#fee2e2'; statusEl.style.color = 'var(--red)';
+    statusEl.textContent = result.reason === 'no_script_url'
+      ? '✗ Apps Script URL not configured — go to Integrations'
+      : '✗ Failed: ' + result.reason;
+  }
+}
 function openTask(issue) {
   if (typeof issue === 'string') try { issue = JSON.parse(issue); } catch(e){}
   document.getElementById('m-id').textContent = issue.key;
@@ -2610,6 +3114,85 @@ function copyScript() {
   showToast('Copied ✓');
 }
 
+function saveGChatWebhook() {
+  const url = document.getElementById('cfg-gchat-webhook').value.trim();
+  STATE.gchatWebhookUrl = url;
+  localStorage.setItem('adloggs_gchat_webhook', url);
+  const badge = document.getElementById('gchat-cfg-badge');
+  if (url) {
+    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
+    badge.textContent = '✓ Webhook configured';
+  }
+  showToast('Google Chat webhook saved ✓');
+}
+
+async function testGChatWebhook() {
+  const el  = document.getElementById('gchat-webhook-status');
+  const url = document.getElementById('cfg-gchat-webhook').value.trim() || STATE.gchatWebhookUrl;
+  if (!url) { el.style.color='var(--red)'; el.textContent='✗ No URL set'; return; }
+  el.style.color='var(--text3)'; el.textContent='⏳ Sending test via Apps Script...';
+  // Temporarily use this URL for the test
+  const prevUrl = STATE.gchatWebhookUrl;
+  STATE.gchatWebhookUrl = url;
+  const result = await sendGChatMessage('✅ Adloggs Portal connected to Google Chat successfully!');
+  STATE.gchatWebhookUrl = prevUrl;
+  if (result.ok) {
+    el.style.color='var(--green)'; el.textContent='✓ Test message sent — check your Space';
+    showToast('Test message sent to Google Chat ✓');
+  } else {
+    el.style.color='var(--red)'; el.textContent='✗ ' + result.reason;
+  }
+}
+
+// ================================================================
+// PERIODIC REMINDERS — sends GChat alerts for open requirements
+// ================================================================
+function startReminderTimer() {
+  if (STATE.reminderTimer) clearInterval(STATE.reminderTimer);
+  const intervalMs = STATE.reminderInterval;
+  if (!intervalMs || intervalMs === 0) return;
+
+  STATE.reminderTimer = setInterval(async () => {
+    await sendOpenRequirementReminders();
+  }, intervalMs);
+
+  console.log(`Reminder timer started — every ${intervalMs/60000} minutes`);
+}
+
+async function sendOpenRequirementReminders() {
+  if (!STATE.gchatWebhookUrl || !STATE.jiraProxyUrl) return;
+
+  const closedStatuses = ['closed','done','rejected'];
+  const openWithPerson = STATE.requirements.filter(r =>
+    !closedStatuses.includes(r.status) && r.responsible
+  );
+
+  if (!openWithPerson.length) return;
+
+  const lines = openWithPerson.map(r => {
+    const mention = r.responsibleEmail ? `<${r.responsibleEmail}>` : r.responsible;
+    return `• *[${r.id}]* ${r.title}\n  Assigned to: ${mention} | Priority: ${r.priority} | Status: ${r.status||'New'}`;
+  }).join('\n\n');
+
+  const message = `🔔 *Adloggs — Open Requirements Reminder*\n\nThe following requirements are still open:\n\n${lines}\n\nPlease update the status or share progress.`;
+  const result = await sendGChatMessage(message);
+  if (result.ok) {
+    showToast(`Reminder sent for ${openWithPerson.length} open requirements ✓`);
+  }
+}
+
+function saveReminderInterval() {
+  const sel = document.getElementById('reminder-interval');
+  const val = parseInt(sel.value);
+  STATE.reminderInterval = val;
+  localStorage.setItem('adloggs_reminder_interval', val);
+  startReminderTimer();
+  const el = document.getElementById('reminder-status');
+  el.textContent = val === 0 ? 'Reminders disabled' : `✓ Sends every ${sel.options[sel.selectedIndex].text}`;
+  el.style.color = val === 0 ? 'var(--text3)' : 'var(--green)';
+  showToast(val === 0 ? 'Reminders disabled' : 'Reminder schedule saved ✓');
+}
+
 function saveAutoSync() {
   STATE.jiraInterval = parseInt(document.getElementById('jira-interval').value);
   STATE.sheetsInterval = parseInt(document.getElementById('sheets-interval').value);
@@ -2699,7 +3282,18 @@ function init() {
     badge.textContent = '✓ Cloudflare Worker connected';
   }
 
-  // Show portal directly — no login required
+  if (STATE.gchatWebhookUrl) {
+    document.getElementById('cfg-gchat-webhook').value = STATE.gchatWebhookUrl;
+    const badge = document.getElementById('gchat-cfg-badge');
+    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
+    badge.textContent = '✓ Webhook configured';
+  }
+  // Restore reminder interval selector
+  if (STATE.reminderInterval) {
+    const sel = document.getElementById('reminder-interval');
+    if (sel) sel.value = String(STATE.reminderInterval);
+  }
+  startReminderTimer();
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility    = 'visible';
 
