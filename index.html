@@ -575,52 +575,46 @@
 
     <!-- ===== ROADMAP ===== -->
     <section id="sec-roadmap" class="section">
-      <!-- COMING SOON — original roadmap content preserved below in comments -->
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:420px;text-align:center;padding:48px 24px">
-        <div style="font-size:52px;margin-bottom:20px">🗺️</div>
-        <div style="font-family:var(--serif);font-size:32px;margin-bottom:10px;color:var(--text)">Coming Soon</div>
-        <div style="font-size:14px;color:var(--text3);max-width:400px;line-height:1.7">The Product Roadmap is being prepared. Check back soon for quarterly plans, initiatives, and milestone tracking.</div>
+      <div class="banner bn-sheets">
+        <div class="banner-left">
+          <div class="sync-dot pulse" style="background:var(--green)"></div>
+          <span>Live from <strong style="color:var(--green)">Google Sheets</strong> · <span id="roadmap-sync-time">Loading...</span></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadRoadmap()"><span id="roadmap-sync-icon">↻</span> Reload</button>
+      </div>
+      <div class="section-head">
+        <h2>Product Roadmap</h2>
+        <p>Strategic initiatives — updated from Google Sheets</p>
       </div>
 
-      <!--
-      ORIGINAL ROADMAP — uncomment to restore
-      <div class="section-head"><h2>Product Roadmap</h2><p>Strategic direction for Adloggs platform</p></div>
-      <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(123,94,167,0.07));border-color:rgba(79,142,247,0.2)">
-        <div style="font-size:10px;font-weight:600;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px">2026 Mission</div>
-        <div style="font-family:var(--serif);font-size:21px;margin-bottom:5px">Reliable last-mile for every Indian enterprise</div>
-        <div style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:14px">Scale Adloggs to 100K+ daily deliveries across Swiggy, Zomato, ONDC, Burger King, KFC, Wellness Forever — with intelligent dispatch, real-time visibility, and seamless 3PL integrations.</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 14px;text-align:center"><div style="font-family:var(--serif);font-size:20px;color:var(--accent)">100K+</div><div style="font-size:10px;color:var(--text3)">Daily Deliveries</div></div>
-          <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 14px;text-align:center"><div style="font-family:var(--serif);font-size:20px;color:var(--green)">Q3 2026</div><div style="font-size:10px;color:var(--text3)">AI Dispatch</div></div>
-          <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 14px;text-align:center"><div style="font-family:var(--serif);font-size:20px;color:var(--amber)">20+</div><div style="font-size:10px;color:var(--text3)">Enterprise Clients</div></div>
+      <!-- Summary stats -->
+      <div id="roadmap-stats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px"></div>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <div style="font-size:11px;color:var(--text3);font-weight:600">Filter:</div>
+        <div id="roadmap-status-filters" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <select class="input" id="rm-filter-client" onchange="renderRoadmap()" style="font-size:11px;padding:4px 8px">
+            <option value="">All Clients</option>
+          </select>
+          <select class="input" id="rm-filter-priority" onchange="renderRoadmap()" style="font-size:11px;padding:4px 8px">
+            <option value="">All Priorities</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="clearRoadmapFilters()">✕ Clear</button>
         </div>
       </div>
-      <div style="font-size:14px;font-weight:600;margin-bottom:12px">Quarterly Plan</div>
-      <div class="roadmap-quarters">
-        <div><div class="q-label">Q1 · Jan-Mar [check]</div>
-          <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">Scheduled Orders</div><div class="ri-team">Backend + Mobile</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
-          <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">3PL Mapping & RTO</div><div class="ri-team">Infra Team</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
-          <div class="roadmap-item" style="border-color:rgba(62,207,142,0.3)"><div class="ri-title">Incentive & Penalty Engine</div><div class="ri-team">Backend</div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
-        </div>
-        <div><div class="q-label">Q2 · Apr-Jun -></div>
-          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">WheelEye Integration</div><div class="ri-team">Infra / Integrations</div><div class="progress-bar"><div class="progress-fill" style="width:60%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">COD Settlement Flow</div><div class="ri-team">Backend + App</div><div class="progress-bar"><div class="progress-fill" style="width:40%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">Loggi Sight App v1</div><div class="ri-team">Design + Dev</div><div class="progress-bar"><div class="progress-fill" style="width:75%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item" style="border-color:rgba(79,142,247,0.3)"><div class="ri-title">Shopify Integration</div><div class="ri-team">Backend</div><div class="progress-bar"><div class="progress-fill" style="width:20%;background:var(--accent)"></div></div></div>
-        </div>
-        <div><div class="q-label">Q3 · Jul-Sep</div>
-          <div class="roadmap-item"><div class="ri-title">ONDC Buyer - Uber</div><div class="ri-team">Integrations</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item"><div class="ri-title">XpressBees Integration</div><div class="ri-team">Infra</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item"><div class="ri-title">AI Dispatch Engine</div><div class="ri-team">AI / Backend</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item"><div class="ri-title">Bulk Onboarding (Import)</div><div class="ri-team">Backend + Product</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
-        </div>
-        <div><div class="q-label">Q4 · Oct-Dec</div>
-          <div class="roadmap-item"><div class="ri-title">Multi-client Analytics</div><div class="ri-team">Data Team</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item"><div class="ri-title">Predictive Dispatch</div><div class="ri-team">AI Team</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
-          <div class="roadmap-item"><div class="ri-title">Control X Full Release</div><div class="ri-team">All Teams</div><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></div>
-        </div>
+
+      <!-- Roadmap content — grouped by Quarter -->
+      <div id="roadmap-content">
+        <div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">Loading roadmap...</div></div>
       </div>
-      -->
+
+      <!-- Detail modal trigger area -->
     </section>
 
     <!-- ===== SCORES ===== -->
@@ -1006,6 +1000,27 @@
     <div style="display:flex;gap:6px;margin-top:10px">
       <button class="btn btn-primary btn-sm" onclick="copyScript()">Copy</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('script-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROADMAP DETAIL MODAL -->
+<div class="modal-overlay" id="roadmap-modal">
+  <div class="modal" style="width:580px">
+    <button class="modal-close" onclick="closeModal('roadmap-modal')">✕</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div id="rm-modal-status-dot" style="width:10px;height:10px;border-radius:50%;flex-shrink:0"></div>
+      <div id="rm-modal-status-label" style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase"></div>
+    </div>
+    <div class="modal-title" id="rm-modal-title" style="margin-bottom:8px"></div>
+    <div id="rm-modal-meta" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+    <div class="divider"></div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:12px" id="rm-modal-desc"></div>
+    <div id="rm-modal-jira" style="margin-top:14px;display:none">
+      <a id="rm-modal-jira-link" href="#" target="_blank" class="btn btn-ghost btn-sm">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        View in Jira ↗
+      </a>
     </div>
   </div>
 </div>
@@ -1573,6 +1588,9 @@ function nav(id, el) {
   if (id === 'weekly') {
     const el = document.getElementById('weekly-last-open');
     if (el) el.textContent = new Date().toLocaleString('en-IN', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  if (id === 'roadmap' && !ROADMAP_DATA.length) {
+    loadRoadmap();
   }
   document.getElementById('topbar-title').textContent = titles[id] || id;
 }
@@ -2845,8 +2863,303 @@ async function addRequirement() {
 }
 
 // ================================================================
-// ASSIGN RESPONSIBLE PERSON
+// ROADMAP
 // ================================================================
+const ROADMAP_SHEET_ID = '1LDnbrSFYcNpWg5HQul_kykcDl8PS7jZHFe_NYQZPsNo';
+
+const RM_STATUS = {
+  'yet to start':       { label:'Yet to Start',        color:'#6b7280', bg:'#f3f4f6', border:'#d1d5db' },
+  'planned':            { label:'Planned',              color:'#6b7280', bg:'#f3f4f6', border:'#d1d5db' },
+  'partially completed':{ label:'Partially Completed',  color:'#d97706', bg:'#fef3c7', border:'#fcd34d' },
+  'in progress':        { label:'In Progress',          color:'#2563eb', bg:'#dbeafe', border:'#93c5fd' },
+  'in phase 2':         { label:'In Phase 2',           color:'#7c3aed', bg:'#ede9fe', border:'#c4b5fd' },
+  'in phase 3':         { label:'In Phase 3',           color:'#0891b2', bg:'#cffafe', border:'#67e8f9' },
+  'done':               { label:'Done',                 color:'#059669', bg:'#d1fae5', border:'#6ee7b7' },
+  'completed':          { label:'Done',                 color:'#059669', bg:'#d1fae5', border:'#6ee7b7' },
+};
+
+const RM_PRIORITY = {
+  'critical': { color:'#dc2626', bg:'#fee2e2' },
+  'high':     { color:'#d97706', bg:'#fef3c7' },
+  'medium':   { color:'#2563eb', bg:'#dbeafe' },
+  'low':      { color:'#6b7280', bg:'#f3f4f6' },
+};
+
+let ROADMAP_DATA    = [];
+let RM_FILTER_STATUS = 'all';
+
+async function loadRoadmap() {
+  const icon    = document.getElementById('roadmap-sync-icon');
+  const timeEl  = document.getElementById('roadmap-sync-time');
+  icon.classList.add('spin');
+  timeEl.textContent = 'Loading...';
+
+  try {
+    if (!STATE.jiraProxyUrl) {
+      document.getElementById('roadmap-content').innerHTML = `
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:9px;padding:14px;font-size:12px;color:#92400e">
+          ⚠ Cloudflare Worker URL not configured. Go to <strong>Integrations</strong> and add the Worker URL to load the roadmap.
+        </div>`;
+      timeEl.textContent = 'Worker not configured';
+      icon.classList.remove('spin');
+      return;
+    }
+
+    // Fetch via Cloudflare Worker (bypasses CORS on Google Sheets export)
+    const workerBase = STATE.jiraProxyUrl.replace(/[/]+$/, '');
+    const url = `${workerBase}/roadmap`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' — check sheet is shared publicly');
+    const csv = await res.text();
+    if (!csv || csv.length < 10) throw new Error('Empty response from sheet');
+
+    // Parse CSV
+    const rows = csv.trim().split('\n').map(row => {
+      // Handle quoted fields with commas
+      const result = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < row.length; i++) {
+        const c = row[i];
+        if (c === '"' && row[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') inQ = !inQ;
+        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+        else cur += c;
+      }
+      result.push(cur.trim());
+      return result;
+    });
+
+    // Skip header row, parse each initiative
+    ROADMAP_DATA = rows.slice(1)
+      .filter(r => r[0] && r[0].length > 0)
+      .map((r, i) => ({
+        id:          i + 1,
+        initiative:  r[0] || '',
+        description: r[1] || '',
+        quarter:     r[2] || '',
+        team:        r[3] || '',
+        status:      r[4] || 'Yet to start',
+        priority:    r[5] || '',
+        client:      r[6] || '',
+        milestone:   r[7] || '',
+        jiraLink:    r[8] || '',
+      }));
+
+    // Populate client filter
+    const clientSel = document.getElementById('rm-filter-client');
+    const clients = [...new Set(ROADMAP_DATA.map(r => r.client).filter(Boolean))].sort();
+    clientSel.innerHTML = '<option value="">All Clients</option>';
+    clients.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      clientSel.appendChild(o);
+    });
+
+    timeEl.textContent = `Synced at ${fmt(new Date())} · ${ROADMAP_DATA.length} initiatives`;
+    renderRoadmapFilters();
+    renderRoadmap();
+
+  } catch(e) {
+    timeEl.textContent = 'Failed — ' + e.message;
+    document.getElementById('roadmap-content').innerHTML = `
+      <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:9px;padding:16px;font-size:12px;color:#991b1b">
+        ✗ Could not load roadmap: ${esc(e.message)}<br>
+        <span style="color:#b91c1c;margin-top:4px;display:block">Make sure the sheet is shared as "Anyone with the link → Viewer"</span>
+      </div>`;
+    showToast('Roadmap load failed: ' + e.message);
+  } finally {
+    icon.classList.remove('spin');
+  }
+}
+
+function renderRoadmapFilters() {
+  const statusCounts = {};
+  ROADMAP_DATA.forEach(r => {
+    const key = r.status.toLowerCase();
+    statusCounts[key] = (statusCounts[key] || 0) + 1;
+  });
+
+  const container = document.getElementById('roadmap-status-filters');
+  const allCount  = ROADMAP_DATA.length;
+  let html = `<button class="filter-btn ${RM_FILTER_STATUS==='all'?'active':''}" onclick="setRMFilter('all')">All (${allCount})</button>`;
+  Object.entries(RM_STATUS).forEach(([key, cfg]) => {
+    const count = statusCounts[key] || 0;
+    if (!count) return;
+    html += `<button class="filter-btn ${RM_FILTER_STATUS===key?'active':''}"
+      onclick="setRMFilter('${key}')"
+      style="${RM_FILTER_STATUS===key ? `background:${cfg.bg};color:${cfg.color};border-color:${cfg.border}` : ''}">
+      ${cfg.label} (${count})
+    </button>`;
+  });
+  container.innerHTML = html;
+}
+
+function setRMFilter(status) {
+  RM_FILTER_STATUS = status;
+  renderRoadmapFilters();
+  renderRoadmap();
+}
+
+function clearRoadmapFilters() {
+  RM_FILTER_STATUS = 'all';
+  document.getElementById('rm-filter-client').value   = '';
+  document.getElementById('rm-filter-priority').value = '';
+  renderRoadmapFilters();
+  renderRoadmap();
+}
+
+function renderRoadmap() {
+  const filterClient   = document.getElementById('rm-filter-client')?.value   || '';
+  const filterPriority = document.getElementById('rm-filter-priority')?.value || '';
+
+  const filtered = ROADMAP_DATA.filter(r => {
+    if (RM_FILTER_STATUS !== 'all' && r.status.toLowerCase() !== RM_FILTER_STATUS) return false;
+    if (filterClient   && r.client !== filterClient)                               return false;
+    if (filterPriority && r.priority !== filterPriority)                           return false;
+    return true;
+  });
+
+  const container = document.getElementById('roadmap-content');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No initiatives match the filters</div></div>';
+    renderRoadmapStats(filtered);
+    return;
+  }
+
+  // Group by quarter — empty quarter → "Not Scheduled"
+  const groups = {};
+  filtered.forEach(r => {
+    const q = r.quarter || 'Not Scheduled';
+    if (!groups[q]) groups[q] = [];
+    groups[q].push(r);
+  });
+
+  // Sort quarters: Q1 < Q2 < Q3 < Q4 < Not Scheduled
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    if (a === 'Not Scheduled') return 1;
+    if (b === 'Not Scheduled') return -1;
+    return a.localeCompare(b);
+  });
+
+  let html = '';
+  sortedKeys.forEach(quarter => {
+    const items  = groups[quarter];
+    const isNow  = quarter.includes('Q2 2026') || quarter.includes('Q3 2026');
+    html += `
+      <div style="margin-bottom:28px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="font-family:var(--serif);font-size:16px;font-weight:600;color:${quarter==='Not Scheduled'?'var(--text3)':'var(--text)'}">${esc(quarter)}</div>
+          ${isNow ? `<span style="font-size:10px;background:rgba(37,99,235,0.1);color:var(--accent);border:1px solid rgba(37,99,235,0.2);padding:2px 8px;border-radius:8px;font-weight:600">ACTIVE</span>` : ''}
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <div style="font-size:11px;color:var(--text3)">${items.length} initiative${items.length!==1?'s':''}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+          ${items.map(r => renderRoadmapCard(r)).join('')}
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+  renderRoadmapStats(filtered);
+}
+
+function renderRoadmapCard(r) {
+  const statusKey = r.status.toLowerCase();
+  const st  = RM_STATUS[statusKey] || { label: r.status, color:'#6b7280', bg:'#f3f4f6', border:'#d1d5db' };
+  const pri = r.priority ? (RM_PRIORITY[r.priority.toLowerCase()] || null) : null;
+
+  // Extract Jira ticket from URL
+  const jiraMatch = r.jiraLink.match(/browse\/(AB-\d+)/);
+  const jiraKey   = jiraMatch ? jiraMatch[1] : '';
+
+  const rJson = JSON.stringify(r).replace(/"/g,'&quot;');
+
+  return `
+    <div onclick="openRoadmapDetail(${rJson})" style="background:var(--surface);border:1px solid ${st.border};border-radius:11px;padding:14px;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.05)"
+      onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,0.1)';this.style.transform='translateY(-1px)'"
+      onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.transform=''">
+
+      <!-- Status badge -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;background:${st.bg};color:${st.color};border:1px solid ${st.border}">${st.label}</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          ${pri ? `<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:${pri.bg};color:${pri.color}">${r.priority}</span>` : ''}
+          ${jiraKey ? `<span style="font-size:10px;background:rgba(37,99,235,0.08);color:var(--accent);padding:2px 6px;border-radius:4px;font-weight:500">${jiraKey}</span>` : ''}
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div style="font-size:13px;font-weight:600;line-height:1.4;margin-bottom:6px;color:var(--text)">${esc(r.initiative)}</div>
+
+      <!-- Description preview -->
+      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px">${esc(r.description.slice(0,90))}${r.description.length>90?'…':''}</div>
+
+      <!-- Footer -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${r.client ? `<span style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text2)">${esc(r.client)}</span>` : ''}
+          ${r.team   ? `<span style="font-size:10px;background:rgba(123,94,167,0.1);color:#7b5ea7;border-radius:4px;padding:1px 6px;font-weight:500">${esc(r.team)}</span>` : ''}
+        </div>
+        ${r.milestone && r.milestone !== '—' ? `<span style="font-size:10px;color:var(--text3)">📅 ${esc(r.milestone)}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderRoadmapStats(filtered) {
+  const stats = document.getElementById('roadmap-stats');
+  const total   = filtered.length;
+  const done    = filtered.filter(r => ['done','completed'].includes(r.status.toLowerCase())).length;
+  const active  = filtered.filter(r => ['in progress','in phase 2','in phase 3','partially completed'].includes(r.status.toLowerCase())).length;
+  const planned = filtered.filter(r => ['yet to start','planned'].includes(r.status.toLowerCase())).length;
+
+  stats.innerHTML = [
+    { num: total,   label: 'Total',      color: 'var(--text)' },
+    { num: active,  label: 'In Progress', color: 'var(--accent)' },
+    { num: done,    label: 'Done',        color: 'var(--green)' },
+    { num: planned, label: 'Planned',     color: 'var(--text3)' },
+  ].map(s => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;text-align:center;min-width:70px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+      <div style="font-family:var(--serif);font-size:22px;color:${s.color}">${s.num}</div>
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-top:1px">${s.label}</div>
+    </div>`).join('');
+}
+
+function openRoadmapDetail(r) {
+  const statusKey = r.status.toLowerCase();
+  const st = RM_STATUS[statusKey] || { label:r.status, color:'#6b7280', bg:'#f3f4f6', border:'#d1d5db' };
+
+  document.getElementById('rm-modal-status-dot').style.background = st.color;
+  document.getElementById('rm-modal-status-label').style.color = st.color;
+  document.getElementById('rm-modal-status-label').textContent = st.label;
+  document.getElementById('rm-modal-title').textContent = r.initiative;
+
+  // Meta chips
+  const meta = [];
+  if (r.quarter)  meta.push(`<span style="font-size:11px;background:#dbeafe;color:#1e40af;padding:3px 9px;border-radius:5px;font-weight:500">📅 ${esc(r.quarter)}</span>`);
+  if (r.priority) { const p = RM_PRIORITY[r.priority.toLowerCase()]; if(p) meta.push(`<span style="font-size:11px;padding:3px 9px;border-radius:5px;font-weight:500;background:${p.bg};color:${p.color}">${esc(r.priority)}</span>`); }
+  if (r.client)   meta.push(`<span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:5px">${esc(r.client)}</span>`);
+  if (r.team)     meta.push(`<span style="font-size:11px;background:rgba(123,94,167,0.1);color:#7b5ea7;padding:3px 9px;border-radius:5px;font-weight:500">${esc(r.team)}</span>`);
+  if (r.milestone && r.milestone !== '—') meta.push(`<span style="font-size:11px;color:var(--text3)">🎯 Milestone: ${esc(r.milestone)}</span>`);
+  document.getElementById('rm-modal-meta').innerHTML = meta.join('');
+
+  // Description — preserve line breaks
+  document.getElementById('rm-modal-desc').innerHTML = esc(r.description).replace(/\n/g,'<br>');
+
+  // Jira link
+  const jiraEl = document.getElementById('rm-modal-jira');
+  const jiraMatch = r.jiraLink.match(/browse\/(AB-\d+)/);
+  if (jiraMatch || r.jiraLink) {
+    const jiraKey = jiraMatch ? jiraMatch[1] : '';
+    const jiraUrl = r.jiraLink || `https://adloggss.atlassian.net/browse/${jiraKey}`;
+    document.getElementById('rm-modal-jira-link').href = jiraUrl;
+    document.getElementById('rm-modal-jira-link').textContent = jiraKey ? `View ${jiraKey} in Jira ↗` : 'View in Jira ↗';
+    jiraEl.style.display = '';
+  } else {
+    jiraEl.style.display = 'none';
+  }
+
+  openModal('roadmap-modal');
+}
 
 // Build flat list of all team members for the dropdown
 function getAllTeamMembers() {
