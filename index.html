@@ -2227,98 +2227,115 @@ async function testJiraProxy() {
 async function syncSprint() {
   const icon = document.getElementById('sprint-sync-icon');
   icon.classList.add('spin');
-  setPill('syncing','Syncing Jira...');
+  setPill('syncing', 'Syncing Jira...');
 
   try {
-    if (STATE.jiraProxyUrl) {
-      // Manual timeout using AbortController (avoids AbortSignal.timeout browser issues)
-      const controller = new AbortController();
-      const timeoutId  = setTimeout(() => controller.abort(), 30000);
-
-      const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/, '') + '/sprint', { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const raw  = data.issues || [];
-
-      if (raw.length > 0) {
-        // Parse Jira API response into our internal format
-        SPRINT_DATA.length = 0;
-        raw.forEach(issue => {
-          const f = issue.fields || {};
-          const sprint = (f.customfield_10020 || [])[0] || {};
-          // Update sprint meta if available
-          if (sprint.name) {
-            STATE.sprintMeta = {
-              name:      sprint.name,
-              startDate: sprint.startDate,
-              endDate:   sprint.endDate,
-              goal:      sprint.goal || '',
-              boardId:   sprint.boardId,
-              state:     sprint.state,
-            };
-          }
-          SPRINT_DATA.push({
-            key:         issue.key,
-            summary:     f.summary || '',
-            status:      f.status?.name || 'To Do',
-            priority:    f.priority?.name || 'Medium',
-            assignee:    f.assignee?.displayName || 'Unassigned',
-            due:         f.duedate || null,
-            type:        f.issuetype?.name || 'Task',
-            // Rich fields from Jira
-            description: f.description
-              ? (typeof f.description === 'string'
-                  ? f.description
-                  : (f.description?.content || []).map(b =>
-                      (b.content||[]).map(t => t.text||'').join('')
-                    ).join('\n'))
-              : '',
-            attachments: (f.attachment || []).map(a => ({
-              filename: a.filename,
-              mimeType: a.mimeType,
-              content:  a.content,
-              size:     a.size,
-            })),
-            comments: (f.comment?.comments || []).map(c => ({
-              author:  c.author?.displayName || '?',
-              created: c.created ? new Date(c.created).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '',
-              body:    (c.body?.content || []).map(b =>
-                         (b.content||[]).map(t => t.text||'').join('')
-                       ).join('\n') || (typeof c.body === 'string' ? c.body : ''),
-            })),
-          });
-        });
-
-        // Rebuild member filter with fresh assignees
-        const sel = document.getElementById('filter-member');
-        sel.innerHTML = '<option value="">All Members</option>';
-        const names = [...new Set(SPRINT_DATA.map(i=>i.assignee).filter(Boolean))].sort();
-        names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
-
-        // Update sprint badge with live count
-        const badge = document.getElementById('sprint-badge');
-        if (badge) badge.textContent = SPRINT_DATA.length;
-
-        showToast(`✓ Synced ${SPRINT_DATA.length} issues live from Jira`);
-      }
-    } else {
-      // No proxy → use baked-in data, just refresh UI
-      await new Promise(r => setTimeout(r, 600));
-      showToast('Using cached sprint data — add proxy URL in Integrations for live sync');
+    if (!STATE.jiraProxyUrl) {
+      showToast('No Cloudflare Worker URL — add it in Integrations');
+      return;
     }
+
+    const workerBase = STATE.jiraProxyUrl.replace(/[/]+$/, '');
+
+    // Find highest cached key for incremental sync
+    const isIncremental = SPRINT_DATA.length > 0;
+    let maxKey = null;
+    if (isIncremental) {
+      const nums = SPRINT_DATA.map(i => parseInt(i.key.replace(/[^0-9]/g,''))).filter(n => !isNaN(n));
+      if (nums.length) {
+        const maxNum = Math.max(...nums);
+        maxKey = 'AB-' + maxNum;
+      }
+    }
+
+    // Step 1: always fetch all issues (minimal fields — fast)
+    const allRes  = await fetch(workerBase + '/sprint');
+    if (!allRes.ok) throw new Error('HTTP ' + allRes.status);
+    const allData = await allRes.json();
+    const allRaw  = allData.issues || [];
+
+    if (!allRaw.length) { showToast('No issues found in sprint'); return; }
+
+    // Parse minimal fields
+    function parseIssue(issue, existingDesc, existingAtts, existingCmts) {
+      const f = issue.fields || {};
+      const sprint = (f.customfield_10020 || [])[0] || {};
+      if (sprint.name && !STATE.sprintMeta) {
+        STATE.sprintMeta = { name:sprint.name, startDate:sprint.startDate,
+          endDate:sprint.endDate, goal:sprint.goal||'', boardId:sprint.boardId, state:sprint.state };
+      }
+      return {
+        key:      issue.key,
+        summary:  f.summary || '',
+        status:   f.status?.name || 'To Do',
+        priority: f.priority?.name || 'Medium',
+        assignee: f.assignee?.displayName || 'Unassigned',
+        due:      f.duedate || null,
+        type:     f.issuetype?.name || 'Task',
+        description: f.description
+          ? (typeof f.description==='string' ? f.description
+            : (f.description?.content||[]).map(b=>(b.content||[]).map(t=>t.text||'').join('')).join('\n'))
+          : (existingDesc || ''),
+        attachments: f.attachment
+          ? (f.attachment||[]).map(a=>({filename:a.filename,mimeType:a.mimeType,content:a.content}))
+          : (existingAtts || []),
+        comments: f.comment?.comments
+          ? (f.comment.comments||[]).map(c=>({
+              author: c.author?.displayName||'?',
+              created: c.created ? new Date(c.created).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '',
+              body: (c.body?.content||[]).map(b=>(b.content||[]).map(t=>t.text||'').join('')).join('\n')||(typeof c.body==='string'?c.body:''),
+            }))
+          : (existingCmts || []),
+      };
+    }
+
+    // Merge all issues into SPRINT_DATA
+    let added = 0, updated = 0;
+    const existingMap = {};
+    SPRINT_DATA.forEach(i => existingMap[i.key] = i);
+
+    const newData = allRaw.map(issue => {
+      const ex = existingMap[issue.key];
+      return parseIssue(issue, ex?.description, ex?.attachments, ex?.comments);
+    });
+
+    // Replace SPRINT_DATA with merged data
+    SPRINT_DATA.length = 0;
+    newData.forEach(i => {
+      const wasExisting = !!existingMap[i.key];
+      SPRINT_DATA.push(i);
+      if (wasExisting) updated++; else added++;
+    });
+
+    // Save to localStorage cache
+    try {
+      localStorage.setItem('adloggs_sprint_cache', JSON.stringify(SPRINT_DATA));
+      localStorage.setItem('adloggs_sprint_cache_time', Date.now());
+    } catch(e) {}
+
+    // Update badge + member filter
+    const badge = document.getElementById('sprint-badge');
+    if (badge) badge.textContent = SPRINT_DATA.length;
+    const sel = document.getElementById('filter-member');
+    sel.innerHTML = '<option value="">All Members</option>';
+    const names = [...new Set(SPRINT_DATA.map(i=>i.assignee).filter(Boolean))].sort();
+    names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+
+    const msg = isIncremental
+      ? `✓ ${SPRINT_DATA.length} issues (${added} new, ${updated} updated)`
+      : `✓ Loaded all ${SPRINT_DATA.length} issues from Jira`;
+    showToast(msg);
 
     STATE.lastJiraSync = new Date();
     renderFilteredBoard();
     updateSprintMeta();
-    setPill('live','Live');
+    setPill('live', 'Live');
 
   } catch(e) {
-    showToast('Jira sync failed: ' + e.message + ' — showing cached data');
+    showToast('Sync failed: ' + e.message);
     renderFilteredBoard();
     updateSprintMeta();
-    setPill('error','Sync failed');
+    setPill('error', 'Sync failed');
     setTimeout(() => setPill('live','Live'), 4000);
   } finally {
     icon.classList.remove('spin');
@@ -3301,6 +3318,22 @@ function init() {
 
   renderTeams();
   populateMemberFilter();
+
+  // Load sprint from localStorage cache first (instant display)
+  try {
+    const cached = localStorage.getItem('adloggs_sprint_cache');
+    const cacheTime = parseInt(localStorage.getItem('adloggs_sprint_cache_time') || '0');
+    if (cached && (Date.now() - cacheTime < 24 * 60 * 60 * 1000)) {
+      const parsed = JSON.parse(cached);
+      if (parsed.length > 0) {
+        SPRINT_DATA.length = 0;
+        parsed.forEach(i => SPRINT_DATA.push(i));
+        const badge = document.getElementById('sprint-badge');
+        if (badge) badge.textContent = SPRINT_DATA.length;
+      }
+    }
+  } catch(e) {}
+
   renderFilteredBoard();
   updateSprintMeta();
   renderReleases();
