@@ -2256,9 +2256,13 @@ async function syncSprint() {
 
     if (!allRaw.length) { showToast('No issues found in sprint'); return; }
 
-    // Parse minimal fields
-    function parseIssue(issue, existingDesc, existingAtts, existingCmts) {
-      const f = issue.fields || {};
+    // Always do full replace — worker returns ALL issues now
+    const existingMap = {};
+    SPRINT_DATA.forEach(i => existingMap[i.key] = i);
+
+    function parseIssue(issue) {
+      const f  = issue.fields || {};
+      const ex = existingMap[issue.key];
       const sprint = (f.customfield_10020 || [])[0] || {};
       if (sprint.name && !STATE.sprintMeta) {
         STATE.sprintMeta = { name:sprint.name, startDate:sprint.startDate,
@@ -2272,40 +2276,18 @@ async function syncSprint() {
         assignee: f.assignee?.displayName || 'Unassigned',
         due:      f.duedate || null,
         type:     f.issuetype?.name || 'Task',
-        description: f.description
-          ? (typeof f.description==='string' ? f.description
-            : (f.description?.content||[]).map(b=>(b.content||[]).map(t=>t.text||'').join('')).join('\n'))
-          : (existingDesc || ''),
-        attachments: f.attachment
-          ? (f.attachment||[]).map(a=>({filename:a.filename,mimeType:a.mimeType,content:a.content}))
-          : (existingAtts || []),
-        comments: f.comment?.comments
-          ? (f.comment.comments||[]).map(c=>({
-              author: c.author?.displayName||'?',
-              created: c.created ? new Date(c.created).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '',
-              body: (c.body?.content||[]).map(b=>(b.content||[]).map(t=>t.text||'').join('')).join('\n')||(typeof c.body==='string'?c.body:''),
-            }))
-          : (existingCmts || []),
+        description: ex?.description || '',
+        attachments: ex?.attachments || [],
+        comments:    ex?.comments    || [],
       };
     }
 
-    // Merge all issues into SPRINT_DATA
-    let added = 0, updated = 0;
-    const existingMap = {};
-    SPRINT_DATA.forEach(i => existingMap[i.key] = i);
+    const added   = allRaw.filter(i => !existingMap[i.key]).length;
+    const newData = allRaw.map(i => parseIssue(i));
 
-    const newData = allRaw.map(issue => {
-      const ex = existingMap[issue.key];
-      return parseIssue(issue, ex?.description, ex?.attachments, ex?.comments);
-    });
-
-    // Replace SPRINT_DATA with merged data
+    // Full replace with all issues from Jira
     SPRINT_DATA.length = 0;
-    newData.forEach(i => {
-      const wasExisting = !!existingMap[i.key];
-      SPRINT_DATA.push(i);
-      if (wasExisting) updated++; else added++;
-    });
+    newData.forEach(i => SPRINT_DATA.push(i));
 
     // Save to localStorage cache
     try {
@@ -2321,10 +2303,7 @@ async function syncSprint() {
     const names = [...new Set(SPRINT_DATA.map(i=>i.assignee).filter(Boolean))].sort();
     names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
 
-    const msg = isIncremental
-      ? `✓ ${SPRINT_DATA.length} issues (${added} new, ${updated} updated)`
-      : `✓ Loaded all ${SPRINT_DATA.length} issues from Jira`;
-    showToast(msg);
+    showToast(`✓ ${SPRINT_DATA.length} issues synced from Jira (${added} new)`);
 
     STATE.lastJiraSync = new Date();
     renderFilteredBoard();
