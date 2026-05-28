@@ -185,6 +185,26 @@
   .form-label{font-size:11px;color:var(--text3);margin-bottom:5px;display:block}
   .input{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--sans);font-size:12px;padding:7px 11px;outline:none;width:100%;transition:border-color 0.15s}
   .input:focus{border-color:var(--accent)}
+  /* SEARCHABLE DROPDOWN */
+  .sd-wrap{position:relative;width:100%}
+  .sd-trigger{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--sans);font-size:12px;padding:7px 28px 7px 11px;outline:none;width:100%;cursor:pointer;text-align:left;transition:border-color 0.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sd-trigger:focus,.sd-trigger.open{border-color:var(--accent)}
+  .sd-trigger::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text3);font-size:10px}
+  .sd-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:999;display:none;flex-direction:column;max-height:280px}
+  .sd-dropdown.open{display:flex}
+  .sd-search{padding:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .sd-search input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:12px;font-family:var(--sans);outline:none;color:var(--text)}
+  .sd-search input:focus{border-color:var(--accent)}
+  .sd-list{overflow-y:auto;max-height:220px;padding:4px}
+  .sd-list::-webkit-scrollbar{width:4px}
+  .sd-list::-webkit-scrollbar-track{background:transparent}
+  .sd-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+  .sd-option{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sd-option:hover{background:var(--surface2)}
+  .sd-option.selected{background:rgba(37,99,235,0.08);color:var(--accent);font-weight:500}
+  .sd-option.hidden{display:none}
+  .sd-empty{padding:12px 10px;font-size:12px;color:var(--text3);text-align:center}
+
   select.input{appearance:none;cursor:pointer}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:200;align-items:center;justify-content:center}
   .modal-overlay.open{display:flex}
@@ -346,44 +366,68 @@
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
         <div style="flex:1;min-width:140px">
           <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Team</div>
-          <select class="input" id="filter-team" onchange="applyFilters()" style="font-size:12px">
-            <option value="">All Teams</option>
-            <option value="Pinnacle">🏆 Pinnacle</option>
-            <option value="Momentum">⚡ Momentum</option>
-            <option value="Catalyst">🔥 Catalyst</option>
-            <option value="AI Intelligence">🤖 AI Intelligence</option>
-            <option value="Shared">🤝 Shared</option>
-          </select>
+          <div class="sd-wrap" id="sd-team">
+            <button class="sd-trigger" onclick="toggleSD('sd-team')">All Teams</button>
+            <div class="sd-dropdown">
+              <div class="sd-search"><input placeholder="Search team..." oninput="searchSD('sd-team',this.value)"></div>
+              <div class="sd-list">
+                <div class="sd-option selected" data-value="" onclick="selectSD('sd-team','','All Teams')">All Teams</div>
+                <div class="sd-option" data-value="Pinnacle" onclick="selectSD('sd-team','Pinnacle','🏆 Pinnacle')">🏆 Pinnacle</div>
+                <div class="sd-option" data-value="Momentum" onclick="selectSD('sd-team','Momentum','⚡ Momentum')">⚡ Momentum</div>
+                <div class="sd-option" data-value="Catalyst" onclick="selectSD('sd-team','Catalyst','🔥 Catalyst')">🔥 Catalyst</div>
+                <div class="sd-option" data-value="AI Intelligence" onclick="selectSD('sd-team','AI Intelligence','🤖 AI Intelligence')">🤖 AI Intelligence</div>
+                <div class="sd-option" data-value="Shared" onclick="selectSD('sd-team','Shared','🤝 Shared')">🤝 Shared</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div style="flex:1;min-width:140px">
           <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Status</div>
-          <select class="input" id="filter-status" onchange="applyFilters()" style="font-size:12px">
-            <option value="">All Statuses</option>
-            <option value="To Do">To Do</option>
-            <option value="Backlog">Backlog</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Code Review">Code Review</option>
-            <option value="READY FOR TESTING">Ready for Testing</option>
-            <option value="under testing">Under Testing</option>
-            <option value="Back To Dev">Back To Dev</option>
-            <option value="Hold">Hold</option>
-            <option value="Done">Done</option>
-          </select>
+          <div class="sd-wrap" id="sd-status">
+            <button class="sd-trigger" onclick="toggleSD('sd-status')">All Statuses</button>
+            <div class="sd-dropdown">
+              <div class="sd-search"><input placeholder="Search status..." oninput="searchSD('sd-status',this.value)"></div>
+              <div class="sd-list">
+                <div class="sd-option selected" data-value="" onclick="selectSD('sd-status','','All Statuses')">All Statuses</div>
+                <div class="sd-option" data-value="To Do" onclick="selectSD('sd-status','To Do','To Do')">To Do</div>
+                <div class="sd-option" data-value="Backlog" onclick="selectSD('sd-status','Backlog','Backlog')">Backlog</div>
+                <div class="sd-option" data-value="In Progress" onclick="selectSD('sd-status','In Progress','In Progress')">In Progress</div>
+                <div class="sd-option" data-value="Code Review" onclick="selectSD('sd-status','Code Review','Code Review')">Code Review</div>
+                <div class="sd-option" data-value="READY FOR TESTING" onclick="selectSD('sd-status','READY FOR TESTING','Ready for Testing')">Ready for Testing</div>
+                <div class="sd-option" data-value="under testing" onclick="selectSD('sd-status','under testing','Under Testing')">Under Testing</div>
+                <div class="sd-option" data-value="Back To Dev" onclick="selectSD('sd-status','Back To Dev','Back To Dev')">Back To Dev</div>
+                <div class="sd-option" data-value="Hold" onclick="selectSD('sd-status','Hold','Hold')">Hold</div>
+                <div class="sd-option" data-value="Done" onclick="selectSD('sd-status','Done','Done')">Done</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div style="flex:1;min-width:140px">
           <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Member</div>
-          <select class="input" id="filter-member" onchange="applyFilters()" style="font-size:12px">
-            <option value="">All Members</option>
-          </select>
+          <div class="sd-wrap" id="sd-member">
+            <button class="sd-trigger" onclick="toggleSD('sd-member')">All Members</button>
+            <div class="sd-dropdown">
+              <div class="sd-search"><input placeholder="Search member..." oninput="searchSD('sd-member',this.value)"></div>
+              <div class="sd-list" id="sd-member-list">
+                <div class="sd-option selected" data-value="" onclick="selectSD('sd-member','','All Members')">All Members</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div style="flex:1;min-width:140px">
           <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.6px">Type</div>
-          <select class="input" id="filter-type" onchange="applyFilters()" style="font-size:12px">
-            <option value="">All Types</option>
-            <option value="Bug">Bug</option>
-            <option value="Story">Story</option>
-            <option value="Task">Task</option>
-          </select>
+          <div class="sd-wrap" id="sd-type">
+            <button class="sd-trigger" onclick="toggleSD('sd-type')">All Types</button>
+            <div class="sd-dropdown">
+              <div class="sd-search"><input placeholder="Search type..." oninput="searchSD('sd-type',this.value)"></div>
+              <div class="sd-list">
+                <div class="sd-option selected" data-value="" onclick="selectSD('sd-type','','All Types')">All Types</div>
+                <div class="sd-option" data-value="Bug" onclick="selectSD('sd-type','Bug','Bug')">Bug</div>
+                <div class="sd-option" data-value="Story" onclick="selectSD('sd-type','Story','Story')">Story</div>
+                <div class="sd-option" data-value="Task" onclick="selectSD('sd-type','Task','Task')">Task</div>
+              </div>
+            </div>
+          </div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="align-self:flex-end;white-space:nowrap">✕ Clear</button>
       </div>
@@ -886,9 +930,15 @@
 
     <div class="form-group">
       <div class="form-label">Pick from team</div>
-      <select class="input" id="assign-team-select" onchange="onAssignTeamSelect()" style="font-size:12px">
-        <option value="">— Select a team member —</option>
-      </select>
+      <div class="sd-wrap" id="sd-assign">
+        <button class="sd-trigger" onclick="toggleSD('sd-assign')">— Select a team member —</button>
+        <div class="sd-dropdown">
+          <div class="sd-search"><input placeholder="Search name..." oninput="searchSD('sd-assign',this.value)"></div>
+          <div class="sd-list" id="sd-assign-list">
+            <div class="sd-option selected" data-value="" onclick="selectSDAssign('','')">— Select a team member —</div>
+          </div>
+        </div>
+      </div>
     </div>
     <div style="text-align:center;font-size:11px;color:var(--text3);margin:6px 0">or</div>
     <div class="form-group">
@@ -1646,8 +1696,84 @@ function moveMemberToShared(fromTeamId, memberName, e) {
 }
 
 // ================================================================
-// VIEW SWITCHER — Board / List
+// SEARCHABLE DROPDOWN
 // ================================================================
+const SD_STATE = {}; // stores current value per dropdown id
+
+function toggleSD(id) {
+  const wrap = document.getElementById(id);
+  const dd   = wrap.querySelector('.sd-dropdown');
+  const isOpen = dd.classList.contains('open');
+  // Close all others first
+  document.querySelectorAll('.sd-dropdown.open').forEach(d => {
+    d.classList.remove('open');
+    d.closest('.sd-wrap').querySelector('.sd-trigger')?.classList.remove('open');
+  });
+  if (!isOpen) {
+    dd.classList.add('open');
+    wrap.querySelector('.sd-trigger').classList.add('open');
+    const input = dd.querySelector('.sd-search input');
+    if (input) { input.value = ''; searchSD(id, ''); input.focus(); }
+  }
+}
+
+function searchSD(id, query) {
+  const wrap = document.getElementById(id);
+  const opts = wrap.querySelectorAll('.sd-option');
+  const q    = query.toLowerCase();
+  let visible = 0;
+  opts.forEach(opt => {
+    const match = opt.textContent.toLowerCase().includes(q);
+    opt.classList.toggle('hidden', !match);
+    if (match) visible++;
+  });
+  // Show/hide empty state
+  let empty = wrap.querySelector('.sd-empty');
+  if (!visible) {
+    if (!empty) { empty = document.createElement('div'); empty.className='sd-empty'; empty.textContent='No results'; wrap.querySelector('.sd-list').appendChild(empty); }
+    empty.style.display = '';
+  } else if (empty) {
+    empty.style.display = 'none';
+  }
+}
+
+function selectSD(id, value, label) {
+  SD_STATE[id] = value;
+  const wrap    = document.getElementById(id);
+  const trigger = wrap.querySelector('.sd-trigger');
+  trigger.textContent = label || 'All';
+  // Mark selected
+  wrap.querySelectorAll('.sd-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.value === value);
+  });
+  // Close
+  wrap.querySelector('.sd-dropdown').classList.remove('open');
+  trigger.classList.remove('open');
+  // Apply filters
+  applyFilters();
+}
+
+function selectSDAssign(value, label) {
+  const wrap    = document.getElementById('sd-assign');
+  const trigger = wrap.querySelector('.sd-trigger');
+  trigger.textContent = label || '— Select a team member —';
+  wrap.querySelectorAll('.sd-option').forEach(o => o.classList.toggle('selected', o.dataset.value === value));
+  wrap.querySelector('.sd-dropdown').classList.remove('open');
+  trigger.classList.remove('open');
+  if (value) onAssignTeamSelectValue(value);
+}
+
+function getSDValue(id) { return SD_STATE[id] || ''; }
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.sd-wrap')) {
+    document.querySelectorAll('.sd-dropdown.open').forEach(d => {
+      d.classList.remove('open');
+      d.closest('.sd-wrap')?.querySelector('.sd-trigger')?.classList.remove('open');
+    });
+  }
+});
 let CURRENT_VIEW = 'kanban';
 
 function switchView(view) {
@@ -2002,10 +2128,10 @@ function populateMemberFilter() {
 }
 
 function applyFilters() {
-  FILTER.team   = document.getElementById('filter-team').value;
-  FILTER.status = document.getElementById('filter-status').value;
-  FILTER.member = document.getElementById('filter-member').value;
-  FILTER.type   = document.getElementById('filter-type').value;
+  FILTER.team   = getSDValue('sd-team');
+  FILTER.status = getSDValue('sd-status');
+  FILTER.member = getSDValue('sd-member');
+  FILTER.type   = getSDValue('sd-type');
   FILTER.page   = 1;
   renderFilteredBoard();
   renderActiveFilterChips();
@@ -2013,14 +2139,52 @@ function applyFilters() {
 
 function clearFilters() {
   FILTER.team = ''; FILTER.status = ''; FILTER.member = ''; FILTER.type = ''; FILTER.page = 1;
-  document.getElementById('filter-team').value   = '';
-  document.getElementById('filter-status').value = '';
-  document.getElementById('filter-member').value = '';
-  document.getElementById('filter-type').value   = '';
+  ['sd-team','sd-status','sd-member','sd-type'].forEach(id => {
+    SD_STATE[id] = '';
+    const wrap = document.getElementById(id);
+    if (!wrap) return;
+    const trigger = wrap.querySelector('.sd-trigger');
+    const labels  = { 'sd-team':'All Teams', 'sd-status':'All Statuses', 'sd-member':'All Members', 'sd-type':'All Types' };
+    if (trigger) trigger.textContent = labels[id] || 'All';
+    wrap.querySelectorAll('.sd-option').forEach(o => o.classList.toggle('selected', o.dataset.value === ''));
+  });
   renderFilteredBoard();
   renderActiveFilterChips();
 }
 
+function clearOneFilter(key) {
+  FILTER[key] = ''; FILTER.page = 1;
+  const sdMap = { team:'sd-team', status:'sd-status', member:'sd-member', type:'sd-type' };
+  const labels = { team:'All Teams', status:'All Statuses', member:'All Members', type:'All Types' };
+  const sdId = sdMap[key];
+  if (sdId) {
+    SD_STATE[sdId] = '';
+    const wrap = document.getElementById(sdId);
+    if (wrap) {
+      const trigger = wrap.querySelector('.sd-trigger');
+      if (trigger) trigger.textContent = labels[key];
+      wrap.querySelectorAll('.sd-option').forEach(o => o.classList.toggle('selected', o.dataset.value === ''));
+    }
+  }
+  renderFilteredBoard();
+  renderActiveFilterChips();
+}
+
+function populateMemberFilter() {
+  const listEl = document.getElementById('sd-member-list');
+  if (!listEl) return;
+  // Keep the "All Members" option, rebuild the rest
+  listEl.innerHTML = `<div class="sd-option selected" data-value="" onclick="selectSD('sd-member','','All Members')">All Members</div>`;
+  const names = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))].sort();
+  names.forEach(name => {
+    const div = document.createElement('div');
+    div.className = 'sd-option';
+    div.dataset.value = name;
+    div.textContent = name;
+    div.onclick = () => selectSD('sd-member', name, name);
+    listEl.appendChild(div);
+  });
+}
 function changePage(dir) {
   const filtered = getFilteredIssues();
   const totalPages = Math.max(1, Math.ceil(filtered.length / FILTER.perPage));
@@ -2716,23 +2880,41 @@ let ASSIGN_REQ_ID = null;
 
 function openAssignModal(req) {
   ASSIGN_REQ_ID = req.id;
-  document.getElementById('assign-req-id').textContent   = req.id;
+  document.getElementById('assign-req-id').textContent    = req.id;
   document.getElementById('assign-req-title').textContent = req.title;
   document.getElementById('assign-manual').value = req.responsible || '';
   document.getElementById('assign-email').value  = req.responsibleEmail || '';
 
-  // Populate team dropdown
-  const sel = document.getElementById('assign-team-select');
-  sel.innerHTML = '<option value="">— Select a team member —</option>';
+  // Populate SD assign dropdown
+  const listEl = document.getElementById('sd-assign-list');
+  listEl.innerHTML = `<div class="sd-option selected" data-value="" onclick="selectSDAssign('','')">— Select a team member —</div>`;
   getAllTeamMembers().forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.name;
-    opt.textContent = `${m.name} (${m.team})`;
-    if (m.name === req.responsible) opt.selected = true;
-    sel.appendChild(opt);
+    const div = document.createElement('div');
+    div.className = 'sd-option';
+    div.dataset.value = m.name;
+    div.textContent   = `${m.name} (${m.team})`;
+    if (m.name === req.responsible) div.classList.add('selected');
+    div.onclick = () => selectSDAssign(m.name, `${m.name} (${m.team})`);
+    listEl.appendChild(div);
   });
 
+  // Reset SD trigger label
+  const trigger = document.querySelector('#sd-assign .sd-trigger');
+  if (trigger) trigger.textContent = req.responsible ? `${req.responsible}` : '— Select a team member —';
+
   openModal('assign-modal');
+}
+
+function onAssignTeamSelectValue(val) {
+  document.getElementById('assign-manual').value = val;
+  const emailMap = {
+    'Priya':'priyadharshini@adloggs.com','Swathi Iyyappan':'swathi@adloggs.com',
+    'Abinaya':'abinaya@adloggs.com','Bharat':'bharat@adloggs.com',
+    'Vinay':'vinay@adloggs.com','Saurabh':'saurabh@adloggs.com',
+    'Vignesh Murugan':'vignesh@adloggs.com','Raja':'raja@adloggs.com',
+  };
+  const known = emailMap[val];
+  document.getElementById('assign-email').value = known || (val.toLowerCase().split(' ')[0] + '@adloggs.com');
 }
 
 function onAssignTeamSelect() {
