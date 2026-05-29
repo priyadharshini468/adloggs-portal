@@ -2947,26 +2947,35 @@ async function loadRoadmap() {
     const csv = await res.text();
     if (!csv || csv.length < 10) throw new Error('Empty response');
 
-    // Parse CSV
-    const rows = csv.trim().split('\n').map(row => {
-      const result = []; let cur = '', inQ = false;
-      for (let i = 0; i < row.length; i++) {
-        const c = row[i];
-        if (c === '"' && row[i+1] === '"') { cur += '"'; i++; }
-        else if (c === '"') inQ = !inQ;
-        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-        else cur += c;
+    // Parse CSV — handles multi-line quoted fields (descriptions with newlines)
+    function parseCSV(text) {
+      const rows = [];
+      let row = [], cur = '', inQ = false, i = 0;
+      while (i < text.length) {
+        const c = text[i];
+        if (c === '"') {
+          if (inQ && text[i+1] === '"') { cur += '"'; i += 2; continue; } // escaped quote
+          inQ = !inQ; i++; continue;
+        }
+        if (c === ',' && !inQ) { row.push(cur.trim()); cur = ''; i++; continue; }
+        if ((c === '\n' || c === '\r') && !inQ) {
+          if (c === '\r' && text[i+1] === '\n') i++; // CRLF
+          row.push(cur.trim()); rows.push(row); row = []; cur = ''; i++; continue;
+        }
+        cur += c; i++;
       }
-      result.push(cur.trim());
-      return result;
-    });
+      if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
+      return rows;
+    }
+
+    const rows = parseCSV(csv);
 
     ROADMAP_DATA = rows.slice(1)
-      .filter(r => r[0] && r[0].length > 0)
+      .filter(r => r[0] && r[0].length > 0 && r[0] !== 'Initiative')
       .map((r, i) => ({
-        id: i + 1,
+        id:          i + 1,
         initiative:  r[0] || '',
-        description: r[1] || '',
+        description: (r[1] || '').replace(/\n/g,' ').trim(),
         quarter:     r[2] || '',
         team:        r[3] || '',
         status:      r[4] || 'Yet to start',
