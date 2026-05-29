@@ -3049,72 +3049,90 @@ function renderRoadmap() {
 }
 
 function renderSwimlane(filtered, container) {
-  // Get unique quarters (columns) and teams (rows)
-  const allQuarters = [...new Set(filtered.map(r => r.quarter||'Not Scheduled').filter(Boolean))].sort((a,b)=>{
-    if(a==='Not Scheduled') return 1; if(b==='Not Scheduled') return -1; return a.localeCompare(b);
-  });
-  const allTeams = [...new Set(filtered.map(r => r.team || r.client || 'Other').filter(Boolean))];
+  const allQ = [...new Set(filtered.map(r => r.quarter||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const allTeams = [...new Set(filtered.map(r => r.team||'Other'))];
+  if (!allQ.length) { renderCards(filtered, container); return; }
 
-  const Q_BG = ['#2563eb','#059669','#7c3aed','#d97706','#0891b2','#dc2626','#db2777'];
+  const TEAM_COLORS = {
+    'Pinnacle':        '#2563eb',
+    'Momentum':        '#059669',
+    'Catalyst':        '#d97706',
+    'AI Intelligence': '#7c3aed',
+    'Shared':          '#0891b2',
+    'Other':           '#6b7280',
+  };
 
-  // Quarter column widths
-  const labelW = 160;
-  const colW   = Math.max(180, Math.floor((900) / Math.max(allQuarters.length,1)));
-  const totalW = labelW + colW * allQuarters.length;
+  const STATUS_BAR_COLORS = {
+    'yet to start':        { bg:'#e5e7eb', text:'#6b7280', border:'#d1d5db' },
+    'planned':             { bg:'#e5e7eb', text:'#6b7280', border:'#d1d5db' },
+    'partially completed': { bg:'#fde68a', text:'#92400e', border:'#fbbf24' },
+    'in progress':         { bg:'#93c5fd', text:'#1e3a8a', border:'#3b82f6' },
+    'in phase 2':          { bg:'#c4b5fd', text:'#4c1d95', border:'#8b5cf6' },
+    'in phase 3':          { bg:'#67e8f9', text:'#164e63', border:'#06b6d4' },
+    'done':                { bg:'#6ee7b7', text:'#064e3b', border:'#10b981' },
+    'completed':           { bg:'#6ee7b7', text:'#064e3b', border:'#10b981' },
+  };
 
-  let html = `
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-    <div style="min-width:${totalW}px">
+  const colW = 160;
+  const labelW = 140;
 
-    <!-- HEADER ROW — quarters -->
-    <div style="display:grid;grid-template-columns:${labelW}px repeat(${allQuarters.length},${colW}px);margin-bottom:0;position:sticky;top:0;z-index:10;background:var(--bg)">
-      <div style="background:var(--surface2);border:1px solid var(--border);border-right:none;padding:10px 14px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center">INITIATIVE</div>
-      ${allQuarters.map((q,i) => `
-        <div style="background:${Q_BG[i%Q_BG.length]};border:1px solid ${Q_BG[i%Q_BG.length]};${i<allQuarters.length-1?'border-right:none':''}padding:10px 14px;text-align:center;color:#fff;font-size:12px;font-weight:700;letter-spacing:0.5px">
-          ${esc(q)}
-        </div>`).join('')}
-    </div>
-
-    <!-- DATA ROWS — one per team/area -->
-    ${allTeams.map((team, ti) => {
-      const teamItems = filtered.filter(r => (r.team||r.client||'Other') === team);
-      const rowBg = ti % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
-      return `
-        <div style="display:grid;grid-template-columns:${labelW}px repeat(${allQuarters.length},${colW}px);border-bottom:1px solid var(--border)">
-          <!-- Row label -->
-          <div style="background:${Q_BG[ti%Q_BG.length]};padding:10px 14px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;min-height:60px;border-right:3px solid rgba(0,0,0,0.1)">
-            ${esc(team)}
+  let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+  <table style="width:100%;border-collapse:collapse;min-width:${labelW + colW*allQ.length}px">
+    <thead>
+      <tr style="background:#f8fafc">
+        <th style="width:${labelW}px;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);border-right:1px solid var(--border)">Team</th>
+        ${allQ.map(q => `<th style="width:${colW}px;padding:12px 14px;text-align:center;font-size:12px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);border-right:1px solid var(--border)">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="font-family:var(--serif)">${esc(q)}</div>
           </div>
-          <!-- Quarter cells -->
-          ${allQuarters.map((q,qi) => {
-            const cellItems = teamItems.filter(r => (r.quarter||'Not Scheduled') === q);
-            return `<div style="background:${rowBg};border-left:1px solid var(--border);padding:6px 8px;min-height:60px;display:flex;flex-direction:column;gap:4px">
-              ${cellItems.map(r => {
-                const st = RM_STATUS[r.status.toLowerCase()] || RM_STATUS['yet to start'];
-                const rJson = JSON.stringify(r).replace(/"/g,'&quot;');
-                return `<div onclick="openRoadmapDetail(${rJson})"
-                  title="${esc(r.initiative)}"
-                  style="background:${st.bg};border:1px solid ${st.border};border-radius:5px;padding:4px 8px;font-size:11px;font-weight:500;color:${st.color};cursor:pointer;transition:all 0.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px"
-                  onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'"
-                  onmouseout="this.style.transform='';this.style.boxShadow=''">
-                  <span>${st.icon}</span>
-                  <span style="overflow:hidden;text-overflow:ellipsis">${esc(r.initiative)}</span>
-                </div>`;
-              }).join('')}
-            </div>`;
-          }).join('')}
+        </th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>`;
+
+  allTeams.forEach((team, ti) => {
+    const teamItems = filtered.filter(r => (r.team||'Other') === team);
+    const teamColor = TEAM_COLORS[team] || '#6b7280';
+    const rowBg = ti%2===0 ? '#ffffff' : '#fafbfc';
+
+    html += `<tr style="background:${rowBg}">
+      <td style="padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle">
+        <div style="background:${teamColor};color:#fff;font-size:11px;font-weight:700;padding:14px 12px;height:100%;display:flex;align-items:center;min-height:60px;letter-spacing:0.3px">${esc(team)}</div>
+      </td>`;
+
+    allQ.forEach(q => {
+      const cellItems = teamItems.filter(r => (r.quarter||'') === q);
+      html += `<td style="padding:6px 8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle;min-height:60px">`;
+      cellItems.forEach(r => {
+        const sc  = STATUS_BAR_COLORS[r.status.toLowerCase()] || STATUS_BAR_COLORS['yet to start'];
+        const rJson = JSON.stringify(r).replace(/"/g,'&quot;');
+        const jiraMatch = r.jiraLink.match(/browse\/(AB-\d+)/);
+        const jiraKey = jiraMatch ? jiraMatch[1] : '';
+        html += `<div onclick="openRoadmapDetail(${rJson})"
+          title="${esc(r.initiative)}"
+          style="background:${sc.bg};border:1px solid ${sc.border};border-radius:5px;padding:5px 9px;margin-bottom:4px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:5px"
+          onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)';this.style.transform='translateY(-1px)'"
+          onmouseout="this.style.boxShadow='';this.style.transform=''">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600;color:${sc.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.initiative)}</div>
+            ${jiraKey ? `<div style="font-size:9px;color:${sc.text}80;margin-top:1px">${jiraKey}</div>` : ''}
+          </div>
         </div>`;
-    }).join('')}
+      });
+      html += `</td>`;
+    });
+    html += `</tr>`;
+  });
 
-    </div></div>
+  html += `</tbody></table></div>
 
-    <!-- LEGEND -->
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:9px">
-      <span style="font-size:11px;font-weight:600;color:var(--text3);margin-right:4px">Status:</span>
-      ${Object.entries(RM_STATUS).filter(([k])=>!['planned','completed'].includes(k)).map(([k,v])=>
-        `<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${v.bg};color:${v.color};border:1px solid ${v.border}">${v.icon} ${v.label}</span>`
-      ).join('')}
-    </div>`;
+  <!-- LEGEND -->
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center">
+    <span style="font-size:11px;font-weight:600;color:var(--text3)">Status:</span>
+    ${Object.entries(STATUS_BAR_COLORS).filter(([k])=>!['planned','completed'].includes(k)).map(([k,v])=>
+      `<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${v.bg};color:${v.text};border:1px solid ${v.border}">${RM_STATUS[k]?.icon||''} ${RM_STATUS[k]?.label||k}</span>`
+    ).join('')}
+  </div>`;
 
   container.innerHTML = html;
 }
