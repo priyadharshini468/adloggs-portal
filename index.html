@@ -3085,15 +3085,21 @@ function renderSwimlane(filtered, container) {
   const colW = 160;
   const labelW = 140;
 
-  let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:12px;overflow:hidden">
-  <table style="width:100%;border-collapse:collapse;min-width:${labelW + colW*allQ.length}px">
+  let html = `
+  <!-- Download button -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <button class="btn btn-ghost btn-sm" onclick="downloadRoadmapPDF()" style="display:flex;align-items:center;gap:5px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download PDF
+    </button>
+  </div>
+  <div id="roadmap-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--border)">
+  <table style="border-collapse:collapse;min-width:${labelW + colW*allQ.length}px;width:100%">
     <thead>
       <tr style="background:#f8fafc">
-        <th style="width:${labelW}px;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);border-right:1px solid var(--border)">Team</th>
-        ${allQ.map(q => `<th style="width:${colW}px;padding:12px 14px;text-align:center;font-size:12px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);border-right:1px solid var(--border)">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-            <div style="font-family:var(--serif)">${esc(q)}</div>
-          </div>
+        <th style="width:${labelW}px;min-width:${labelW}px;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);border-right:1px solid var(--border);position:sticky;left:0;z-index:3;background:#f8fafc">Team</th>
+        ${allQ.map(q => `<th style="width:${colW}px;min-width:${colW}px;padding:12px 14px;text-align:center;font-size:12px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);border-right:1px solid var(--border);white-space:nowrap">
+          <div style="font-family:var(--serif)">${esc(q)}</div>
         </th>`).join('')}
       </tr>
     </thead>
@@ -3105,8 +3111,8 @@ function renderSwimlane(filtered, container) {
     const rowBg = ti%2===0 ? '#ffffff' : '#fafbfc';
 
     html += `<tr style="background:${rowBg}">
-      <td style="padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle">
-        <div style="background:${teamColor};color:#fff;font-size:11px;font-weight:700;padding:14px 12px;height:100%;display:flex;align-items:center;min-height:60px;letter-spacing:0.3px">${esc(team)}</div>
+      <td style="padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle;position:sticky;left:0;z-index:2">
+        <div style="background:${teamColor};color:#fff;font-size:11px;font-weight:700;padding:14px 12px;min-height:60px;display:flex;align-items:center;letter-spacing:0.3px;min-width:${labelW}px">${esc(team)}</div>
       </td>`;
 
     allQ.forEach(q => {
@@ -3226,6 +3232,8 @@ function openRoadmapDetail(r) {
   if (pri)      meta.push(`<span style="font-size:11px;padding:3px 9px;border-radius:5px;font-weight:600;background:${pri.bg};color:${pri.color}">${esc(r.priority)}</span>`);
   if (r.client) meta.push(`<span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:5px">🏢 ${esc(r.client)}</span>`);
   if (r.team)   meta.push(`<span style="font-size:11px;background:rgba(123,94,167,0.1);color:#7b5ea7;padding:3px 9px;border-radius:5px;font-weight:500">👥 ${esc(r.team)}</span>`);
+  if (r.milestone && r.milestone !== '—' && r.milestone !== '') meta.push(`<span style="font-size:11px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:3px 9px;border-radius:5px;font-weight:500">🎯 ${esc(r.milestone)}</span>`);
+  if (jiraKey)  meta.push(`<a href="${r.jiraLink||'https://adloggss.atlassian.net/browse/'+jiraKey}" target="_blank" style="font-size:11px;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;padding:3px 9px;border-radius:5px;font-weight:500;text-decoration:none">🔗 ${jiraKey} ↗</a>`);
   document.getElementById('rm-modal-meta').innerHTML = meta.join('');
 
   // Timeline visual — Image 1 style horizontal timeline
@@ -3271,7 +3279,78 @@ function openRoadmapDetail(r) {
     jiraEl.style.display = '';
   } else { jiraEl.style.display = 'none'; }
 
+  // Jira now shown in meta chips — hide old button
+  document.getElementById('rm-modal-jira').style.display = 'none';
+
   openModal('roadmap-modal');
+}
+
+function downloadRoadmapPDF() {
+  const filtered = getFilteredRoadmap();
+  if (!filtered.length) { showToast('No roadmap data to download'); return; }
+
+  // Build a printable HTML page and open in new tab for PDF save
+  const Q_COLORS_MAP = { Q1:'#2563eb', Q2:'#059669', Q3:'#7c3aed', Q4:'#d97706', Q5:'#0891b2', Q6:'#dc2626', Q7:'#db2777' };
+  const allQ = [...new Set(filtered.map(r => r.quarter||'').filter(Boolean))].sort();
+  const allTeams = [...new Set(filtered.map(r => r.team||'Other'))];
+
+  const STATUS_BAR = {
+    'yet to start':        { bg:'#e5e7eb', text:'#6b7280' },
+    'partially completed': { bg:'#fde68a', text:'#92400e' },
+    'in progress':         { bg:'#93c5fd', text:'#1e3a8a' },
+    'in phase 2':          { bg:'#c4b5fd', text:'#4c1d95' },
+    'in phase 3':          { bg:'#67e8f9', text:'#164e63' },
+    'done':                { bg:'#6ee7b7', text:'#064e3b' },
+  };
+
+  const TEAM_COLORS_PDF = { Pinnacle:'#2563eb', Momentum:'#059669', Catalyst:'#d97706', 'AI Intelligence':'#7c3aed', Other:'#6b7280' };
+
+  let tableHTML = `<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:11px">
+    <thead><tr>
+      <th style="background:#f1f5f9;padding:10px 12px;border:1px solid #e2e8f0;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;width:120px">Team</th>
+      ${allQ.map(q => {
+        const qc = Q_COLORS_MAP[q.split(' ')[0]] || '#2563eb';
+        return `<th style="background:${qc};color:#fff;padding:10px 12px;border:1px solid #e2e8f0;text-align:center;font-weight:700">${q}</th>`;
+      }).join('')}
+    </tr></thead><tbody>`;
+
+  allTeams.forEach((team, ti) => {
+    const tc = TEAM_COLORS_PDF[team] || '#6b7280';
+    const rowBg = ti%2===0 ? '#ffffff' : '#f8fafc';
+    tableHTML += `<tr style="background:${rowBg}">
+      <td style="background:${tc};color:#fff;padding:10px 12px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${team}</td>`;
+    allQ.forEach(q => {
+      const items = filtered.filter(r => (r.team||'Other')===team && (r.quarter||'')===q);
+      tableHTML += `<td style="padding:6px 8px;border:1px solid #e2e8f0;vertical-align:top;min-width:140px">
+        ${items.map(r => {
+          const sc = STATUS_BAR[r.status.toLowerCase()] || STATUS_BAR['yet to start'];
+          return `<div style="background:${sc.bg};color:${sc.text};border-radius:4px;padding:4px 7px;margin-bottom:3px;font-size:10px;font-weight:600">${r.initiative}</div>`;
+        }).join('')}
+      </td>`;
+    });
+    tableHTML += `</tr>`;
+  });
+  tableHTML += `</tbody></table>`;
+
+  const printWin = window.open('','_blank');
+  printWin.document.write(`<!DOCTYPE html><html><head>
+    <title>Adloggs Product Roadmap</title>
+    <style>
+      body { margin: 20px; font-family: Arial, sans-serif; }
+      h1 { font-size: 22px; margin-bottom: 4px; color: #111; }
+      .sub { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+      @media print { .no-print { display:none } }
+    </style>
+  </head><body>
+    <h1>Adloggs — Product Roadmap</h1>
+    <div class="sub">Generated ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})} · ${filtered.length} initiatives</div>
+    ${tableHTML}
+    <div class="no-print" style="margin-top:20px;text-align:center">
+      <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer">Print / Save as PDF</button>
+    </div>
+  </body></html>`);
+  printWin.document.close();
+  showToast('Roadmap opened in new tab — click Print / Save as PDF');
 }
 
 // Build timeline phases based on status
