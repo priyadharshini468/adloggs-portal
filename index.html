@@ -1598,43 +1598,47 @@ function nav(id, el) {
 // ================================================================
 // TEAMS — synced from Jira
 // ================================================================
-function syncTeamsFromJira() {
+async function syncTeamsFromJira() {
   const icon = document.getElementById('teams-sync-icon');
   icon.classList.add('spin');
   setPill('syncing', 'Syncing...');
-  setTimeout(() => {
-    // Update live issue counts per member from SPRINT_DATA
-    STATE.teams.forEach(team => {
-      team.members.forEach(m => {
-        m.issues = SPRINT_DATA.filter(i => i.assignee === m.name).length;
+
+  // Sync sprint first if not loaded yet
+  if (SPRINT_DATA.length === 0 && STATE.jiraProxyUrl) {
+    await syncSprint();
+  }
+
+  // Update live issue counts per member from SPRINT_DATA
+  STATE.teams.forEach(team => {
+    team.members.forEach(m => {
+      m.issues = SPRINT_DATA.filter(i => i.assignee === m.name).length;
+    });
+  });
+
+  // Any sprint assignee not in a named pod → add to Shared Resources
+  const podMemberNames = new Set(
+    STATE.teams.filter(t => t.id !== 'shared').flatMap(t => t.members.map(m => m.name))
+  );
+  const sharedTeam = STATE.teams.find(t => t.id === 'shared');
+  const allSprintAssignees = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))];
+  const avs = ['av1','av2','av3','av4','av5','av6','av7','av8','av9','av10','av11','av12'];
+  allSprintAssignees.forEach(name => {
+    if (!podMemberNames.has(name) && !sharedTeam.members.find(m => m.name === name)) {
+      const init = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      sharedTeam.members.push({
+        name, title: 'Shared Resource', initials: init,
+        av: avs[sharedTeam.members.length % 12], status: 'online', jiraId: '',
+        issues: SPRINT_DATA.filter(i => i.assignee === name).length
       });
-    });
+    }
+  });
 
-    // Any sprint assignee not already in a named pod → add to Shared Resources
-    const podMemberNames = new Set(
-      STATE.teams.filter(t => t.id !== 'shared').flatMap(t => t.members.map(m => m.name))
-    );
-    const sharedTeam = STATE.teams.find(t => t.id === 'shared');
-    const allSprintAssignees = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))];
-    const avs = ['av1','av2','av3','av4','av5','av6','av7','av8','av9','av10','av11','av12'];
-    allSprintAssignees.forEach(name => {
-      if (!podMemberNames.has(name) && !sharedTeam.members.find(m => m.name === name)) {
-        const init = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-        sharedTeam.members.push({
-          name, title: 'Shared Resource', initials: init,
-          av: avs[sharedTeam.members.length % 12], status: 'online', jiraId: '',
-          issues: SPRINT_DATA.filter(i => i.assignee === name).length
-        });
-      }
-    });
-
-    STATE.lastJiraSync = new Date();
-    renderTeams();
-    icon.classList.remove('spin');
-    setPill('live', 'Live');
-    document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
-    showToast('Teams synced from Jira ✓');
-  }, 900);
+  STATE.lastJiraSync = new Date();
+  renderTeams();
+  icon.classList.remove('spin');
+  setPill('live', 'Live');
+  document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
+  showToast('Teams synced ✓');
 }
 
 function renderTeams() {
@@ -2544,20 +2548,32 @@ function renderReleases() {
   };
 
   if (STATE.jiraProxyUrl) {
-    const ctrl = new AbortController();
-    const tid2 = setTimeout(() => ctrl.abort(), 10000);
-    fetch(STATE.jiraProxyUrl.replace(/\/+$/, '') + '/releases', { signal: ctrl.signal })
-      .then(r => { clearTimeout(tid2); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    const workerBase = STATE.jiraProxyUrl.replace(/\/+$/, '');
+    fetch(workerBase + '/releases')
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(data => {
-        // Jira versions API returns an array directly
-        const versions = Array.isArray(data) ? data : (data.values || RELEASES_DATA);
+        // Jira returns versions array — map to our format
+        const raw = Array.isArray(data) ? data : (data.values || data.versions || []);
+        let versions;
+        if (raw.length && raw[0].name !== undefined && raw[0].released !== undefined) {
+          // Live Jira format
+          versions = raw.map(v => ({
+            name:        v.name,
+            released:    v.released || false,
+            releaseDate: v.releaseDate || null,
+            description: v.description || '',
+            features:    v.description ? [v.description] : [],
+          })).filter(v => v.name);
+        } else {
+          versions = raw.length ? raw : RELEASES_DATA;
+        }
+        if (!versions.length) versions = RELEASES_DATA;
         doRender(versions);
-        showToast(`Releases synced — ${versions.length} versions ✓`);
+        showToast(`✓ ${versions.length} releases synced from Jira`);
       })
       .catch(e => {
         doRender(RELEASES_DATA);
-        showToast('Releases sync failed — using cached data');
+        showToast('Releases: using cached data (' + e.message + ')');
       });
   } else {
     setTimeout(() => { doRender(RELEASES_DATA); }, 400);
