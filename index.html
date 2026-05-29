@@ -3015,6 +3015,7 @@ function renderRoadmapFilters() {
   const counts = {};
   ROADMAP_DATA.forEach(r => { const k = r.status.toLowerCase(); counts[k] = (counts[k]||0)+1; });
   const container = document.getElementById('roadmap-status-filters');
+  if (!container) return;
   let html = `<button class="filter-btn ${RM_FILTER_STATUS==='all'?'active':''}" onclick="setRMFilter('all')">All (${ROADMAP_DATA.length})</button>`;
   Object.entries(RM_STATUS).forEach(([key,cfg]) => {
     const count = counts[key]||0;
@@ -3190,6 +3191,7 @@ function renderCards(filtered, container) {
 
 function renderRoadmapStats(filtered) {
   const stats = document.getElementById('roadmap-stats');
+  if (!stats) return;
   const done    = filtered.filter(r => ['done','completed'].includes(r.status.toLowerCase())).length;
   const active  = filtered.filter(r => ['in progress','in phase 2','in phase 3','partially completed'].includes(r.status.toLowerCase())).length;
   const planned = filtered.filter(r => ['yet to start','planned'].includes(r.status.toLowerCase())).length;
