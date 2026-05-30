@@ -38,7 +38,8 @@
   .u-role{font-size:11px;color:var(--text3)}
 
   /* MAIN */
-  .main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+  .main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+
   .topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.06);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50}
   .topbar-title{font-family:var(--serif);font-size:17px;flex:1}
   .topbar-actions{display:flex;align-items:center;gap:8px}
@@ -3076,6 +3077,10 @@ function renderSwimlane(filtered, container) {
   const allTeams = [...new Set(filtered.map(r => r.team||'Other'))];
   if (!allQ.length) { renderCards(filtered, container); return; }
 
+  // Build a lookup map so onclick can pass a safe integer ID instead of inline JSON
+  window._RM_MAP = {};
+  filtered.forEach((r, i) => { window._RM_MAP[i] = r; });
+
   const TEAM_COLORS = {
     'Pinnacle':        '#2563eb',
     'Momentum':        '#059669',
@@ -3096,8 +3101,8 @@ function renderSwimlane(filtered, container) {
     'completed':           { bg:'#6ee7b7', text:'#064e3b', border:'#10b981' },
   };
 
-  const colW = 160;
-  const labelW = 140;
+  const colW = 200;
+  const labelW = 150;
 
   let html = `
   <!-- Download button -->
@@ -3107,14 +3112,17 @@ function renderSwimlane(filtered, container) {
       Download PDF
     </button>
   </div>
-  <div id="roadmap-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--border)">
-  <table style="border-collapse:collapse;min-width:${labelW + colW*allQ.length}px;width:100%">
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--border);position:relative">
+  <table style="border-collapse:collapse;table-layout:fixed;min-width:${labelW + colW*allQ.length}px">
     <thead>
       <tr style="background:#f8fafc">
-        <th style="width:${labelW}px;min-width:${labelW}px;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);border-right:1px solid var(--border);position:sticky;left:0;z-index:3;background:#f8fafc">Team</th>
-        ${allQ.map(q => `<th style="width:${colW}px;min-width:${colW}px;padding:12px 14px;text-align:center;font-size:12px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);border-right:1px solid var(--border);white-space:nowrap">
-          <div style="font-family:var(--serif)">${esc(q)}</div>
-        </th>`).join('')}
+        <th style="width:${labelW}px;min-width:${labelW}px;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);border-right:2px solid var(--border2);position:sticky;left:0;z-index:3;background:#f8fafc;box-shadow:3px 0 6px rgba(0,0,0,0.06)">Team</th>
+        ${allQ.map((q,qi) => {
+          const qColor = Q_COLORS[qi % Q_COLORS.length];
+          return `<th style="width:${colW}px;min-width:${colW}px;padding:12px 14px;text-align:center;font-size:12px;font-weight:700;color:#fff;background:${qColor};border-bottom:2px solid ${qColor};border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap">
+            <div style="font-family:var(--serif)">${esc(q)}</div>
+          </th>`;
+        }).join('')}
       </tr>
     </thead>
     <tbody>`;
@@ -3125,27 +3133,25 @@ function renderSwimlane(filtered, container) {
     const rowBg = ti%2===0 ? '#ffffff' : '#fafbfc';
 
     html += `<tr style="background:${rowBg}">
-      <td style="padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle;position:sticky;left:0;z-index:2">
-        <div style="background:${teamColor};color:#fff;font-size:11px;font-weight:700;padding:14px 12px;min-height:60px;display:flex;align-items:center;letter-spacing:0.3px;min-width:${labelW}px">${esc(team)}</div>
+      <td style="padding:0;border-right:2px solid var(--border2);border-bottom:1px solid var(--border);vertical-align:top;position:sticky;left:0;z-index:2;box-shadow:3px 0 6px rgba(0,0,0,0.06)">
+        <div style="background:${teamColor};color:#fff;font-size:11px;font-weight:700;padding:14px 12px;height:100%;min-height:64px;display:flex;align-items:center;letter-spacing:0.3px;width:${labelW}px">${esc(team)}</div>
       </td>`;
 
     allQ.forEach(q => {
       const cellItems = teamItems.filter(r => (r.quarter||'') === q);
-      html += `<td style="padding:6px 8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle;min-height:60px">`;
-      cellItems.forEach(r => {
+      html += `<td style="padding:7px 8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:top;min-height:64px">`;
+      cellItems.forEach((r, ri) => {
         const sc  = STATUS_BAR_COLORS[r.status.toLowerCase()] || STATUS_BAR_COLORS['yet to start'];
-        const rJson = JSON.stringify(r).replace(/"/g,'&quot;');
-        const jiraMatch = r.jiraLink.match(/browse\/(AB-\d+)/);
+        const rmIdx = filtered.indexOf(r);
+        const jiraMatch = r.jiraLink ? r.jiraLink.match(/browse\/(AB-\d+)/) : null;
         const jiraKey = jiraMatch ? jiraMatch[1] : '';
-        html += `<div onclick="openRoadmapDetail(${rJson})"
+        html += `<div onclick="openRoadmapById(${rmIdx})"
           title="${esc(r.initiative)}"
-          style="background:${sc.bg};border:1px solid ${sc.border};border-radius:5px;padding:5px 9px;margin-bottom:4px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:5px"
-          onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)';this.style.transform='translateY(-1px)'"
+          style="background:${sc.bg};border:1px solid ${sc.border};border-radius:6px;padding:6px 10px;margin-bottom:5px;cursor:pointer;transition:all 0.15s"
+          onmouseover="this.style.boxShadow='0 3px 10px rgba(0,0,0,0.15)';this.style.transform='translateY(-1px)'"
           onmouseout="this.style.boxShadow='';this.style.transform=''">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:11px;font-weight:600;color:${sc.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.initiative)}</div>
-            ${jiraKey ? `<div style="font-size:9px;color:${sc.text}80;margin-top:1px">${jiraKey}</div>` : ''}
-          </div>
+          <div style="font-size:11px;font-weight:600;color:${sc.text};line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(r.initiative)}</div>
+          ${jiraKey ? `<div style="font-size:9px;color:${sc.text};opacity:0.6;margin-top:2px">${jiraKey}</div>` : ''}
         </div>`;
       });
       html += `</td>`;
@@ -3166,7 +3172,18 @@ function renderSwimlane(filtered, container) {
   container.innerHTML = html;
 }
 
+// Safe popup opener — looks up item by index from the map set during render
+function openRoadmapById(idx) {
+  const r = window._RM_MAP && window._RM_MAP[idx];
+  if (!r) return;
+  openRoadmapDetail(r);
+}
+
 function renderCards(filtered, container) {
+  // Ensure the lookup map is populated (may be called directly if no quarters)
+  window._RM_MAP = window._RM_MAP || {};
+  filtered.forEach((r, i) => { window._RM_MAP[i] = r; });
+
   const groups = {};
   filtered.forEach(r => { const q = r.quarter||'Not Scheduled'; if(!groups[q]) groups[q]=[]; groups[q].push(r); });
   const sortedQ = Object.keys(groups).sort((a,b)=>{ if(a==='Not Scheduled') return 1; if(b==='Not Scheduled') return -1; return a.localeCompare(b); });
@@ -3183,9 +3200,9 @@ function renderCards(filtered, container) {
     groups[quarter].forEach(r => {
       const st  = RM_STATUS[r.status.toLowerCase()] || RM_STATUS['yet to start'];
       const pri = r.priority ? (RM_PRIORITY_COLORS[r.priority.toLowerCase()]||null) : null;
-      const rJson = JSON.stringify(r).replace(/"/g,'&quot;');
+      const rmIdx = filtered.indexOf(r);
       html += `
-        <div onclick="openRoadmapDetail(${rJson})" style="background:var(--surface);border:1px solid ${st.border};border-radius:10px;padding:12px;cursor:pointer;transition:all 0.15s"
+        <div onclick="openRoadmapById(${rmIdx})" style="background:var(--surface);border:1px solid ${st.border};border-radius:10px;padding:12px;cursor:pointer;transition:all 0.15s"
           onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,0.1)';this.style.transform='translateY(-1px)'"
           onmouseout="this.style.boxShadow='';this.style.transform=''">
           <div style="display:flex;justify-content:space-between;margin-bottom:7px">
@@ -3222,7 +3239,7 @@ function renderRoadmapStats(filtered) {
 function openRoadmapDetail(r) {
   const st  = RM_STATUS[r.status.toLowerCase()] || { label:r.status, color:'#6b7280', bg:'#f3f4f6', border:'#d1d5db', icon:'⬜' };
   const pri = r.priority ? (RM_PRIORITY_COLORS[r.priority.toLowerCase()]||null) : null;
-  const jiraMatch = r.jiraLink.match(/browse\/(AB-\d+)/);
+  const jiraMatch = (r.jiraLink||'').match(/browse\/(AB-\d+)/);
   const jiraKey   = jiraMatch ? jiraMatch[1] : '';
 
   // Banner
