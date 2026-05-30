@@ -3113,10 +3113,10 @@ function renderSwimlane(filtered, container) {
     </button>
   </div>
   <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--border);position:relative">
-  <table style="border-collapse:collapse;table-layout:fixed;min-width:${labelW + colW*allQ.length}px">
+  <table style="border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:${labelW + colW*allQ.length}px">
     <thead>
       <tr style="background:#f8fafc">
-        <th style="width:${labelW}px;min-width:${labelW}px;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);border-right:2px solid var(--border2);position:sticky;left:0;z-index:3;background:#f8fafc;box-shadow:3px 0 6px rgba(0,0,0,0.06)">Team</th>
+        <th style="width:${labelW}px;min-width:${labelW}px;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--border);border-right:2px solid var(--border2);position:sticky;left:0;z-index:5;background:#f8fafc;box-shadow:3px 0 6px rgba(0,0,0,0.08)">Team</th>
         ${allQ.map((q,qi) => {
           const qColor = Q_COLORS[qi % Q_COLORS.length];
           return `<th style="width:${colW}px;min-width:${colW}px;padding:12px 14px;text-align:center;font-size:12px;font-weight:700;color:#fff;background:${qColor};border-bottom:2px solid ${qColor};border-right:1px solid rgba(255,255,255,0.2);white-space:nowrap">
@@ -3133,7 +3133,7 @@ function renderSwimlane(filtered, container) {
     const rowBg = ti%2===0 ? '#ffffff' : '#fafbfc';
 
     html += `<tr style="background:${rowBg}">
-      <td style="padding:0;border-right:2px solid var(--border2);border-bottom:1px solid var(--border);vertical-align:top;position:sticky;left:0;z-index:2;box-shadow:3px 0 6px rgba(0,0,0,0.06)">
+      <td style="padding:0;border-right:2px solid var(--border2);border-bottom:1px solid var(--border);vertical-align:top;position:sticky;left:0;z-index:4;box-shadow:3px 0 6px rgba(0,0,0,0.08);background:${rowBg}">
         <div style="background:${teamColor};color:#fff;font-size:11px;font-weight:700;padding:14px 12px;height:100%;min-height:64px;display:flex;align-items:center;letter-spacing:0.3px;width:${labelW}px">${esc(team)}</div>
       </td>`;
 
@@ -3321,28 +3321,40 @@ function downloadRoadmapPDF() {
   const filtered = getFilteredRoadmap();
   if (!filtered.length) { showToast('No roadmap data to download'); return; }
 
-  // Build a printable HTML page and open in new tab for PDF save
   const Q_COLORS_MAP = { Q1:'#2563eb', Q2:'#059669', Q3:'#7c3aed', Q4:'#d97706', Q5:'#0891b2', Q6:'#dc2626', Q7:'#db2777' };
   const allQ = [...new Set(filtered.map(r => r.quarter||'').filter(Boolean))].sort();
   const allTeams = [...new Set(filtered.map(r => r.team||'Other'))];
 
   const STATUS_BAR = {
-    'yet to start':        { bg:'#e5e7eb', text:'#6b7280' },
-    'partially completed': { bg:'#fde68a', text:'#92400e' },
-    'in progress':         { bg:'#93c5fd', text:'#1e3a8a' },
-    'in phase 2':          { bg:'#c4b5fd', text:'#4c1d95' },
-    'in phase 3':          { bg:'#67e8f9', text:'#164e63' },
-    'done':                { bg:'#6ee7b7', text:'#064e3b' },
+    'yet to start':        { bg:'#e5e7eb', text:'#6b7280', label:'Yet to Start', icon:'⬜' },
+    'planned':             { bg:'#e5e7eb', text:'#6b7280', label:'Planned',      icon:'📋' },
+    'partially completed': { bg:'#fde68a', text:'#92400e', label:'Partially Completed', icon:'🔶' },
+    'in progress':         { bg:'#93c5fd', text:'#1e3a8a', label:'In Progress',  icon:'🔵' },
+    'in phase 2':          { bg:'#c4b5fd', text:'#4c1d95', label:'Phase 2',       icon:'🟣' },
+    'in phase 3':          { bg:'#67e8f9', text:'#164e63', label:'Phase 3',       icon:'🔷' },
+    'done':                { bg:'#6ee7b7', text:'#064e3b', label:'Done',          icon:'✅' },
+    'completed':           { bg:'#6ee7b7', text:'#064e3b', label:'Done',          icon:'✅' },
   };
 
-  const TEAM_COLORS_PDF = { Pinnacle:'#2563eb', Momentum:'#059669', Catalyst:'#d97706', 'AI Intelligence':'#7c3aed', Other:'#6b7280' };
+  const PRI_PDF = {
+    'critical': { bg:'#fee2e2', text:'#dc2626' },
+    'high':     { bg:'#fef3c7', text:'#d97706' },
+    'medium':   { bg:'#dbeafe', text:'#2563eb' },
+    'low':      { bg:'#f3f4f6', text:'#6b7280' },
+  };
 
+  const TEAM_COLORS_PDF = { Pinnacle:'#2563eb', Momentum:'#059669', Catalyst:'#d97706', 'AI Intelligence':'#7c3aed', Shared:'#0891b2', Other:'#6b7280' };
+
+  // Helper to escape for the new window's HTML
+  const e = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  // ---- 1. Swimlane table (each initiative links to its detail anchor) ----
   let tableHTML = `<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:11px">
     <thead><tr>
       <th style="background:#f1f5f9;padding:10px 12px;border:1px solid #e2e8f0;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;width:120px">Team</th>
       ${allQ.map(q => {
         const qc = Q_COLORS_MAP[q.split(' ')[0]] || '#2563eb';
-        return `<th style="background:${qc};color:#fff;padding:10px 12px;border:1px solid #e2e8f0;text-align:center;font-weight:700">${q}</th>`;
+        return `<th style="background:${qc};color:#fff;padding:10px 12px;border:1px solid #e2e8f0;text-align:center;font-weight:700">${e(q)}</th>`;
       }).join('')}
     </tr></thead><tbody>`;
 
@@ -3350,13 +3362,14 @@ function downloadRoadmapPDF() {
     const tc = TEAM_COLORS_PDF[team] || '#6b7280';
     const rowBg = ti%2===0 ? '#ffffff' : '#f8fafc';
     tableHTML += `<tr style="background:${rowBg}">
-      <td style="background:${tc};color:#fff;padding:10px 12px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${team}</td>`;
+      <td style="background:${tc};color:#fff;padding:10px 12px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${e(team)}</td>`;
     allQ.forEach(q => {
       const items = filtered.filter(r => (r.team||'Other')===team && (r.quarter||'')===q);
       tableHTML += `<td style="padding:6px 8px;border:1px solid #e2e8f0;vertical-align:top;min-width:140px">
         ${items.map(r => {
+          const idx = filtered.indexOf(r);
           const sc = STATUS_BAR[r.status.toLowerCase()] || STATUS_BAR['yet to start'];
-          return `<div style="background:${sc.bg};color:${sc.text};border-radius:4px;padding:4px 7px;margin-bottom:3px;font-size:10px;font-weight:600">${r.initiative}</div>`;
+          return `<a href="#rmd-${idx}" style="display:block;text-decoration:none;background:${sc.bg};color:${sc.text};border-radius:4px;padding:4px 7px;margin-bottom:3px;font-size:10px;font-weight:600">${e(r.initiative)} ›</a>`;
         }).join('')}
       </td>`;
     });
@@ -3364,20 +3377,82 @@ function downloadRoadmapPDF() {
   });
   tableHTML += `</tbody></table>`;
 
+  // ---- 2. Detail cards (mirror the on-screen popup) ----
+  const PHASE_ORDER = ['Planned','In Progress','Phase 2','Phase 3','Done'];
+  function phaseProgress(r) {
+    const s = r.status.toLowerCase();
+    if (s==='yet to start'||s==='planned') return 0;
+    if (s==='in progress'||s==='partially completed') return 1;
+    if (s==='in phase 2') return 2;
+    if (s==='in phase 3') return 3;
+    if (s==='done'||s==='completed') return 4;
+    return 0;
+  }
+
+  let detailsHTML = `<h2 style="font-size:18px;margin:34px 0 4px;color:#111;page-break-before:always">Initiative Details</h2>
+    <div style="font-size:12px;color:#64748b;margin-bottom:18px">Click any initiative in the table above to jump to its detail.</div>`;
+
+  filtered.forEach((r, idx) => {
+    const sc  = STATUS_BAR[r.status.toLowerCase()] || STATUS_BAR['yet to start'];
+    const pri = r.priority ? (PRI_PDF[r.priority.toLowerCase()]||null) : null;
+    const tc  = TEAM_COLORS_PDF[r.team] || '#6b7280';
+    const jiraMatch = (r.jiraLink||'').match(/browse\/(AB-\d+)/);
+    const jiraKey   = jiraMatch ? jiraMatch[1] : '';
+    const jiraUrl   = r.jiraLink || (jiraKey ? `https://adloggss.atlassian.net/browse/${jiraKey}` : '');
+    const prog = phaseProgress(r);
+
+    // Timeline as inline node row
+    const timeline = `<div style="display:flex;justify-content:space-between;margin:12px 0;position:relative">
+      ${PHASE_ORDER.map((p,i) => {
+        const done = i < prog, active = i === prog;
+        const dot = done ? '#059669' : (active ? sc.text : '#d1d5db');
+        const bg  = done ? '#d1fae5' : (active ? sc.bg : '#f9fafb');
+        return `<div style="flex:1;text-align:center">
+          <div style="width:30px;height:30px;border-radius:50%;background:${bg};border:2px solid ${dot};display:inline-flex;align-items:center;justify-content:center;font-size:13px">${done?'✓':active?(sc.icon):'○'}</div>
+          <div style="font-size:9px;color:${done?'#059669':active?sc.text:'#9ca3af'};margin-top:4px;font-weight:600">${p}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+    detailsHTML += `<div id="rmd-${idx}" style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;page-break-inside:avoid">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;background:${sc.bg};margin:-16px -16px 14px;padding:12px 16px;border-radius:10px 10px 0 0">
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${sc.text}">${sc.icon} ${sc.label}</div>
+          <div style="font-size:16px;font-weight:700;color:#111;margin-top:2px">${e(r.initiative)}</div>
+        </div>
+        <div style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:#fff;border:2px solid ${Q_COLORS_MAP[(r.quarter||'').split(' ')[0]]||'#2563eb'};color:${Q_COLORS_MAP[(r.quarter||'').split(' ')[0]]||'#2563eb'};white-space:nowrap">${e(r.quarter||'Not Scheduled')}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        ${pri ? `<span style="font-size:11px;padding:3px 9px;border-radius:5px;font-weight:600;background:${pri.bg};color:${pri.text}">${e(r.priority)}</span>` : ''}
+        ${r.client ? `<span style="font-size:11px;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 9px;border-radius:5px">🏢 ${e(r.client)}</span>` : ''}
+        <span style="font-size:11px;background:${tc}1a;color:${tc};padding:3px 9px;border-radius:5px;font-weight:600">👥 ${e(r.team||'Other')}</span>
+        ${r.milestone && r.milestone!=='—' && r.milestone!=='' ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:3px 9px;border-radius:5px;font-weight:500">🎯 ${e(r.milestone)}</span>` : ''}
+        ${jiraKey ? `<a href="${e(jiraUrl)}" style="font-size:11px;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;padding:3px 9px;border-radius:5px;font-weight:600;text-decoration:none">🔗 ${jiraKey}</a>` : ''}
+      </div>
+      ${timeline}
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 5px">Description</div>
+      <div style="font-size:12px;color:#374151;line-height:1.7">${r.description ? e(r.description).replace(/\n/g,'<br>') : '<em style="color:#9ca3af">No description provided</em>'}</div>
+      <div style="margin-top:12px"><a href="#rm-top" style="font-size:10px;color:#2563eb;text-decoration:none">↑ Back to roadmap</a></div>
+    </div>`;
+  });
+
   const printWin = window.open('','_blank');
   printWin.document.write(`<!DOCTYPE html><html><head>
     <title>Adloggs Product Roadmap</title>
     <style>
-      body { margin: 20px; font-family: Arial, sans-serif; }
-      h1 { font-size: 22px; margin-bottom: 4px; color: #111; }
+      body { margin: 24px; font-family: Arial, sans-serif; color:#111; }
+      h1 { font-size: 22px; margin-bottom: 4px; }
       .sub { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+      a { color: inherit; }
       @media print { .no-print { display:none } }
     </style>
   </head><body>
+    <div id="rm-top"></div>
     <h1>Adloggs — Product Roadmap</h1>
-    <div class="sub">Generated ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})} · ${filtered.length} initiatives</div>
+    <div class="sub">Generated ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})} · ${filtered.length} initiatives · Click any initiative to view details</div>
     ${tableHTML}
-    <div class="no-print" style="margin-top:20px;text-align:center">
+    ${detailsHTML}
+    <div class="no-print" style="margin-top:24px;text-align:center">
       <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer">Print / Save as PDF</button>
     </div>
   </body></html>`);
