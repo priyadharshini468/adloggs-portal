@@ -771,7 +771,46 @@
       </div>
 
       <div class="cfg-block">
-        <div class="cfg-title">⏱ Auto-sync</div>
+        <div class="cfg-title">📋 EOD Daily Summary — Per-Member Google Chat
+          <span class="cfg-badge" id="eod-cfg-badge" style="background:rgba(245,166,35,0.12);color:var(--amber)">⚠ Not configured</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px">
+          Every day at the scheduled time, each team member receives a personal Google Chat message summarising the Jira issues they touched that day — status changes, comments added, or new assignments. Each person needs their own Space or DM webhook.
+        </div>
+        <div style="background:rgba(26,115,232,0.05);border:1px solid rgba(26,115,232,0.15);border-radius:7px;padding:10px 12px;font-size:12px;margin-bottom:14px;line-height:1.8">
+          <strong style="color:var(--text)">How to set up per-member webhooks:</strong><br>
+          1. Open Google Chat → open a DM with the team member (or a private Space)<br>
+          2. Click the conversation name → <strong>Apps &amp; integrations → Add webhooks</strong><br>
+          3. Name it <em>"EOD Summary"</em> → copy the webhook URL → paste below next to their name
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap">
+          <div style="flex:0 0 auto">
+            <div class="form-label">Send daily summary at</div>
+            <input type="time" class="input" id="eod-time" value="18:30" style="width:130px" />
+          </div>
+          <div style="flex:0 0 auto">
+            <div class="form-label">Timezone</div>
+            <select class="input" id="eod-tz" style="width:160px">
+              <option value="Asia/Kolkata" selected>IST (Asia/Kolkata)</option>
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">EST (New York)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveEodConfig()" style="align-self:flex-end">Save Schedule</button>
+          <button class="btn btn-ghost btn-sm" onclick="sendEodSummaryNow()" style="align-self:flex-end">▶ Send Now (Test)</button>
+          <span id="eod-status" style="font-size:11px;color:var(--text3);align-self:flex-end"></span>
+        </div>
+
+        <!-- Per-member webhook table -->
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">Member Webhooks</div>
+        <div id="eod-member-table" style="display:flex;flex-direction:column;gap:6px">
+          <!-- populated by renderEodMemberTable() -->
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="renderEodMemberTable()" style="margin-top:10px">↻ Reload Members</button>
+      </div>
+
+
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
           <div style="flex:1;min-width:180px">
             <div class="form-label">Jira sync interval</div>
@@ -4099,8 +4138,216 @@ function showToast(msg) {
 }
 
 // ================================================================
-// INIT
+// EOD DAILY SUMMARY
 // ================================================================
+
+// Collect all members across all teams with their jiraId and display name
+function getAllMembers() {
+  const members = [];
+  TEAM_DATA.forEach(team => {
+    (team.members||[]).forEach(m => {
+      if (m.name) members.push({ name: m.name, jiraId: m.jiraId||'', team: team.name });
+    });
+  });
+  return members;
+}
+
+// Render the per-member webhook input table inside the settings block
+function renderEodMemberTable() {
+  const container = document.getElementById('eod-member-table');
+  if (!container) return;
+  const members = getAllMembers();
+  const saved = JSON.parse(localStorage.getItem('adloggs_eod_webhooks')||'{}');
+
+  if (!members.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text3)">No team members found. Check Teams data.</div>';
+    return;
+  }
+
+  container.innerHTML = members.map(m => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div style="min-width:130px;flex-shrink:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(m.name)}</div>
+        <div style="font-size:10px;color:var(--text3)">${esc(m.team)}</div>
+      </div>
+      <input class="input" placeholder="https://chat.googleapis.com/v1/spaces/..." 
+        id="eod-wh-${CSS.escape(m.name)}"
+        value="${esc(saved[m.name]||'')}"
+        oninput="saveEodMemberWebhook('${esc(m.name)}', this.value)"
+        style="flex:1;font-size:11px;padding:5px 9px" />
+      <span id="eod-wh-status-${CSS.escape(m.name)}" style="font-size:10px;color:var(--text3);flex-shrink:0;width:18px">
+        ${saved[m.name] ? '✓' : ''}
+      </span>
+    </div>`).join('');
+}
+
+function saveEodMemberWebhook(name, url) {
+  const saved = JSON.parse(localStorage.getItem('adloggs_eod_webhooks')||'{}');
+  if (url.trim()) saved[name] = url.trim();
+  else delete saved[name];
+  localStorage.setItem('adloggs_eod_webhooks', JSON.stringify(saved));
+  const statusEl = document.getElementById(`eod-wh-status-${CSS.escape(name)}`);
+  if (statusEl) statusEl.textContent = url.trim() ? '✓' : '';
+  updateEodBadge();
+}
+
+function updateEodBadge() {
+  const saved = JSON.parse(localStorage.getItem('adloggs_eod_webhooks')||'{}');
+  const count = Object.keys(saved).length;
+  const badge = document.getElementById('eod-cfg-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
+    badge.textContent = `✓ ${count} member${count>1?'s':''} configured`;
+  } else {
+    badge.style.background = 'rgba(245,166,35,0.12)'; badge.style.color = 'var(--amber)';
+    badge.textContent = '⚠ Not configured';
+  }
+}
+
+function saveEodConfig() {
+  const time = document.getElementById('eod-time').value || '18:30';
+  const tz   = document.getElementById('eod-tz').value   || 'Asia/Kolkata';
+  localStorage.setItem('adloggs_eod_time', time);
+  localStorage.setItem('adloggs_eod_tz', tz);
+  startEodScheduler();
+  showToast(`EOD summary scheduled at ${time} IST ✓`);
+  document.getElementById('eod-status').textContent = `Scheduled at ${time}`;
+}
+
+// ---- Build the per-member summary message text ----
+function buildEodMessage(memberName, issues) {
+  const today = new Date().toLocaleDateString('en-IN',{ weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  if (!issues.length) {
+    return `*📋 EOD Summary — ${memberName}*\n_${today}_\n\nNo Jira activity recorded for you today. Have a good evening! 🌙`;
+  }
+
+  const statusEmoji = s => {
+    const m = { 'in progress':'🔵','done':'✅','under testing':'🧪','dev qa':'🔍','to do':'📋','hold':'⏸','closed':'✅' };
+    return m[(s||'').toLowerCase()] || '📌';
+  };
+
+  const lines = issues.map(i =>
+    `${statusEmoji(i.status)} *${i.key}* — ${i.summary}\n   ↳ Status: _${i.status}_ | Priority: ${i.priority||'—'}`
+  ).join('\n\n');
+
+  return `*📋 EOD Summary — ${memberName}*\n_${today}_\n\n*${issues.length} task${issues.length>1?'s':''} updated today:*\n\n${lines}\n\n_Keep up the great work! 💪_`;
+}
+
+// ---- Fetch today's updates from Jira via the Worker, then dispatch ----
+async function sendEodSummaryNow() {
+  const statusEl = document.getElementById('eod-status');
+  statusEl.textContent = '⏳ Fetching today\'s Jira activity…';
+
+  const webhooks = JSON.parse(localStorage.getItem('adloggs_eod_webhooks')||'{}');
+  if (!Object.keys(webhooks).length) {
+    statusEl.textContent = '⚠ No member webhooks configured';
+    showToast('Add at least one member webhook first'); return;
+  }
+
+  if (!STATE.jiraProxyUrl) {
+    // Fall back to SPRINT_DATA already loaded in memory
+    await sendEodFromLocalData(webhooks, statusEl);
+    return;
+  }
+
+  try {
+    const workerBase = STATE.jiraProxyUrl.replace(/\/+$/,'');
+    const todayStr = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    const jql = encodeURIComponent(`project=AB AND updated>="${todayStr}" ORDER BY updated DESC`);
+    const res = await fetch(`${workerBase}/issues?jql=${jql}&maxResults=100`);
+    if (!res.ok) throw new Error(`Worker responded ${res.status}`);
+    const data = await res.json();
+    const issues = (data.issues||[]).map(i => ({
+      key:      i.key,
+      summary:  i.fields?.summary || '',
+      status:   i.fields?.status?.name || '',
+      priority: i.fields?.priority?.name || '',
+      assignee: i.fields?.assignee?.displayName || '',
+    }));
+    await dispatchEodMessages(issues, webhooks, statusEl);
+  } catch(err) {
+    console.warn('Worker fetch failed, using local data:', err.message);
+    await sendEodFromLocalData(webhooks, statusEl);
+  }
+}
+
+// Fallback: use SPRINT_DATA already in memory
+async function sendEodFromLocalData(webhooks, statusEl) {
+  const issues = SPRINT_DATA.map(i => ({
+    key:      i.key,
+    summary:  i.summary || '',
+    status:   i.status  || '',
+    priority: i.priority|| '',
+    assignee: i.assignee|| '',
+  }));
+  await dispatchEodMessages(issues, webhooks, statusEl);
+}
+
+// Group by assignee and send one message per member
+async function dispatchEodMessages(issues, webhooks, statusEl) {
+  const members = Object.keys(webhooks);
+  let sent = 0, failed = 0;
+
+  for (const memberName of members) {
+    const webhookUrl = webhooks[memberName];
+    if (!webhookUrl) continue;
+
+    // Match by assignee name (case-insensitive partial match)
+    const myIssues = issues.filter(i =>
+      i.assignee && i.assignee.toLowerCase().includes(memberName.split(' ')[0].toLowerCase())
+    );
+
+    const text = buildEodMessage(memberName, myIssues);
+
+    try {
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (res.ok) sent++;
+      else { console.warn(`Failed for ${memberName}:`, res.status); failed++; }
+    } catch(e) {
+      console.warn(`Error sending to ${memberName}:`, e.message); failed++;
+    }
+
+    // Small delay to avoid rate limiting
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  const msg = `✓ Sent to ${sent} member${sent!==1?'s':''}${failed ? ` · ${failed} failed` : ''}`;
+  if (statusEl) statusEl.textContent = msg;
+  showToast(msg);
+}
+
+// ---- Daily scheduler — checks every minute if it's time to send ----
+let _eodSchedulerTimer = null;
+function startEodScheduler() {
+  if (_eodSchedulerTimer) clearInterval(_eodSchedulerTimer);
+
+  const scheduledTime = localStorage.getItem('adloggs_eod_time') || '18:30';
+  const [h, m] = scheduledTime.split(':').map(Number);
+  let lastSentDate = localStorage.getItem('adloggs_eod_last_sent') || '';
+
+  _eodSchedulerTimer = setInterval(() => {
+    const now = new Date();
+    // Use IST offset (+5:30) for comparison — Intl gives us the right hour
+    const istStr = now.toLocaleString('en-IN', { timeZone: localStorage.getItem('adloggs_eod_tz')||'Asia/Kolkata', hour:'2-digit', minute:'2-digit', hour12:false });
+    const [ch, cm] = istStr.split(':').map(Number);
+    const todayDate = now.toISOString().slice(0,10);
+
+    if (ch === h && cm === m && lastSentDate !== todayDate) {
+      lastSentDate = todayDate;
+      localStorage.setItem('adloggs_eod_last_sent', todayDate);
+      const statusEl = document.getElementById('eod-status');
+      sendEodSummaryNow();
+    }
+  }, 60000); // check every minute
+}
+
+
 function init() {
   // Restore saved config
   if (STATE.scriptUrl) document.getElementById('cfg-script-url').value = STATE.scriptUrl;
@@ -4123,6 +4370,18 @@ function init() {
     if (sel) sel.value = String(STATE.reminderInterval);
   }
   startReminderTimer();
+
+  // Restore EOD config
+  const eodTime = localStorage.getItem('adloggs_eod_time') || '18:30';
+  const eodTz   = localStorage.getItem('adloggs_eod_tz')   || 'Asia/Kolkata';
+  const eodTimeEl = document.getElementById('eod-time');
+  const eodTzEl   = document.getElementById('eod-tz');
+  if (eodTimeEl) eodTimeEl.value = eodTime;
+  if (eodTzEl)   eodTzEl.value   = eodTz;
+  updateEodBadge();
+  startEodScheduler();
+  setTimeout(() => renderEodMemberTable(), 600);
+
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility    = 'visible';
 
