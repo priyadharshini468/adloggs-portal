@@ -4144,9 +4144,10 @@ function showToast(msg) {
 // Collect all members across all teams with their jiraId and display name
 function getAllMembers() {
   const members = [];
-  TEAM_DATA.forEach(team => {
-    (team.members||[]).forEach(m => {
-      if (m.name) members.push({ name: m.name, jiraId: m.jiraId||'', team: team.name });
+  const teams = STATE.teams || [];
+  teams.forEach(team => {
+    (team.members || []).forEach(m => {
+      if (m.name) members.push({ name: m.name, jiraId: m.jiraId || '', team: team.name });
     });
   });
   return members;
@@ -4156,8 +4157,19 @@ function getAllMembers() {
 function renderEodMemberTable() {
   const container = document.getElementById('eod-member-table');
   if (!container) return;
-  const members = getAllMembers();
-  const saved = JSON.parse(localStorage.getItem('adloggs_eod_webhooks')||'{}');
+
+  // Use STATE.teams if populated, otherwise fall back to seed data
+  const teamsSource = (STATE.teams && STATE.teams.length) ? STATE.teams : (typeof TEAMS_FROM_JIRA !== 'undefined' ? TEAMS_FROM_JIRA : []);
+  const members = [];
+  teamsSource.forEach(team => {
+    // STATE.teams uses team.members; TEAMS_FROM_JIRA uses team.jiraAssignees
+    const list = team.members
+      ? team.members.map(m => ({ name: m.name, team: team.name }))
+      : (team.jiraAssignees || []).map(n => ({ name: n, team: team.name }));
+    list.forEach(m => { if (m.name) members.push(m); });
+  });
+
+  const saved = JSON.parse(localStorage.getItem('adloggs_eod_webhooks') || '{}');
 
   if (!members.length) {
     container.innerHTML = '<div style="font-size:12px;color:var(--text3)">No team members found. Check Teams data.</div>';
@@ -4380,7 +4392,7 @@ function init() {
   if (eodTzEl)   eodTzEl.value   = eodTz;
   updateEodBadge();
   startEodScheduler();
-  setTimeout(() => renderEodMemberTable(), 600);
+  setTimeout(() => renderEodMemberTable(), 3000);
 
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility    = 'visible';
