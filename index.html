@@ -4229,16 +4229,41 @@ function saveEodMemberWebhook(name, url) {
   updateEodBadge();
 }
 
+function toggleEodMember(name) {
+  const enabled = JSON.parse(localStorage.getItem('adloggs_eod_enabled') || '{}');
+  const current = enabled[name] !== false; // default ON
+  enabled[name] = !current;               // flip
+  localStorage.setItem('adloggs_eod_enabled', JSON.stringify(enabled));
+
+  // Update the button in-place without full re-render
+  const isNowOn = enabled[name] !== false;
+  const btn = document.getElementById(`eod-toggle-${CSS.escape(name)}`);
+  const row = document.getElementById(`eod-row-${CSS.escape(name)}`);
+
+  if (btn) {
+    btn.textContent      = isNowOn ? 'ON' : 'OFF';
+    btn.style.background = isNowOn ? '#22c55e' : '#d1d5db';
+    btn.style.color      = isNowOn ? '#fff'    : '#6b7280';
+    btn.title            = isNowOn ? 'Click to disable' : 'Click to enable';
+  }
+  if (row) row.style.opacity = isNowOn ? '1' : '0.5';
+
+  updateEodBadge();
+  showToast(`${name} EOD summary ${isNowOn ? 'enabled ✓' : 'disabled'}`);
+}
+
 function updateEodBadge() {
   const members  = JSON.parse(localStorage.getItem('adloggs_eod_webhooks') || '{}');
+  const enabled  = JSON.parse(localStorage.getItem('adloggs_eod_enabled')  || '{}');
   const full     = JSON.parse(localStorage.getItem('adloggs_eod_fullreport') || '{}');
   const group    = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
-  const count    = Object.keys(members).length + (full.webhook ? 1 : 0) + (group.webhook ? 1 : 0);
+  const activeMembers = Object.keys(members).filter(n => members[n] && enabled[n] !== false).length;
+  const count    = activeMembers + (full.webhook ? 1 : 0) + (group.webhook ? 1 : 0);
   const badge    = document.getElementById('eod-cfg-badge');
   if (!badge) return;
   if (count > 0) {
     badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
-    badge.textContent = `✓ ${count} destination${count > 1 ? 's' : ''} configured`;
+    badge.textContent = `✓ ${activeMembers} member${activeMembers !== 1 ? 's' : ''} active${full.webhook || group.webhook ? ' + reports' : ''}`;
   } else {
     badge.style.background = 'rgba(245,166,35,0.12)'; badge.style.color = 'var(--amber)';
     badge.textContent = '⚠ Not configured';
@@ -4249,8 +4274,9 @@ function updateEodBadge() {
 function renderEodMemberTable() {
   const container = document.getElementById('eod-member-table');
   if (!container) return;
-  const saved = JSON.parse(localStorage.getItem('adloggs_eod_webhooks') || '{}');
-  const teams = getTeamsSource();
+  const saved   = JSON.parse(localStorage.getItem('adloggs_eod_webhooks') || '{}');
+  const enabled = JSON.parse(localStorage.getItem('adloggs_eod_enabled')  || '{}');
+  const teams   = getTeamsSource();
 
   if (!teams.length) {
     container.innerHTML = '<div style="font-size:12px;color:var(--text3)">No team members found — try clicking ↻ Reload Members after the page finishes loading.</div>';
@@ -4265,18 +4291,26 @@ function renderEodMemberTable() {
     const members  = team.members || [];
     if (!members.length) return;
 
-    // Pod header
     html += `<div style="font-size:10px;font-weight:700;color:${podColor};text-transform:uppercase;letter-spacing:1px;padding:6px 2px 3px;margin-top:6px">${esc(team.name)}</div>`;
 
     members.forEach(m => {
       if (!m.name) return;
-      const isLead  = /lead|manager/i.test(m.title || '');
+      const isLead   = /lead|manager/i.test(m.title || '');
       const initials = m.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      const rowBg   = isLead ? `${podColor}12` : 'var(--surface)';
-      const border  = isLead ? podColor : 'var(--border)';
+      const rowBg    = isLead ? `${podColor}12` : 'var(--surface)';
+      const border   = isLead ? podColor : 'var(--border)';
+      const isOn     = enabled[m.name] !== false; // default ON
+      const hasHook  = !!saved[m.name];
+
+      // Toggle pill colours
+      const toggleBg   = isOn ? '#22c55e' : '#d1d5db';
+      const toggleText = isOn ? '#fff'     : '#6b7280';
+      const toggleLabel= isOn ? 'ON'       : 'OFF';
+      // Dim the row if turned off
+      const rowOpacity = isOn ? '1' : '0.5';
 
       html += `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:${rowBg};border:1px solid ${border};border-radius:7px">
+      <div id="eod-row-${CSS.escape(m.name)}" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:${rowBg};border:1px solid ${border};border-radius:7px;opacity:${rowOpacity};transition:opacity 0.2s">
         <div style="width:30px;height:30px;border-radius:50%;background:${isLead ? podColor : 'var(--surface2)'};color:${isLead ? '#fff' : 'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${initials}</div>
         <div style="min-width:120px;flex-shrink:0">
           <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(m.name)} ${isLead ? `<span style="font-size:9px;background:${podColor};color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">LEAD</span>` : ''}</div>
@@ -4287,7 +4321,13 @@ function renderEodMemberTable() {
           value="${esc(saved[m.name] || '')}"
           oninput="saveEodMemberWebhook('${esc(m.name)}', this.value)"
           style="flex:1;font-size:11px;padding:5px 9px" />
-        <span id="eod-wh-status-${CSS.escape(m.name)}" style="font-size:11px;color:var(--green);flex-shrink:0;width:16px">${saved[m.name] ? '✓' : ''}</span>
+        <span id="eod-wh-status-${CSS.escape(m.name)}" style="font-size:11px;color:var(--green);flex-shrink:0;width:16px">${hasHook ? '✓' : ''}</span>
+        <!-- ON/OFF toggle -->
+        <button id="eod-toggle-${CSS.escape(m.name)}"
+          onclick="toggleEodMember('${esc(m.name)}')"
+          title="${isOn ? 'Click to disable' : 'Click to enable'}"
+          style="flex-shrink:0;border:none;cursor:pointer;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:${toggleBg};color:${toggleText};letter-spacing:0.5px;transition:background 0.2s"
+        >${toggleLabel}</button>
       </div>`;
     });
   });
@@ -4402,8 +4442,10 @@ async function sendEodSummaryNow() {
   }
 
   // ---- 1. Per-member messages ----
+  const enabledMap = JSON.parse(localStorage.getItem('adloggs_eod_enabled') || '{}');
   for (const [memberName, webhookUrl] of Object.entries(memberWebhooks)) {
     if (!webhookUrl) continue;
+    if (enabledMap[memberName] === false) continue;  // explicitly disabled — skip
     const myIssues = issuesFor(memberName);
     await post(webhookUrl, buildMemberMessage(memberName, myIssues, todayLabel));
   }
@@ -4421,8 +4463,7 @@ async function sendEodSummaryNow() {
     }));
 
     for (const lead of leads) {
-      // Don't double-send: lead already got personal summary above.
-      // We send an ADDITIONAL team-summary message to their same webhook.
+      if (enabledMap[lead.name] === false) continue;  // lead disabled — skip team summary too
       await post(memberWebhooks[lead.name],
         buildPodLeadMessage(lead.name, team.name, memberSummaries, todayLabel)
       );
