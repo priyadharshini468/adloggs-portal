@@ -4335,50 +4335,6 @@ function renderEodMemberTable() {
   container.innerHTML = html;
 }
 
-// ---- Message builders ----
-
-function eodStatusEmoji(s) {
-  return { 'in progress':'🔵','done':'✅','under testing':'🧪','dev qa':'🔍','to do':'📋','hold':'⏸','closed':'✅' }[(s||'').toLowerCase()] || '📌';
-}
-
-function buildMemberMessage(memberName, issues, todayLabel) {
-  if (!issues.length)
-    return `*📋 EOD Summary — ${memberName}*\n_${todayLabel}_\n\nNo Jira activity recorded today. Have a good evening! 🌙`;
-  const lines = issues.map(i =>
-    `${eodStatusEmoji(i.status)} *${i.key}* — ${i.summary}\n   ↳ Status: _${i.status}_ | Priority: ${i.priority || '—'}`
-  ).join('\n\n');
-  return `*📋 EOD Summary — ${memberName}*\n_${todayLabel}_\n\n*${issues.length} task${issues.length > 1 ? 's' : ''} updated today:*\n\n${lines}\n\n_Keep up the great work! 💪_`;
-}
-
-function buildPodLeadMessage(leadName, teamName, memberSummaries, todayLabel) {
-  const total = memberSummaries.reduce((s, m) => s + m.issues.length, 0);
-  const header = `*📊 ${teamName} — EOD Team Summary for ${leadName}*\n_${todayLabel}_\n\n*${total} task${total !== 1 ? 's' : ''} updated across your team today:*\n`;
-  const sections = memberSummaries.map(m => {
-    if (!m.issues.length) return `\n👤 *${m.name}* — No activity today`;
-    const lines = m.issues.map(i =>
-      `   ${eodStatusEmoji(i.status)} *${i.key}* — ${i.summary} (_${i.status}_)`
-    ).join('\n');
-    return `\n👤 *${m.name}* — ${m.issues.length} task${m.issues.length > 1 ? 's' : ''}\n${lines}`;
-  }).join('\n');
-  return header + sections + '\n\n_Review and follow up as needed. 🙌_';
-}
-
-function buildFullReportMessage(allTeamSummaries, todayLabel) {
-  const grandTotal = allTeamSummaries.reduce((s, t) => s + t.total, 0);
-  let msg = `*📋 Adloggs — Full EOD Report*\n_${todayLabel}_\n\n*${grandTotal} task${grandTotal !== 1 ? 's' : ''} updated across all pods today:*\n`;
-  allTeamSummaries.forEach(t => {
-    msg += `\n\n*${t.teamName}* (${t.total} task${t.total !== 1 ? 's' : ''})`;
-    t.members.forEach(m => {
-      if (!m.issues.length) { msg += `\n   👤 ${m.name} — no activity`; return; }
-      m.issues.forEach(i => {
-        msg += `\n   ${eodStatusEmoji(i.status)} ${i.key} · ${m.name} — ${i.summary} (_${i.status}_)`;
-      });
-    });
-  });
-  msg += '\n\n_Sent automatically by Adloggs Portal_ 🤖';
-  return msg;
-}
-
 // ---- Core dispatch ----
 
 async function sendEodSummaryNow() {
@@ -4424,12 +4380,105 @@ async function sendEodSummaryNow() {
   const teams = getTeamsSource();
   let sent = 0, failed = 0;
 
-  // Helper: find issues for a person by first-name match
-  const issuesFor = name => issues.filter(i =>
-    i.assignee && i.assignee.toLowerCase().includes(name.split(' ')[0].toLowerCase())
-  );
+  // Build a lookup: portal member name → Jira assignee display name variations
+  // This resolves ambiguities like "Chandru S" vs "Jai Chandru SS"
+  const memberJiraMap = {};
+  getTeamsSource().forEach(team => {
+    (team.members || []).forEach(m => {
+      if (!m.name) return;
+      // jiraId-based match is best; fall back to name
+      memberJiraMap[m.name] = m.jiraId || null;
+    });
+  });
 
-  // Helper: post to a webhook
+  // issuesFor: match by jiraId (accountId) if available, else full-name, else first-name
+  // This prevents "chandru" matching "Jai Chandru SS"
+  const issuesFor = (portalName) => {
+    return issues.filter(i => {
+      if (!i.assignee) return false;
+      const ja = i.assignee.toLowerCase().trim();
+      const pn = portalName.toLowerCase().trim();
+      // Exact full match
+      if (ja === pn) return true;
+      // Portal name words all appear in Jira name in order (handles "Chandru S" ↔ "Chandru Sekar")
+      const pWords = pn.split(/\s+/);
+      const jWords = ja.split(/\s+/);
+      // Every word in portal name must appear in jira name
+      const allMatch = pWords.every(pw => jWords.some(jw => jw === pw || jw.startsWith(pw)));
+      if (!allMatch) return false;
+      // Disambiguation: if portal name starts with a qualifier (e.g. "Jai"), jira name must too
+      if (pWords[0] !== jWords[0]) return false;
+      return true;
+    });
+  };
+
+  // ---- Formatted message builders ----
+
+  // Google Chat supports bold (*text*), italic (_text_), code (`text`), and line breaks (\n)
+  // We use text-based tables with monospace alignment since Chat doesn't render HTML
+
+  function padR(str, len) { return String(str).slice(0, len).padEnd(len); }
+  function padL(str, len) { return String(str).slice(0, len).padStart(len); }
+
+  function buildMemberMessage(memberName, myIssues, todayLabel) {
+    const header = `*📋 EOD Summary — ${memberName}*\n_${todayLabel}_\n`;
+    if (!myIssues.length) {
+      return header + '\nNo Jira activity recorded today. Have a good evening! 🌙';
+    }
+    // Table header
+    let table = '```\n';
+    table += `${'Issue'.padEnd(8)} ${'Status'.padEnd(16)} ${'Pri'.padEnd(8)} Summary\n`;
+    table += `${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(8)} ${'─'.repeat(30)}\n`;
+    myIssues.forEach(i => {
+      table += `${padR(i.key,8)} ${padR(i.status,16)} ${padR(i.priority||'—',8)} ${padR(i.summary,45)}\n`;
+    });
+    table += '```';
+    return `${header}\n*${myIssues.length} task${myIssues.length > 1 ? 's' : ''} updated today:*\n${table}\n\n_Keep up the great work! 💪_`;
+  }
+
+  function buildPodLeadMessage(leadName, teamName, memberSummaries, todayLabel) {
+    const total  = memberSummaries.reduce((s, m) => s + m.issues.length, 0);
+    const header = `*📊 ${teamName} Pod — EOD Report for ${leadName}*\n_${todayLabel}_\n\n*${total} task${total !== 1 ? 's' : ''} updated across the team today:*\n`;
+
+    const sections = memberSummaries.map(m => {
+      if (!m.issues.length) return `\n👤 *${m.name}* — _No activity today_`;
+      let tbl = `\n👤 *${m.name}* — ${m.issues.length} task${m.issues.length > 1 ? 's' : ''}\n\`\`\`\n`;
+      tbl += `${'Issue'.padEnd(8)} ${'Status'.padEnd(16)} Summary\n`;
+      tbl += `${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(35)}\n`;
+      m.issues.forEach(i => {
+        tbl += `${padR(i.key,8)} ${padR(i.status,16)} ${padR(i.summary,45)}\n`;
+      });
+      tbl += '```';
+      return tbl;
+    }).join('\n');
+
+    return header + sections + '\n\n_Review and follow up as needed. 🙌_';
+  }
+
+  function buildFullReportMessage(allTeamSummaries, todayLabel) {
+    const grandTotal = allTeamSummaries.reduce((s, t) => s + t.total, 0);
+    let msg = `*📋 Adloggs — Full EOD Report*\n_${todayLabel}_\n\n*${grandTotal} task${grandTotal !== 1 ? 's' : ''} updated across all pods today:*`;
+
+    allTeamSummaries.forEach(t => {
+      msg += `\n\n*${t.teamName}* — ${t.total} task${t.total !== 1 ? 's' : ''}`;
+      const active = t.members.filter(m => m.issues.length);
+      if (!active.length) { msg += '\n_No activity today_'; return; }
+      msg += '\n```\n';
+      msg += `${'Member'.padEnd(20)} ${'Issue'.padEnd(8)} ${'Status'.padEnd(16)} Summary\n`;
+      msg += `${'─'.repeat(20)} ${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(30)}\n`;
+      active.forEach(m => {
+        m.issues.forEach((i, idx) => {
+          msg += `${padR(idx === 0 ? m.name : '', 20)} ${padR(i.key,8)} ${padR(i.status,16)} ${padR(i.summary,35)}\n`;
+        });
+      });
+      msg += '```';
+    });
+
+    msg += '\n\n_Sent automatically by Adloggs Portal 🤖_';
+    return msg;
+  }
+
+
   async function post(webhookUrl, text) {
     try {
       const r = await fetch(webhookUrl, {
