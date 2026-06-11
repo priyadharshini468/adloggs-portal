@@ -4362,6 +4362,24 @@ function renderEodMemberTable() {
   container.innerHTML = html;
 }
 
+// Flatten Jira ADF (Atlassian Document Format) comment body to plain text
+function extractCommentText(body) {
+  if (!body) return '';
+  if (typeof body === 'string') return body.trim();
+  // ADF: { type:'doc', content:[...] }
+  function walk(node) {
+    if (!node) return '';
+    if (node.type === 'text') return node.text || '';
+    if (node.type === 'hardBreak' || node.type === 'paragraph') {
+      const inner = (node.content || []).map(walk).join('');
+      return inner ? inner + ' ' : '';
+    }
+    if (node.content) return node.content.map(walk).join('');
+    return '';
+  }
+  return walk(body).replace(/\s+/g, ' ').trim().slice(0, 120);
+}
+
 // ---- Core dispatch ----
 
 async function sendEodSummaryNow() {
@@ -4380,13 +4398,24 @@ async function sendEodSummaryNow() {
       const res = await fetch(`${workerBase}/issues?jql=${encodeURIComponent(jql)}&maxResults=200`);
       if (res.ok) {
         const data = await res.json();
-        issues = (data.issues || []).map(i => ({
-          key:      i.key,
-          summary:  i.fields?.summary || '',
-          status:   i.fields?.status?.name || '',
-          priority: i.fields?.priority?.name || '',
-          assignee: i.fields?.assignee?.displayName || '',
-        }));
+        issues = (data.issues || []).map(i => {
+          // Extract comments added or updated today
+          const allComments = i.fields?.comment?.comments || [];
+          const todayComments = allComments
+            .filter(c => (c.updated || c.created || '').slice(0, 10) === todayStr)
+            .map(c => ({
+              author: c.author?.displayName || c.updateAuthor?.displayName || 'Unknown',
+              body:   extractCommentText(c.body),
+            }));
+          return {
+            key:      i.key,
+            summary:  i.fields?.summary || '',
+            status:   i.fields?.status?.name || '',
+            priority: i.fields?.priority?.name || '',
+            assignee: i.fields?.assignee?.displayName || '',
+            comments: todayComments,
+          };
+        });
       }
     }
   } catch(e) { console.warn('Jira fetch failed, using local data:', e.message); }
@@ -4395,7 +4424,7 @@ async function sendEodSummaryNow() {
   if (!issues.length) {
     issues = SPRINT_DATA.map(i => ({
       key: i.key, summary: i.summary || '', status: i.status || '',
-      priority: i.priority || '', assignee: i.assignee || '',
+      priority: i.priority || '', assignee: i.assignee || '', comments: [],
     }));
   }
 
@@ -4452,7 +4481,6 @@ async function sendEodSummaryNow() {
     if (!myIssues.length) {
       return header + '\nNo Jira activity recorded today. Have a good evening! 🌙';
     }
-    // Table header
     let table = '```\n';
     table += `${'Issue'.padEnd(8)} ${'Status'.padEnd(16)} ${'Pri'.padEnd(8)} Summary\n`;
     table += `${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(8)} ${'─'.repeat(30)}\n`;
@@ -4460,7 +4488,20 @@ async function sendEodSummaryNow() {
       table += `${padR(i.key,8)} ${padR(i.status,16)} ${padR(i.priority||'—',8)} ${padR(i.summary,45)}\n`;
     });
     table += '```';
-    return `${header}\n*${myIssues.length} task${myIssues.length > 1 ? 's' : ''} updated today:*\n${table}\n\n_Keep up the great work! 💪_`;
+
+    // Append comments below the table
+    const commented = myIssues.filter(i => i.comments && i.comments.length);
+    let commentBlock = '';
+    if (commented.length) {
+      commentBlock = '\n\n*💬 Comments added today:*';
+      commented.forEach(i => {
+        i.comments.forEach(c => {
+          commentBlock += `\n• *${i.key}* — _${c.author}:_ ${c.body}`;
+        });
+      });
+    }
+
+    return `${header}\n*${myIssues.length} task${myIssues.length > 1 ? 's' : ''} updated today:*\n${table}${commentBlock}\n\n_Keep up the great work! 💪_`;
   }
 
   function buildPodLeadMessage(leadName, teamName, memberSummaries, todayLabel) {
@@ -4481,7 +4522,21 @@ async function sendEodSummaryNow() {
     });
     table += '```';
 
-    return header + table + '\n\n_Review and follow up as needed. 🙌_';
+    // Comments section
+    const allCommented = memberSummaries.flatMap(m =>
+      (m.issues || []).filter(i => i.comments && i.comments.length).map(i => ({ member: m.name, issue: i }))
+    );
+    let commentBlock = '';
+    if (allCommented.length) {
+      commentBlock = '\n\n*💬 Comments added today:*';
+      allCommented.forEach(({ member, issue }) => {
+        issue.comments.forEach(c => {
+          commentBlock += `\n• *${issue.key}* (${member}) — _${c.author}:_ ${c.body}`;
+        });
+      });
+    }
+
+    return header + table + commentBlock + '\n\n_Review and follow up as needed. 🙌_';
   }
 
   function buildFullReportMessage(allTeamSummaries, todayLabel) {
@@ -4495,7 +4550,6 @@ async function sendEodSummaryNow() {
       msg += `${'─'.repeat(20)} ${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(30)}\n`;
       t.members.forEach(m => {
         if (!m.issues.length) {
-          // Show member with no activity
           msg += `${padR(m.name, 20)} ${'—'.padEnd(8)} ${'No activity'.padEnd(16)} —\n`;
         } else {
           m.issues.forEach((i, idx) => {
@@ -4504,6 +4558,18 @@ async function sendEodSummaryNow() {
         }
       });
       msg += '```';
+      // Comments for this pod
+      const podComments = t.members.flatMap(m =>
+        (m.issues || []).filter(i => i.comments && i.comments.length).map(i => ({ member: m.name, issue: i }))
+      );
+      if (podComments.length) {
+        msg += '\n*💬 Comments:*';
+        podComments.forEach(({ member, issue }) => {
+          issue.comments.forEach(c => {
+            msg += `\n• *${issue.key}* (${member}) — _${c.author}:_ ${c.body}`;
+          });
+        });
+      }
     });
 
     msg += '\n\n_Sent automatically by Adloggs Portal 🤖_';
