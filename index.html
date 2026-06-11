@@ -4440,19 +4440,21 @@ async function sendEodSummaryNow() {
     const total  = memberSummaries.reduce((s, m) => s + m.issues.length, 0);
     const header = `*📊 ${teamName} Pod — EOD Report for ${leadName}*\n_${todayLabel}_\n\n*${total} task${total !== 1 ? 's' : ''} updated across the team today:*\n`;
 
-    const sections = memberSummaries.map(m => {
-      if (!m.issues.length) return `\n👤 *${m.name}* — _No activity today_`;
-      let tbl = `\n👤 *${m.name}* — ${m.issues.length} task${m.issues.length > 1 ? 's' : ''}\n\`\`\`\n`;
-      tbl += `${'Issue'.padEnd(8)} ${'Status'.padEnd(16)} Summary\n`;
-      tbl += `${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(35)}\n`;
-      m.issues.forEach(i => {
-        tbl += `${padR(i.key,8)} ${padR(i.status,16)} ${padR(i.summary,45)}\n`;
-      });
-      tbl += '```';
-      return tbl;
-    }).join('\n');
+    let table = '\n```\n';
+    table += `${'Member'.padEnd(20)} ${'Issue'.padEnd(8)} ${'Status'.padEnd(16)} Summary\n`;
+    table += `${'─'.repeat(20)} ${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(30)}\n`;
+    memberSummaries.forEach(m => {
+      if (!m.issues.length) {
+        table += `${padR(m.name, 20)} ${'—'.padEnd(8)} ${'No activity'.padEnd(16)} —\n`;
+      } else {
+        m.issues.forEach((i, idx) => {
+          table += `${padR(idx === 0 ? m.name : '', 20)} ${padR(i.key, 8)} ${padR(i.status, 16)} ${padR(i.summary, 35)}\n`;
+        });
+      }
+    });
+    table += '```';
 
-    return header + sections + '\n\n_Review and follow up as needed. 🙌_';
+    return header + table + '\n\n_Review and follow up as needed. 🙌_';
   }
 
   function buildFullReportMessage(allTeamSummaries, todayLabel) {
@@ -4461,15 +4463,18 @@ async function sendEodSummaryNow() {
 
     allTeamSummaries.forEach(t => {
       msg += `\n\n*${t.teamName}* — ${t.total} task${t.total !== 1 ? 's' : ''}`;
-      const active = t.members.filter(m => m.issues.length);
-      if (!active.length) { msg += '\n_No activity today_'; return; }
       msg += '\n```\n';
       msg += `${'Member'.padEnd(20)} ${'Issue'.padEnd(8)} ${'Status'.padEnd(16)} Summary\n`;
       msg += `${'─'.repeat(20)} ${'─'.repeat(8)} ${'─'.repeat(16)} ${'─'.repeat(30)}\n`;
-      active.forEach(m => {
-        m.issues.forEach((i, idx) => {
-          msg += `${padR(idx === 0 ? m.name : '', 20)} ${padR(i.key,8)} ${padR(i.status,16)} ${padR(i.summary,35)}\n`;
-        });
+      t.members.forEach(m => {
+        if (!m.issues.length) {
+          // Show member with no activity
+          msg += `${padR(m.name, 20)} ${'—'.padEnd(8)} ${'No activity'.padEnd(16)} —\n`;
+        } else {
+          m.issues.forEach((i, idx) => {
+            msg += `${padR(idx === 0 ? m.name : '', 20)} ${padR(i.key, 8)} ${padR(i.status, 16)} ${padR(i.summary, 35)}\n`;
+          });
+        }
       });
       msg += '```';
     });
