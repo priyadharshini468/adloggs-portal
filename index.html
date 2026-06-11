@@ -168,6 +168,11 @@
   .score-row:last-child{border-bottom:none}
   .score-label{font-size:12px;color:var(--text2)}
   .score-val{font-family:var(--serif);font-size:19px}
+  .sc-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:3px;margin:0 10px}
+  .sc-bar{height:6px;border-radius:3px;transition:width 0.6s ease}
+  .sc-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
+  .sc-auto-badge{font-size:9px;background:rgba(26,115,232,0.1);color:var(--accent);padding:1px 5px;border-radius:3px;font-weight:600}
+  .sc-manual-badge{font-size:9px;background:rgba(245,166,35,0.12);color:var(--amber);padding:1px 5px;border-radius:3px;font-weight:600}
   .locked-overlay{position:absolute;inset:0;background:rgba(244,246,249,0.95);z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:13px;gap:14px}
   .pin-input{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:15px;letter-spacing:6px;text-align:center;padding:9px 15px;width:150px;outline:none}
   .pin-input:focus{border-color:var(--accent)}
@@ -636,35 +641,118 @@
 
     <!-- ===== SCORES ===== -->
     <section id="sec-scores" class="section">
-      <!-- COMING SOON — original scores content preserved below in comments -->
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:420px;text-align:center;padding:48px 24px">
-        <div style="font-size:52px;margin-bottom:20px">📊</div>
-        <div style="font-family:var(--serif);font-size:32px;margin-bottom:10px;color:var(--text)">Coming Soon</div>
-        <div style="font-size:14px;color:var(--text3);max-width:400px;line-height:1.7">Team performance scores and velocity metrics are being configured. This section will show sprint velocity, delivery scores, and quality metrics per pod.</div>
+      <div class="section-head">
+        <h2>Performance Scores</h2>
+        <p>Auto-scored from Jira · Bonus points · Sprint rankings · History</p>
       </div>
 
-      <!--
-      ORIGINAL SCORES — uncomment to restore
-      <div style="position:relative;min-height:500px">
-        <div style="filter:blur(5px);pointer-events:none;user-select:none">
-          <div class="section-head"><h2>Team Scores & Performance</h2><p>Sprint velocity, quality, and delivery metrics</p></div>
-          <div class="score-grid">
-            <div class="score-card"><div class="score-team">Backend Core</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">41</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--amber)">2.4%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--accent)">88</span></div></div>
-            <div class="score-card"><div class="score-team">App / Frontend</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--green)">28</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">1.2%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">92</span></div></div>
-            <div class="score-card"><div class="score-team">Design & Marketing</div><div class="score-row"><span class="score-label">Sprint Velocity</span><span class="score-val" style="color:var(--amber)">19</span></div><div class="score-row"><span class="score-label">Bug Rate</span><span class="score-val" style="color:var(--green)">0.3%</span></div><div class="score-row"><span class="score-label">Delivery Score</span><span class="score-val" style="color:var(--green)">96</span></div></div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border);flex-wrap:wrap">
+        <button id="score-tab-team"       onclick="switchScoreTab('team')"       style="padding:8px 16px;border:none;background:none;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">🏆 Teams</button>
+        <button id="score-tab-individual" onclick="switchScoreTab('individual')"  style="padding:8px 16px;border:none;background:none;font-size:12px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">👤 Individuals</button>
+        <button id="score-tab-rankings"   onclick="switchScoreTab('rankings')"    style="padding:8px 16px;border:none;background:none;font-size:12px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">📊 Rankings</button>
+        <button id="score-tab-bonus"      onclick="switchScoreTab('bonus')"       style="padding:8px 16px;border:none;background:none;font-size:12px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">🌟 Bonus Log</button>
+        <button id="score-tab-history"    onclick="switchScoreTab('history')"     style="padding:8px 16px;border:none;background:none;font-size:12px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">📂 History</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary btn-sm" onclick="computeAllScores()" style="margin-bottom:6px;align-self:flex-end">⟳ Recompute</button>
+      </div>
+
+      <!-- Team Scores Panel -->
+      <div id="score-panel-team">
+        <div id="team-score-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px"></div>
+      </div>
+
+      <!-- Individual Scores Panel -->
+      <div id="score-panel-individual" style="display:none">
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+          <select class="input" id="score-filter-team" onchange="renderIndividualScores()" style="width:180px;font-size:12px"><option value="">All Pods</option></select>
+          <select class="input" id="score-sort" onchange="renderIndividualScores()" style="width:200px;font-size:12px">
+            <option value="total">Sort by Total Score</option>
+            <option value="name">Sort by Name</option>
+            <option value="completion">Sort by Task Completion</option>
+          </select>
+        </div>
+        <div id="individual-score-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px"></div>
+      </div>
+
+      <!-- Rankings Panel -->
+      <div id="score-panel-rankings" style="display:none"></div>
+
+      <!-- Bonus Log Panel -->
+      <div id="score-panel-bonus" style="display:none"></div>
+
+      <!-- History Panel -->
+      <div id="score-panel-history" style="display:none"></div>
+
+    </section>
+
+    <!-- Bonus Award Modal -->
+    <div id="bonus-modal" class="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+      <div class="modal" style="max-width:440px">
+        <div class="modal-header">
+          <div id="bonus-modal-title" class="modal-title">🌟 Award Bonus Points</div>
+          <button class="modal-close" onclick="closeModal('bonus-modal')">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+
+          <!-- Recipient Type -->
+          <div>
+            <div class="form-label">Award To</div>
+            <div style="display:flex;gap:8px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:6px 14px;border:1px solid var(--border);border-radius:6px;flex:1;justify-content:center" id="bonus-type-ind-label">
+                <input type="radio" name="bonus-type" id="bonus-type-ind" value="individual" checked onchange="onBonusTypeChange()" style="accent-color:var(--accent)">
+                👤 Individual
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:6px 14px;border:1px solid var(--border);border-radius:6px;flex:1;justify-content:center" id="bonus-type-team-label">
+                <input type="radio" name="bonus-type" id="bonus-type-team" value="team" onchange="onBonusTypeChange()" style="accent-color:var(--accent)">
+                🏆 Team
+              </label>
+            </div>
+          </div>
+
+          <!-- Recipient Name -->
+          <div>
+            <div class="form-label">Select Recipient</div>
+            <select class="input" id="bonus-recipient-select" style="font-size:12px">
+              <option value="">— Choose —</option>
+            </select>
+          </div>
+
+          <!-- Points -->
+          <div style="display:flex;gap:12px">
+            <div style="flex:0 0 auto">
+              <div class="form-label">Points</div>
+              <input type="number" min="1" max="50" class="input" id="bonus-points-input" placeholder="e.g. 5" style="width:90px" />
+            </div>
+            <div style="flex:1">
+              <div class="form-label">Awarded By</div>
+              <input type="text" class="input" id="bonus-awarded-by" placeholder="Your name" />
+            </div>
+          </div>
+
+          <!-- Reason -->
+          <div>
+            <div class="form-label">Reason</div>
+            <select class="input" id="bonus-reason-preset" onchange="applyBonusPreset(this.value)" style="margin-bottom:6px;font-size:12px">
+              <option value="">— Pick a preset reason —</option>
+              <option value="Handled a critical production issue">Handled a critical production issue</option>
+              <option value="Supported another team during a release">Supported another team during a release</option>
+              <option value="Completed a high-priority task ahead of schedule">Completed high-priority task ahead of schedule</option>
+              <option value="Exceptional client appreciation received">Exceptional client appreciation received</option>
+              <option value="Process improvement suggestion implemented">Process improvement suggestion implemented</option>
+              <option value="Knowledge-sharing or mentoring activity">Knowledge-sharing or mentoring activity</option>
+            </select>
+            <textarea class="input" id="bonus-reason-input" placeholder="Describe the reason…" rows="2" style="resize:vertical;font-size:12px"></textarea>
+          </div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+            <button class="btn btn-ghost btn-sm" onclick="closeModal('bonus-modal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="submitBonus()">🌟 Award Bonus</button>
           </div>
         </div>
-        <div class="locked-overlay" id="score-lock">
-          <div style="font-size:36px">lock</div>
-          <div style="font-family:var(--serif);font-size:20px">Restricted Access</div>
-          <div style="color:var(--text3);font-size:13px">Enter 4-digit PIN to view performance data</div>
-          <input type="password" class="pin-input" id="pin-input" placeholder="dots" maxlength="4" oninput="checkPin(this.value)">
-          <div id="pin-error" style="color:var(--red);font-size:12px;display:none">Incorrect PIN</div>
-          <div style="font-size:11px;color:var(--text3)">Demo PIN: 1234</div>
-        </div>
       </div>
-      -->
-    </section>
+    </div>
+
 
     <!-- ===== SETTINGS ===== -->
     <section id="sec-settings" class="section">
@@ -1693,6 +1781,9 @@ function nav(id, el) {
   }
   if (id === 'roadmap' && !ROADMAP_DATA.length) {
     loadRoadmap();
+  }
+  if (id === 'scores') {
+    setTimeout(() => { computeAllScores(); }, 100);
   }
   document.getElementById('topbar-title').textContent = titles[id] || id;
 }
@@ -3863,8 +3954,24 @@ async function postReqComment() {
   }
 }
 
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.style.display === 'none' || el.style.display === '') {
+    el.style.display = 'flex';
+  } else {
+    el.classList.add('open');
+  }
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.style.display === 'flex' && el.classList.contains('modal-backdrop')) {
+    el.style.display = 'none';
+  } else {
+    el.classList.remove('open');
+  }
+}
 document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
 
 // ================================================================
@@ -4654,6 +4761,716 @@ function startEodScheduler() {
       sendEodSummaryNow();
     }
   }, 60000);
+}
+
+// ================================================================
+// SCORING ENGINE  v2 — Sprint-based, Bonus Points, Rankings, History
+// ================================================================
+
+// ── Weights ──────────────────────────────────────────────────────
+const IND_WEIGHTS = {
+  jiraActivity:   { w:15, label:'Jira Activity & Updates', auto:true  },
+  taskCompletion: { w:25, label:'Tasks Completed',          auto:true  },
+  onTimeDelivery: { w:25, label:'On-Time Delivery',         auto:true  },
+  estAccuracy:    { w:15, label:'Estimation Accuracy',      auto:false },
+  releaseContrib: { w:20, label:'Release Contribution',     auto:false },
+};
+const TEAM_WEIGHTS = {
+  sprintCommit:   { w:20, label:'Sprint Commitment',        auto:true  },
+  releaseSuccess: { w:20, label:'Release Success Rate',     auto:false },
+  velocity:       { w:15, label:'Velocity Stability',       auto:true  },
+  bugLeakage:     { w:20, label:'Bug Leakage Score',        auto:true  },
+  jiraDiscipline: { w:10, label:'Jira Discipline',          auto:true  },
+  slaAdherence:   { w:15, label:'SLA Adherence',            auto:false },
+};
+const MAX_IND  = Object.values(IND_WEIGHTS).reduce((s,v)=>s+v.w, 0);   // 100
+const MAX_TEAM = Object.values(TEAM_WEIGHTS).reduce((s,v)=>s+v.w, 0);  // 100
+
+const DONE_STATUSES = ['done','closed','completed','released'];
+const POD_COLORS    = { Pinnacle:'#2563eb', Momentum:'#059669', Catalyst:'#d97706', 'AI Intelligence':'#7c3aed', 'Shared Resources':'#6b7280' };
+const RANK_MEDALS   = ['🥇','🥈','🥉'];
+
+// ── Helpers ───────────────────────────────────────────────────────
+function scColor(pct) { return pct>=85?'#22c55e':pct>=65?'#f59e0b':'#ef4444'; }
+function scLabel(pct) { return pct>=85?'Excellent':pct>=65?'Good':'Needs Work'; }
+function scBar(val, max) {
+  const pct = max>0 ? Math.min(100,Math.round((val/max)*100)) : 0;
+  const col  = scColor(pct);
+  return `<div class="sc-bar-wrap"><div class="sc-bar" style="width:${pct}%;background:${col}"></div></div>`;
+}
+function isDone(s){ return DONE_STATUSES.includes((s||'').toLowerCase()); }
+
+// Name resolution: maps Jira assignee → portal member name via first-name
+function buildNameMap() {
+  const map = {};
+  getTeamsSource().forEach(t => (t.members||[]).forEach(m => {
+    if (!m.name) return;
+    map[m.name.toLowerCase()] = m.name;
+    map[m.name.split(' ')[0].toLowerCase()] = m.name;
+  }));
+  return map;
+}
+function resolvePortalName(jiraName, nameMap) {
+  return nameMap[jiraName.toLowerCase()]
+      || nameMap[jiraName.split(' ')[0].toLowerCase()]
+      || jiraName;
+}
+
+// ── Current sprint label ──────────────────────────────────────────
+function currentSprintLabel() {
+  const s = SPRINT_DATA[0]?.sprint || SPRINT_DATA[0]?.fields?.sprint;
+  if (s) return s;
+  const now = new Date();
+  return `Sprint ${now.getFullYear()}-Q${Math.ceil((now.getMonth()+1)/3)}`;
+}
+
+// ── Bonus points helpers ──────────────────────────────────────────
+function getBonusLog() { return JSON.parse(localStorage.getItem('adloggs_bonus_log')||'[]'); }
+function saveBonusLog(log) { localStorage.setItem('adloggs_bonus_log', JSON.stringify(log)); }
+
+function bonusFor(portalName) {
+  return getBonusLog()
+    .filter(b => b.recipient === portalName)
+    .reduce((s,b)=>s+(Number(b.points)||0), 0);
+}
+function teamBonusFor(teamName) {
+  return getBonusLog()
+    .filter(b => b.team === teamName)
+    .reduce((s,b)=>s+(Number(b.points)||0), 0);
+}
+
+// ── Auto-score: Individual ────────────────────────────────────────
+function computeIndividualAutoScores() {
+  const issues  = SPRINT_DATA || [];
+  const today   = new Date().toISOString().slice(0,10);
+  const nameMap = buildNameMap();
+  const members = {};
+
+  issues.forEach(i => {
+    const raw    = i.assignee || 'Unassigned';
+    const portal = resolvePortalName(raw, nameMap);
+    if (!members[portal]) members[portal] = [];
+    members[portal].push(i);
+  });
+
+  const teamAvgClosed = (() => {
+    const counts = Object.values(members).map(arr => arr.filter(i=>isDone(i.status)).length);
+    return counts.length ? counts.reduce((a,b)=>a+b,0)/counts.length : 1;
+  })();
+
+  const scores = {};
+  Object.entries(members).forEach(([name, myIssues]) => {
+    const n = myIssues.length || 1;
+
+    // A. Jira Activity (15): comments + due dates + non-stale
+    const withCmt  = myIssues.filter(i=>(i.comments||[]).length>0).length;
+    const withDue  = myIssues.filter(i=>i.due).length;
+    const nonStale = myIssues.filter(i=>{
+      if (!i.due) return true;
+      const d=(new Date(today)-new Date(i.due))/86400000;
+      return d<5 || isDone(i.status);
+    }).length;
+    const jiraActivity = Math.min(15, Math.round((0.4*(withCmt/n)+0.3*(withDue/n)+0.3*(nonStale/n))*15));
+
+    // B. Task Completion (25): relative to team average
+    const closed         = myIssues.filter(i=>isDone(i.status)).length;
+    const taskCompletion = Math.min(25, Math.round((closed/teamAvgClosed)*25));
+
+    // C. On-Time Delivery (25)
+    const closedDue  = myIssues.filter(i=>i.due&&isDone(i.status));
+    const onTime     = closedDue.filter(i=>new Date(i.due)>=new Date(today)).length;
+    const onTimeDelivery = closedDue.length===0 ? 18 : Math.round((onTime/closedDue.length)*25);
+
+    scores[name] = {
+      jiraActivity, taskCompletion, onTimeDelivery,
+      estAccuracy:0, releaseContrib:0,
+      bonus:0,
+      closed, total_tasks: myIssues.length,
+    };
+  });
+  return scores;
+}
+
+// ── Auto-score: Team ──────────────────────────────────────────────
+function computeTeamAutoScores() {
+  const issues  = SPRINT_DATA || [];
+  const nameMap = buildNameMap();
+  const result  = {};
+
+  getTeamsSource().forEach(team => {
+    const mNames  = (team.members||[]).map(m=>m.name.toLowerCase());
+    const tIssues = issues.filter(i => {
+      const pn = resolvePortalName(i.assignee||'', nameMap).toLowerCase();
+      return mNames.some(n=>pn===n||pn.startsWith(n.split(' ')[0]));
+    });
+    const total  = tIssues.length||1;
+    const closed = tIssues.filter(i=>isDone(i.status)).length;
+    const bugs   = tIssues.filter(i=>(i.type||'').toLowerCase()==='bug').length;
+    const inProg = tIssues.filter(i=>(i.status||'').toLowerCase()==='in progress').length;
+
+    const cr = closed/total;
+    const sprintCommit   = cr>=0.95?20:cr>=0.85?16:cr>=0.70?12:8;
+    const ar = (closed+inProg)/total;
+    const velocity       = ar>=0.85?15:ar>=0.70?11:ar>=0.50?7:4;
+    const br = bugs/total;
+    const bugLeakage     = br<=0.05?20:br<=0.10?16:br<=0.20?12:6;
+    const withMeta       = tIssues.filter(i=>i.due||(i.comments||[]).length).length;
+    const jiraDiscipline = Math.min(10,Math.round((withMeta/total)*10));
+
+    result[team.name] = {
+      sprintCommit, velocity, bugLeakage, jiraDiscipline,
+      releaseSuccess:0, slaAdherence:0, bonus:0,
+      total_tasks:tIssues.length, closed_tasks:closed, bug_count:bugs,
+    };
+  });
+  return result;
+}
+
+// ── Merge auto + manual + bonus ───────────────────────────────────
+function getMergedIndividualScores() {
+  const auto    = computeIndividualAutoScores();
+  const manual  = JSON.parse(localStorage.getItem('adloggs_manual_ind_scores')||'{}');
+  const nameMap = buildNameMap();
+
+  Object.entries(auto).forEach(([jiraName,s]) => {
+    const pName = resolvePortalName(jiraName, nameMap);
+    const m     = manual[pName] || manual[jiraName] || {};
+    s.estAccuracy    = m.estAccuracy    !== undefined ? Math.min(15,Number(m.estAccuracy)||0)  : 0;
+    s.releaseContrib = m.releaseContrib !== undefined ? Math.min(20,Number(m.releaseContrib)||0): 0;
+    s.bonus = bonusFor(pName);
+    s.total = s.jiraActivity + s.taskCompletion + s.onTimeDelivery + s.estAccuracy + s.releaseContrib + s.bonus;
+  });
+  return auto;
+}
+
+function getMergedTeamScores() {
+  const auto   = computeTeamAutoScores();
+  const manual = JSON.parse(localStorage.getItem('adloggs_manual_team_scores')||'{}');
+  Object.entries(auto).forEach(([team,s]) => {
+    const m = manual[team]||{};
+    s.releaseSuccess = m.releaseSuccess !== undefined ? Math.min(20,Number(m.releaseSuccess)||0) : 0;
+    s.slaAdherence   = m.slaAdherence   !== undefined ? Math.min(15,Number(m.slaAdherence)||0)   : 0;
+    s.bonus = teamBonusFor(team);
+    s.total = s.sprintCommit + s.velocity + s.bugLeakage + s.jiraDiscipline + s.releaseSuccess + s.slaAdherence + s.bonus;
+  });
+  return auto;
+}
+
+// ── Render: Team Scores ───────────────────────────────────────────
+function renderTeamScores() {
+  const scores  = getMergedTeamScores();
+  const grid    = document.getElementById('team-score-grid');
+  if (!grid) return;
+
+  const ranked = Object.entries(scores).sort((a,b)=>b[1].total-a[1].total);
+
+  grid.innerHTML = ranked.map(([team,s], idx) => {
+    const tColor = scColor(s.total);
+    const pColor = POD_COLORS[team]||'#6b7280';
+    const medal  = RANK_MEDALS[idx] || `#${idx+1}`;
+    const rows = Object.entries(TEAM_WEIGHTS).map(([key,cfg]) => {
+      const val   = s[key]??0;
+      const badge = cfg.auto ? `<span class="sc-auto-badge">AUTO</span>` : `<span class="sc-manual-badge">MANUAL</span>`;
+      return `<div class="score-row">
+        <span class="score-label">${cfg.label} ${badge}</span>
+        ${scBar(val,cfg.w)}
+        <span style="font-size:12px;font-weight:700;color:${scColor((val/cfg.w)*100)};min-width:28px;text-align:right">${val}</span>
+        <span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right">/${cfg.w}</span>
+      </div>`;
+    }).join('');
+    const bonusRow = s.bonus ? `<div class="score-row"><span class="score-label">🌟 Bonus Points</span>${scBar(s.bonus,20)}<span style="font-size:12px;font-weight:700;color:#f59e0b;min-width:28px;text-align:right">${s.bonus}</span><span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right"> pts</span></div>` : '';
+    return `<div class="score-card" style="position:relative">
+      <div style="position:absolute;top:12px;right:12px;font-size:22px">${medal}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:36px;height:36px;border-radius:8px;background:${pColor};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">${team.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${esc(team)}</div>
+          <div style="font-size:10px;color:var(--text3)">${s.closed_tasks} closed · ${s.total_tasks} total · ${s.bug_count} bugs</div>
+        </div>
+        <div style="text-align:right;margin-right:28px">
+          <div style="font-family:var(--serif);font-size:28px;color:${tColor};font-weight:700">${s.total}</div>
+          <div style="font-size:10px;font-weight:600;color:${tColor}">${scLabel(s.total)}</div>
+        </div>
+      </div>
+      ${rows}${bonusRow}
+    </div>`;
+  }).join('');
+}
+
+// ── Render: Individual Scores ─────────────────────────────────────
+function renderIndividualScores() {
+  const scores     = getMergedIndividualScores();
+  const grid       = document.getElementById('individual-score-grid');
+  const filterTeam = document.getElementById('score-filter-team')?.value||'';
+  const sortBy     = document.getElementById('score-sort')?.value||'total';
+  if (!grid) return;
+
+  // Populate pod filter once
+  const sel = document.getElementById('score-filter-team');
+  if (sel && sel.options.length<=1) {
+    getTeamsSource().forEach(t => { const o=document.createElement('option'); o.value=t.name; o.textContent=t.name; sel.appendChild(o); });
+  }
+
+  const memberTeam = {};
+  getTeamsSource().forEach(t => (t.members||[]).forEach(m => { memberTeam[m.name]=t.name; }));
+  const nameMap = buildNameMap();
+
+  let entries = Object.entries(scores).map(([jiraName,s]) => {
+    const pName = resolvePortalName(jiraName, nameMap);
+    return [pName, s, memberTeam[pName]||memberTeam[jiraName]||''];
+  });
+
+  if (filterTeam) entries = entries.filter(([,,t])=>t===filterTeam);
+  entries.sort((a,b) => sortBy==='name' ? a[0].localeCompare(b[0])
+    : sortBy==='completion' ? (b[1].taskCompletion||0)-(a[1].taskCompletion||0)
+    : (b[1].total||0)-(a[1].total||0));
+
+  grid.innerHTML = entries.map(([name,s,team], idx) => {
+    const tColor   = scColor(s.total);
+    const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const medal    = RANK_MEDALS[idx] || '';
+    const rows = Object.entries(IND_WEIGHTS).map(([key,cfg]) => {
+      const val   = s[key]??0;
+      const badge = cfg.auto ? `<span class="sc-auto-badge">AUTO</span>` : `<span class="sc-manual-badge">MANUAL</span>`;
+      return `<div class="score-row">
+        <span class="score-label">${cfg.label} ${badge}</span>
+        ${scBar(val,cfg.w)}
+        <span style="font-size:12px;font-weight:700;color:${scColor((val/cfg.w)*100)};min-width:28px;text-align:right">${val}</span>
+        <span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right">/${cfg.w}</span>
+      </div>`;
+    }).join('');
+    const bonusRow = s.bonus ? `<div class="score-row"><span class="score-label">🌟 Bonus Points</span>${scBar(s.bonus,20)}<span style="font-size:12px;font-weight:700;color:#f59e0b;min-width:28px;text-align:right">${s.bonus}</span><span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right"> pts</span></div>` : '';
+    return `<div class="score-card" style="position:relative">
+      <div style="position:absolute;top:12px;right:12px;font-size:20px">${medal}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">${initials}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${esc(name)}</div>
+          <div style="font-size:10px;color:var(--text3)">${esc(team)} · ${s.closed}/${s.total_tasks} closed</div>
+        </div>
+        <div style="text-align:right;margin-right:28px">
+          <div style="font-family:var(--serif);font-size:28px;color:${tColor};font-weight:700">${s.total}</div>
+          <div style="font-size:10px;font-weight:600;color:${tColor}">${scLabel(s.total)}</div>
+        </div>
+      </div>
+      ${rows}${bonusRow}
+    </div>`;
+  }).join('');
+  if (!entries.length) grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:20px">No data — click ⟳ Recompute from Jira.</div>';
+}
+
+// ── Rankings panel ────────────────────────────────────────────────
+function renderRankings() {
+  const indScores  = getMergedIndividualScores();
+  const teamScores = getMergedTeamScores();
+  const nameMap    = buildNameMap();
+  const memberTeam = {};
+  getTeamsSource().forEach(t => (t.members||[]).forEach(m => { memberTeam[m.name]=t.name; }));
+
+  const indRanked  = Object.entries(indScores)
+    .map(([n,s]) => [resolvePortalName(n,nameMap), s, memberTeam[resolvePortalName(n,nameMap)]||''])
+    .sort((a,b)=>b[1].total-a[1].total);
+  const teamRanked = Object.entries(teamScores).sort((a,b)=>b[1].total-a[1].total);
+
+  const panel = document.getElementById('score-panel-rankings');
+  if (!panel) return;
+
+  const teamRows = teamRanked.map(([team,s],i)=>`
+    <tr style="background:${i%2===0?'var(--surface)':'var(--bg)'}">
+      <td style="padding:8px 12px;font-size:16px">${RANK_MEDALS[i]||`#${i+1}`}</td>
+      <td style="padding:8px 12px;font-size:12px;font-weight:600">${esc(team)}</td>
+      <td style="padding:8px 12px;font-size:13px;font-weight:700;color:${scColor(s.total)}">${s.total}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--text3)">${s.bonus?`🌟 +${s.bonus} bonus`:''}</td>
+    </tr>`).join('');
+
+  const indRows = indRanked.map(([name,s,team],i)=>`
+    <tr style="background:${i%2===0?'var(--surface)':'var(--bg)'}">
+      <td style="padding:8px 12px;font-size:16px">${RANK_MEDALS[i]||`#${i+1}`}</td>
+      <td style="padding:8px 12px;font-size:12px;font-weight:600">${esc(name)}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--text3)">${esc(team)}</td>
+      <td style="padding:8px 12px;font-size:13px;font-weight:700;color:${scColor(s.total)}">${s.total}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--text3)">${s.bonus?`🌟 +${s.bonus}`:''}</td>
+    </tr>`).join('');
+
+  // Special awards
+  const topHygiene  = indRanked.reduce((a,b)=>((b[1].jiraActivity||0)>(a[1].jiraActivity||0)?b:a), indRanked[0]||['—',{},'']);
+  const topOnTime   = indRanked.reduce((a,b)=>((b[1].onTimeDelivery||0)>(a[1].onTimeDelivery||0)?b:a), indRanked[0]||['—',{},'']);
+  const topBonus    = indRanked.reduce((a,b)=>((b[1].bonus||0)>(a[1].bonus||0)?b:a), indRanked[0]||['—',{},'']);
+  const topTeamImproved = teamRanked[0]?.[0] || '—';
+
+  panel.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+
+      <div class="score-card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">🏆 Team Rankings — ${esc(currentSprintLabel())}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">#</th>
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">Team</th>
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">Score</th>
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">Bonus</th>
+          </tr></thead>
+          <tbody>${teamRows}</tbody>
+        </table>
+      </div>
+
+      <div class="score-card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">👤 Individual Rankings — ${esc(currentSprintLabel())}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">#</th>
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">Name</th>
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">Pod</th>
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">Score</th>
+            <th style="padding:6px 12px;font-size:10px;text-align:left;color:var(--text3)">Bonus</th>
+          </tr></thead>
+          <tbody>${indRows}</tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Special Awards -->
+    <div class="score-card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">🏅 Special Awards — ${esc(currentSprintLabel())}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        ${[
+          { icon:'📋', title:'Highest Jira Discipline', name: topHygiene[0], score: topHygiene[1].jiraActivity||0, label:'Jira Activity' },
+          { icon:'⏰', title:'Best On-Time Delivery',   name: topOnTime[0],  score: topOnTime[1].onTimeDelivery||0, label:'On-Time Score' },
+          { icon:'🌟', title:'Most Valuable (Bonus)',   name: topBonus[0],   score: topBonus[1].bonus||0, label:'Bonus Points' },
+          { icon:'🚀', title:'Top Team',                name: topTeamImproved, score: teamScores[topTeamImproved]?.total||0, label:'Team Score' },
+        ].map(a=>`<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:24px;margin-bottom:4px">${a.icon}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${a.title}</div>
+          <div style="font-size:14px;font-weight:700">${esc(a.name)}</div>
+          <div style="font-size:11px;color:var(--text3)">${a.label}: ${a.score}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Sprint End Actions -->
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="freezeSprintScores()">❄️ Freeze Sprint &amp; Archive</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadCurrentScoresExcel()">⬇ Download Excel</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchScoreTab('history')">📂 View History</button>
+      <span style="font-size:11px;color:var(--text3)" id="sprint-freeze-status"></span>
+    </div>`;
+}
+
+// ── Bonus Modal ───────────────────────────────────────────────────
+let _bonusTarget = { type:'individual', name:'' };
+
+function openBonusModal(type, name) {
+  _bonusTarget = { type, name };
+  document.getElementById('bonus-points-input').value  = '';
+  document.getElementById('bonus-awarded-by').value    = '';
+  document.getElementById('bonus-reason-input').value  = '';
+  document.getElementById('bonus-reason-preset').value = '';
+  document.getElementById(type==='team'?'bonus-type-team':'bonus-type-ind').checked = true;
+  onBonusTypeChange();
+  setTimeout(()=>{ const s=document.getElementById('bonus-recipient-select'); if(s&&name) s.value=name; },60);
+  openModal('bonus-modal');
+}
+
+function onBonusTypeChange() {
+  const type = document.querySelector('input[name="bonus-type"]:checked')?.value||'individual';
+  const sel  = document.getElementById('bonus-recipient-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Choose —</option>';
+
+  // Use a small delay on first call so getTeamsSource() has data
+  const teams = getTeamsSource();
+
+  if (type==='individual') {
+    teams.forEach(team => {
+      const grp = document.createElement('optgroup'); grp.label = team.name;
+      (team.members||[]).forEach(m=>{ if(!m.name) return; const o=document.createElement('option'); o.value=m.name; o.textContent=m.name; grp.appendChild(o); });
+      if (grp.children.length) sel.appendChild(grp);
+    });
+    // Fallback: if no teams loaded yet, pull names from SPRINT_DATA assignees
+    if (sel.options.length <= 1 && typeof SPRINT_DATA !== 'undefined' && SPRINT_DATA.length) {
+      const nameMap = buildNameMap();
+      const seen = new Set();
+      SPRINT_DATA.forEach(i => {
+        if (!i.assignee) return;
+        const n = nameMap[i.assignee.toLowerCase()] || nameMap[i.assignee.split(' ')[0].toLowerCase()] || i.assignee;
+        if (seen.has(n)) return; seen.add(n);
+        const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
+      });
+    }
+  } else {
+    teams.forEach(t=>{ const o=document.createElement('option'); o.value=t.name; o.textContent=t.name; sel.appendChild(o); });
+  }
+
+  // Max-height + scroll so it doesn't overflow the modal
+  sel.style.maxHeight  = '180px';
+  sel.style.overflowY  = 'auto';
+  // Use listbox style (size>1) for individuals so scroll works; keep dropdown for teams
+  sel.size = type==='individual' ? Math.min(8, sel.options.length) : 1;
+
+  document.getElementById('bonus-type-ind-label').style.borderColor  = type==='individual' ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('bonus-type-team-label').style.borderColor = type==='team'       ? 'var(--accent)' : 'var(--border)';
+}
+
+function applyBonusPreset(val) { if(val) document.getElementById('bonus-reason-input').value=val; }
+
+function submitBonus() {
+  const type      = document.querySelector('input[name="bonus-type"]:checked')?.value||'individual';
+  const recipient = document.getElementById('bonus-recipient-select').value;
+  const points    = Number(document.getElementById('bonus-points-input').value);
+  const by        = document.getElementById('bonus-awarded-by').value.trim();
+  const reason    = document.getElementById('bonus-reason-input').value.trim();
+  if (!recipient) { showToast('Select a recipient'); return; }
+  if (!points||points<1) { showToast('Enter points > 0'); return; }
+  if (!by)     { showToast('Enter who is awarding the bonus'); return; }
+  if (!reason) { showToast('Enter a reason'); return; }
+  const log = getBonusLog();
+  log.push({ id:Date.now(), type, recipient:type==='individual'?recipient:'', team:type==='team'?recipient:'', points, awardedBy:by, date:new Date().toISOString().slice(0,10), sprint:currentSprintLabel(), reason });
+  saveBonusLog(log);
+  closeModal('bonus-modal');
+  computeAllScores();
+  showToast(`🌟 +${points} bonus awarded to ${recipient}`);
+}
+
+// ── Bonus Log panel ───────────────────────────────────────────────
+function renderBonusLog() {
+  const log   = getBonusLog();
+  const panel = document.getElementById('score-panel-bonus');
+  if (!panel) return;
+  const total = log.reduce((s,b)=>s+(Number(b.points)||0),0);
+  const hdr = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:13px;font-weight:700">🌟 Bonus Points Audit Log</div>
+    <div style="font-size:11px;color:var(--text3)">${log.length} entries · ${total} total points</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="openBonusModal('individual','')">+ Award Bonus</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadBonusLogExcel()">⬇ Excel</button>
+    </div></div>`;
+  if (!log.length) { panel.innerHTML=`<div class="score-card">${hdr}<div style="font-size:13px;color:var(--text3);padding:12px 0">No bonus points awarded yet.</div></div>
+    <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">✏️ Manual Score Inputs <span style="font-size:11px;font-weight:400;color:var(--text3)">(metrics not derivable from Jira)</span></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Release Success, SLA Adherence, Estimation Accuracy, Release Contribution — enter per person/team.</div>
+      <div id="manual-score-table" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="saveManualScores()">Save Manual Scores</button>
+        <span id="manual-save-status" style="font-size:11px;color:var(--green)"></span>
+      </div>
+    </div>`; renderManualInputs(); return; }
+  const rows = [...log].reverse().map(b=>`<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:7px 10px;font-size:11px">${b.date}</td>
+    <td style="padding:7px 10px;font-size:12px;font-weight:600">${esc(b.recipient||b.team)}</td>
+    <td style="padding:7px 10px"><span style="font-size:10px;padding:2px 7px;border-radius:4px;background:${b.type==='team'?'rgba(124,58,237,0.1)':'rgba(26,115,232,0.1)'};color:${b.type==='team'?'#7c3aed':'var(--accent)'}">${b.type==='team'?'Team':'Individual'}</span></td>
+    <td style="padding:7px 10px;font-size:14px;font-weight:700;color:#f59e0b">+${b.points}</td>
+    <td style="padding:7px 10px;font-size:11px">${esc(b.awardedBy)}</td>
+    <td style="padding:7px 10px;font-size:11px;color:var(--text2)">${esc(b.reason)}</td>
+    <td style="padding:7px 10px;font-size:11px;color:var(--text3)">${esc(b.sprint||'')}</td>
+    <td style="padding:7px 10px"><button onclick="deleteBonus(${b.id})" style="border:none;background:none;cursor:pointer;color:var(--red);font-size:13px">✕</button></td>
+  </tr>`).join('');
+  panel.innerHTML = `<div class="score-card">${hdr}<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse"><thead style="background:var(--bg)"><tr>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Date</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Recipient</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Type</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Points</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Awarded By</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Reason</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Sprint</th>
+      <th></th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div>
+    <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">✏️ Manual Score Inputs <span style="font-size:11px;font-weight:400;color:var(--text3)">(metrics not derivable from Jira)</span></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Release Success, SLA Adherence, Estimation Accuracy, Release Contribution — enter per person/team.</div>
+      <div id="manual-score-table" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="saveManualScores()">Save Manual Scores</button>
+        <span id="manual-save-status" style="font-size:11px;color:var(--green)"></span>
+      </div>
+    </div>`;
+  renderManualInputs();
+}
+
+function deleteBonus(id) { saveBonusLog(getBonusLog().filter(b=>b.id!==id)); renderBonusLog(); computeAllScores(); showToast('Bonus entry removed'); }
+
+// ── Excel / CSV download ──────────────────────────────────────────
+function csvEsc(v){ const s=String(v==null?'':v); return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:`${s}`; }
+function csvRow(a){ return a.map(csvEsc).join(','); }
+
+function downloadAsCSV(filename, sheets) {
+  let csv='';
+  sheets.forEach(sh=>{ csv+=`\n\n=== ${sh.name} ===\n`+sh.rows.map(r=>csvRow(r)).join('\n'); });
+  const blob=new Blob([csv.trimStart()],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function downloadScoresExcel(sprintLabel, indScores, teamScores, bonusLog) {
+  const nameMap={}, memberTeam={};
+  getTeamsSource().forEach(t=>(t.members||[]).forEach(m=>{ if(m.name){nameMap[m.name.toLowerCase()]=m.name; nameMap[m.name.split(' ')[0].toLowerCase()]=m.name; memberTeam[m.name]=t.name;} }));
+  const resolve=n=>nameMap[n.toLowerCase()]||nameMap[n.split(' ')[0].toLowerCase()]||n;
+
+  const teamRows=[
+    ['Rank','Team','Sprint Commit','Velocity','Bug Leakage','Jira Discipline','Release Success','SLA Adherence','Bonus','TOTAL','Label','Closed','Total Tasks','Bugs'],
+    ...Object.entries(teamScores).sort((a,b)=>b[1].total-a[1].total).map(([t,s],i)=>[i+1,t,s.sprintCommit,s.velocity,s.bugLeakage,s.jiraDiscipline,s.releaseSuccess,s.slaAdherence,s.bonus,s.total,scLabel(s.total),s.closed_tasks,s.total_tasks,s.bug_count])
+  ];
+  const indEntries=Object.entries(indScores).map(([n,s])=>[resolve(n),memberTeam[resolve(n)]||'',s]).sort((a,b)=>b[2].total-a[2].total);
+  const indRows=[
+    ['Rank','Name','Team','Jira Activity','Task Completion','On-Time Delivery','Est. Accuracy','Release Contrib','Bonus','TOTAL','Label','Closed','Total Tasks'],
+    ...indEntries.map(([name,team,s],i)=>[i+1,name,team,s.jiraActivity,s.taskCompletion,s.onTimeDelivery,s.estAccuracy,s.releaseContrib,s.bonus,s.total,scLabel(s.total),s.closed,s.total_tasks])
+  ];
+  const bonusRows=[
+    ['Date','Recipient','Type','Points','Awarded By','Reason','Sprint'],
+    ...(bonusLog||[]).map(b=>[b.date,b.recipient||b.team,b.type,b.points,b.awardedBy,b.reason,b.sprint||''])
+  ];
+  downloadAsCSV(`Adloggs-Scores-${(sprintLabel||'Sprint').replace(/\s+/g,'-')}.csv`,[
+    {name:'Team Scores',rows:teamRows},{name:'Individual Scores',rows:indRows},{name:'Bonus Log',rows:bonusRows}
+  ]);
+  showToast('Score data downloaded as CSV ✓');
+}
+
+function downloadCurrentScoresExcel() {
+  downloadScoresExcel(currentSprintLabel(),getMergedIndividualScores(),getMergedTeamScores(),getBonusLog());
+}
+function downloadBonusLogExcel() {
+  const log=getBonusLog();
+  downloadAsCSV('Adloggs-BonusLog.csv',[{name:'Bonus Log',rows:[['Date','Recipient','Type','Points','Awarded By','Reason','Sprint'],...log.map(b=>[b.date,b.recipient||b.team,b.type,b.points,b.awardedBy,b.reason,b.sprint||''])]}]);
+}
+function downloadSprintHistoryExcel(sprintLabel) {
+  const h=JSON.parse(localStorage.getItem('adloggs_score_history')||'[]').find(x=>x.sprint===sprintLabel);
+  if (!h){showToast('Sprint data not found');return;}
+  downloadScoresExcel(h.sprint,Object.fromEntries((h.individuals||[]).map(p=>[p.name,p])),Object.fromEntries((h.teams||[]).map(t=>[t.team,t])),h.bonusLog||[]);
+}
+
+// ── Sprint Freeze & Archive ───────────────────────────────────────
+function freezeSprintScores() {
+  const sprint=currentSprintLabel();
+  const indScores=getMergedIndividualScores(), teamScs=getMergedTeamScores();
+  const nameMap={}, memberTeam={};
+  getTeamsSource().forEach(t=>(t.members||[]).forEach(m=>{if(m.name){nameMap[m.name.toLowerCase()]=m.name;nameMap[m.name.split(' ')[0].toLowerCase()]=m.name;memberTeam[m.name]=t.name;}}));
+  const resolve=n=>nameMap[n.toLowerCase()]||nameMap[n.split(' ')[0].toLowerCase()]||n;
+  const history=JSON.parse(localStorage.getItem('adloggs_score_history')||'[]');
+  const existing=history.findIndex(h=>h.sprint===sprint);
+  const entry={
+    sprint, frozen:new Date().toISOString(),
+    individuals:Object.entries(indScores).map(([n,s])=>({name:resolve(n),team:memberTeam[resolve(n)]||'',...s})).sort((a,b)=>b.total-a.total),
+    teams:Object.entries(teamScs).map(([t,s])=>({team:t,...s})).sort((a,b)=>b.total-a.total),
+    bonusLog:getBonusLog().filter(b=>b.sprint===sprint),
+  };
+  if(existing>=0) history[existing]=entry; else history.unshift(entry);
+  localStorage.setItem('adloggs_score_history',JSON.stringify(history.slice(0,20)));
+  document.getElementById('sprint-freeze-status').textContent=`✓ Archived ${sprint}`;
+  showToast(`Sprint scores frozen and archived ✓`);
+}
+
+// ── History panel ─────────────────────────────────────────────────
+function renderHistoryPanel() {
+  const history=JSON.parse(localStorage.getItem('adloggs_score_history')||'[]');
+  const panel=document.getElementById('score-panel-history');
+  if (!panel) return;
+  if (!history.length){panel.innerHTML='<div style="padding:20px;font-size:13px;color:var(--text3)">No archived sprints yet. Use ❄️ Freeze Sprint &amp; Archive from the Rankings tab.</div>';return;}
+
+  panel.innerHTML=history.map(h=>{
+    const ti=h.individuals?.[0], tt=h.teams?.[0];
+    const tRows=(h.teams||[]).map((t,i)=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;font-size:14px">${RANK_MEDALS[i]||`#${i+1}`}</td><td style="padding:5px 8px;font-size:12px;font-weight:600">${esc(t.team)}</td><td style="padding:5px 8px;font-size:13px;font-weight:700;color:${scColor(t.total)}">${t.total}</td><td style="padding:5px 8px;font-size:11px;color:#f59e0b">${t.bonus?`+${t.bonus} 🌟`:''}</td></tr>`).join('');
+    const iRows=(h.individuals||[]).map((p,i)=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;font-size:14px">${RANK_MEDALS[i]||`#${i+1}`}</td><td style="padding:5px 8px;font-size:12px;font-weight:600">${esc(p.name)}</td><td style="padding:5px 8px;font-size:11px;color:var(--text3)">${esc(p.team)}</td><td style="padding:5px 8px;font-size:13px;font-weight:700;color:${scColor(p.total)}">${p.total}</td><td style="padding:5px 8px;font-size:11px;color:#f59e0b">${p.bonus?`+${p.bonus} 🌟`:''}</td></tr>`).join('');
+    const bRows=(h.bonusLog||[]).map(b=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;font-size:11px">${b.date}</td><td style="padding:5px 8px;font-size:12px;font-weight:600">${esc(b.recipient||b.team)}</td><td style="padding:5px 8px;font-size:13px;color:#f59e0b;font-weight:700">+${b.points}</td><td style="padding:5px 8px;font-size:11px">${esc(b.awardedBy)}</td><td style="padding:5px 8px;font-size:11px;color:var(--text2)">${esc(b.reason)}</td></tr>`).join('');
+    return `<div class="score-card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div><div style="font-size:14px;font-weight:700">${esc(h.sprint)}</div><div style="font-size:11px;color:var(--text3)">Archived: ${h.frozen?.slice(0,10)||''} · ${h.individuals?.length||0} members · ${h.teams?.length||0} teams</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${tt?`<div style="background:var(--bg);padding:5px 12px;border-radius:6px;font-size:11px">🏆 <strong>${esc(tt.team)}</strong> — ${tt.total}</div>`:''}
+          ${ti?`<div style="background:var(--bg);padding:5px 12px;border-radius:6px;font-size:11px">🥇 <strong>${esc(ti.name)}</strong> — ${ti.total}</div>`:''}
+          <button class="btn btn-primary btn-sm" onclick="downloadSprintHistoryExcel('${esc(h.sprint)}')">⬇ Excel</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:${(h.bonusLog||[]).length?'14px':'0'}">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Team Rankings</div>
+          <table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--bg)"><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">#</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Team</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Score</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Bonus</th></tr></thead><tbody>${tRows}</tbody></table>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Individual Rankings</div>
+          <table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--bg)"><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">#</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Name</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Pod</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Score</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Bonus</th></tr></thead><tbody>${iRows}</tbody></table>
+        </div>
+      </div>
+      ${(h.bonusLog||[]).length?`<div><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Bonus Points (${h.bonusLog.length})</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--bg)"><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Date</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Recipient</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Points</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Awarded By</th><th style="padding:5px 8px;font-size:10px;color:var(--text3);text-align:left">Reason</th></tr></thead><tbody>${bRows}</tbody></table></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+
+// ── Manual inputs ─────────────────────────────────────────────────
+function renderManualInputs() {
+  const container  = document.getElementById('manual-score-table');
+  if (!container) return;
+  const indManual  = JSON.parse(localStorage.getItem('adloggs_manual_ind_scores')||'{}');
+  const teamManual = JSON.parse(localStorage.getItem('adloggs_manual_team_scores')||'{}');
+  const teams      = getTeamsSource();
+  let html = `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:4px 0">Team Metrics</div>`;
+  teams.forEach(team => {
+    const m = teamManual[team.name]||{};
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;flex-wrap:wrap">
+      <div style="font-size:12px;font-weight:600;min-width:160px">${esc(team.name)}</div>
+      <label style="font-size:11px;color:var(--text3)">Release Success (0-20)</label>
+      <input type="number" min="0" max="20" class="input" data-team="${team.name.replace(/"/g,'&quot;')}" data-key="releaseSuccess" value="${m.releaseSuccess??''}" placeholder="0-20" style="width:70px;font-size:11px;padding:4px 8px" />
+      <label style="font-size:11px;color:var(--text3)">SLA Adherence (0-15)</label>
+      <input type="number" min="0" max="15" class="input" data-team="${team.name.replace(/"/g,'&quot;')}" data-key="slaAdherence" value="${m.slaAdherence??''}" placeholder="0-15" style="width:70px;font-size:11px;padding:4px 8px" />
+    </div>`;
+  });
+  html += `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">Individual Metrics</div>`;
+  teams.forEach(team => {
+    (team.members||[]).forEach(m => {
+      if (!m.name) return;
+      const saved = indManual[m.name]||{};
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;flex-wrap:wrap">
+        <div style="font-size:12px;font-weight:600;min-width:150px">${esc(m.name)}</div>
+        <span style="font-size:10px;color:var(--text3)">${esc(team.name)}</span>
+        <label style="font-size:11px;color:var(--text3);margin-left:8px">Est. Accuracy (0-15)</label>
+        <input type="number" min="0" max="15" class="input" data-member="${m.name.replace(/"/g,'&quot;')}" data-key="estAccuracy" value="${saved.estAccuracy??''}" placeholder="0-15" style="width:70px;font-size:11px;padding:4px 8px" />
+        <label style="font-size:11px;color:var(--text3)">Release Contrib (0-20)</label>
+        <input type="number" min="0" max="20" class="input" data-member="${m.name.replace(/"/g,'&quot;')}" data-key="releaseContrib" value="${saved.releaseContrib??''}" placeholder="0-20" style="width:70px;font-size:11px;padding:4px 8px" />
+      </div>`;
+    });
+  });
+  container.innerHTML = html;
+}
+
+function saveManualScores() {
+  const indManual  = JSON.parse(localStorage.getItem('adloggs_manual_ind_scores')  ||'{}');
+  const teamManual = JSON.parse(localStorage.getItem('adloggs_manual_team_scores') ||'{}');
+  document.querySelectorAll('#manual-score-table input[data-member]').forEach(el => {
+    const name=el.dataset.member, key=el.dataset.key, val=el.value.trim();
+    if (!indManual[name]) indManual[name]={};
+    if (val!=='') indManual[name][key]=Number(val)||0;
+  });
+  document.querySelectorAll('#manual-score-table input[data-team]').forEach(el => {
+    const team=el.dataset.team, key=el.dataset.key, val=el.value.trim();
+    if (!teamManual[team]) teamManual[team]={};
+    if (val!=='') teamManual[team][key]=Number(val)||0;
+  });
+  localStorage.setItem('adloggs_manual_ind_scores',  JSON.stringify(indManual));
+  localStorage.setItem('adloggs_manual_team_scores', JSON.stringify(teamManual));
+  const el=document.getElementById('manual-save-status');
+  if (el){el.textContent='✓ Saved';setTimeout(()=>el.textContent='',2500);}
+  renderTeamScores(); renderIndividualScores();
+  showToast('Manual scores saved ✓');
+}
+
+function computeAllScores() {
+  renderTeamScores(); renderIndividualScores(); renderManualInputs(); renderRankings(); renderBonusLog();
+}
+
+function switchScoreTab(tab) {
+  ['team','individual','rankings','bonus','history'].forEach(t => {
+    const panel = document.getElementById(`score-panel-${t}`);
+    const btn   = document.getElementById(`score-tab-${t}`);
+    if (panel) panel.style.display = t===tab ? '' : 'none';
+    if (btn) {
+      btn.style.color        = t===tab ? 'var(--accent)' : 'var(--text3)';
+      btn.style.borderBottom = t===tab ? '2px solid var(--accent)' : '2px solid transparent';
+      btn.style.fontWeight   = t===tab ? '700' : '500';
+    }
+  });
+  if (tab==='rankings') renderRankings();
+  if (tab==='bonus')    renderBonusLog();
+  if (tab==='history')  renderHistoryPanel();
 }
 
 
