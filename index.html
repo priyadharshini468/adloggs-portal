@@ -4346,8 +4346,19 @@ function saveEodConfig() {
   const tz   = document.getElementById('eod-tz').value   || 'Asia/Kolkata';
   localStorage.setItem('adloggs_eod_time', time);
   localStorage.setItem('adloggs_eod_tz', tz);
+  // Clear last-sent so rescheduling allows same-day fire
+  localStorage.removeItem('adloggs_eod_last_sent');
   startEodScheduler();
-  document.getElementById('eod-status').textContent = `Scheduled at ${time}`;
+  // Check immediately — if the scheduled time is right now, fire without waiting 60s
+  const [h, m] = time.split(':').map(Number);
+  const fmt    = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour:'numeric', minute:'numeric', hour12:false });
+  const parts  = fmt.formatToParts(new Date());
+  const ch     = Number(parts.find(p=>p.type==='hour')?.value   || 0);
+  const cm     = Number(parts.find(p=>p.type==='minute')?.value || 0);
+  if (ch === h && cm === m) sendEodSummaryNow();
+
+  const statusEl = document.getElementById('eod-status');
+  if (statusEl) statusEl.textContent = `Scheduled at ${time} ✓`;
   showToast(`EOD summary scheduled at ${time} ✓`);
 }
 
@@ -4748,19 +4759,35 @@ function startEodScheduler() {
   if (_eodSchedulerTimer) clearInterval(_eodSchedulerTimer);
   const scheduledTime = localStorage.getItem('adloggs_eod_time') || '18:30';
   const [h, m] = scheduledTime.split(':').map(Number);
-  let lastSentDate = localStorage.getItem('adloggs_eod_last_sent') || '';
+  const tz = localStorage.getItem('adloggs_eod_tz') || 'Asia/Kolkata';
+
+  // Use Intl.DateTimeFormat parts — immune to locale 12h/24h formatting quirks
+  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: 'numeric', minute: 'numeric', hour12: false });
 
   _eodSchedulerTimer = setInterval(() => {
-    const now = new Date();
-    const str = now.toLocaleString('en-IN', { timeZone: localStorage.getItem('adloggs_eod_tz') || 'Asia/Kolkata', hour:'2-digit', minute:'2-digit', hour12: false });
-    const [ch, cm] = str.split(':').map(Number);
+    const now   = new Date();
+    const parts = fmt.formatToParts(now);
+    const ch    = Number(parts.find(p => p.type === 'hour')?.value   || 0);
+    const cm    = Number(parts.find(p => p.type === 'minute')?.value || 0);
     const today = now.toISOString().slice(0, 10);
+    const lastSentDate = localStorage.getItem('adloggs_eod_last_sent') || '';
+
+    // Update live countdown in status label
+    const statusEl = document.getElementById('eod-status');
+    if (statusEl && document.getElementById('sec-settings')?.classList.contains('active')) {
+      const minsLeft = ((h * 60 + m) - (ch * 60 + cm) + 1440) % 1440;
+      if (minsLeft === 0) {
+        statusEl.textContent = '⏳ Sending now…';
+      } else {
+        statusEl.textContent = `Next send in ${minsLeft < 60 ? `${minsLeft}m` : `${Math.floor(minsLeft/60)}h ${minsLeft%60}m`}`;
+      }
+    }
+
     if (ch === h && cm === m && lastSentDate !== today) {
-      lastSentDate = today;
       localStorage.setItem('adloggs_eod_last_sent', today);
       sendEodSummaryNow();
     }
-  }, 60000);
+  }, 60000); // check every minute
 }
 
 // ================================================================
