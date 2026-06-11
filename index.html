@@ -800,7 +800,7 @@
         <div class="divider"></div>
 
         <!-- DESTINATION 1: Full report person -->
-        <div style="margin-bottom:16px">
+        <div id="eod-fullreport-row" style="margin-bottom:16px;opacity:1;transition:opacity 0.2s">
           <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">📨 Full Report — Single Person</div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Receives one consolidated message with all members' activity grouped by pod.</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -808,11 +808,13 @@
             <input class="input" id="eod-fullreport-webhook" placeholder="https://chat.googleapis.com/v1/spaces/..." style="flex:1;min-width:260px;font-size:11px" />
             <button class="btn btn-ghost btn-sm" onclick="saveEodFullReport()">Save</button>
             <span id="eod-fullreport-status" style="font-size:11px;color:var(--green)"></span>
+            <button id="eod-toggle-fullreport" onclick="toggleEodDestination('fullreport')"
+              style="flex-shrink:0;border:none;cursor:pointer;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:#22c55e;color:#fff;letter-spacing:0.5px;transition:background 0.2s">ON</button>
           </div>
         </div>
 
         <!-- DESTINATION 2: Group chat -->
-        <div style="margin-bottom:16px">
+        <div id="eod-group-row" style="margin-bottom:16px;opacity:1;transition:opacity 0.2s">
           <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">👥 Full Report — Group Chat</div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Sends the same consolidated report to a team-wide Google Chat Space or group.</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -820,6 +822,8 @@
             <input class="input" id="eod-group-webhook" placeholder="https://chat.googleapis.com/v1/spaces/..." style="flex:1;min-width:260px;font-size:11px" />
             <button class="btn btn-ghost btn-sm" onclick="saveEodGroup()">Save</button>
             <span id="eod-group-status" style="font-size:11px;color:var(--green)"></span>
+            <button id="eod-toggle-group" onclick="toggleEodDestination('group')"
+              style="flex-shrink:0;border:none;cursor:pointer;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:#22c55e;color:#fff;letter-spacing:0.5px;transition:background 0.2s">ON</button>
           </div>
         </div>
 
@@ -4210,6 +4214,26 @@ function saveEodGroup() {
   showToast('Group chat destination saved ✓');
 }
 
+function toggleEodDestination(key) {
+  // key = 'fullreport' or 'group'
+  const stored  = JSON.parse(localStorage.getItem(`adloggs_eod_dest_enabled`) || '{}');
+  const current = stored[key] !== false; // default ON
+  stored[key]   = !current;
+  localStorage.setItem('adloggs_eod_dest_enabled', JSON.stringify(stored));
+  const isNowOn = stored[key] !== false;
+
+  const btn = document.getElementById(`eod-toggle-${key}`);
+  const row = document.getElementById(`eod-${key}-row`);
+  if (btn) {
+    btn.textContent    = isNowOn ? 'ON' : 'OFF';
+    btn.style.background = isNowOn ? '#22c55e' : '#d1d5db';
+    btn.style.color      = isNowOn ? '#fff'    : '#6b7280';
+  }
+  if (row) row.style.opacity = isNowOn ? '1' : '0.5';
+  updateEodBadge();
+  showToast(`${key === 'fullreport' ? 'Full report (person)' : 'Group chat'} ${isNowOn ? 'enabled ✓' : 'disabled'}`);
+}
+
 function saveEodConfig() {
   const time = document.getElementById('eod-time').value || '18:30';
   const tz   = document.getElementById('eod-tz').value   || 'Asia/Kolkata';
@@ -4253,17 +4277,20 @@ function toggleEodMember(name) {
 }
 
 function updateEodBadge() {
-  const members  = JSON.parse(localStorage.getItem('adloggs_eod_webhooks') || '{}');
-  const enabled  = JSON.parse(localStorage.getItem('adloggs_eod_enabled')  || '{}');
-  const full     = JSON.parse(localStorage.getItem('adloggs_eod_fullreport') || '{}');
-  const group    = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
+  const members     = JSON.parse(localStorage.getItem('adloggs_eod_webhooks')     || '{}');
+  const enabled     = JSON.parse(localStorage.getItem('adloggs_eod_enabled')      || '{}');
+  const destEnabled = JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled') || '{}');
+  const full        = JSON.parse(localStorage.getItem('adloggs_eod_fullreport')   || '{}');
+  const group       = JSON.parse(localStorage.getItem('adloggs_eod_group')        || '{}');
   const activeMembers = Object.keys(members).filter(n => members[n] && enabled[n] !== false).length;
-  const count    = activeMembers + (full.webhook ? 1 : 0) + (group.webhook ? 1 : 0);
-  const badge    = document.getElementById('eod-cfg-badge');
+  const frActive      = full.webhook  && destEnabled['fullreport'] !== false ? 1 : 0;
+  const grActive      = group.webhook && destEnabled['group']      !== false ? 1 : 0;
+  const count         = activeMembers + frActive + grActive;
+  const badge         = document.getElementById('eod-cfg-badge');
   if (!badge) return;
   if (count > 0) {
     badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
-    badge.textContent = `✓ ${activeMembers} member${activeMembers !== 1 ? 's' : ''} active${full.webhook || group.webhook ? ' + reports' : ''}`;
+    badge.textContent = `✓ ${activeMembers} member${activeMembers !== 1 ? 's' : ''} active${frActive || grActive ? ' + reports' : ''}`;
   } else {
     badge.style.background = 'rgba(245,166,35,0.12)'; badge.style.color = 'var(--amber)';
     badge.textContent = '⚠ Not configured';
@@ -4525,6 +4552,7 @@ async function sendEodSummaryNow() {
   }
 
   // ---- 3. Full consolidated report ----
+  const destEnabled = JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled') || '{}');
   if (fullReport.webhook || groupReport.webhook) {
     const allTeamSummaries = teams.map(team => ({
       teamName: team.name,
@@ -4532,8 +4560,8 @@ async function sendEodSummaryNow() {
       members:  (team.members || []).map(m => ({ name: m.name, issues: issuesFor(m.name) })),
     }));
     const fullText = buildFullReportMessage(allTeamSummaries, todayLabel);
-    if (fullReport.webhook)  await post(fullReport.webhook, fullText);
-    if (groupReport.webhook) await post(groupReport.webhook, fullText);
+    if (fullReport.webhook  && destEnabled['fullreport'] !== false) await post(fullReport.webhook, fullText);
+    if (groupReport.webhook && destEnabled['group']      !== false) await post(groupReport.webhook, fullText);
   }
 
   const msg = `✓ Sent ${sent} message${sent !== 1 ? 's' : ''}${failed ? ` · ${failed} failed` : ''}`;
@@ -4605,6 +4633,15 @@ function init() {
     const gr = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
     if (gr.name)    document.getElementById('eod-group-name').value    = gr.name;
     if (gr.webhook) { document.getElementById('eod-group-webhook').value = gr.webhook; document.getElementById('eod-group-status').textContent = '✓ Saved'; }
+    // Restore destination toggle states
+    const destEnabled = JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled') || '{}');
+    ['fullreport', 'group'].forEach(key => {
+      const isOn = destEnabled[key] !== false;
+      const btn  = document.getElementById(`eod-toggle-${key}`);
+      const row  = document.getElementById(`eod-${key}-row`);
+      if (btn) { btn.textContent = isOn ? 'ON' : 'OFF'; btn.style.background = isOn ? '#22c55e' : '#d1d5db'; btn.style.color = isOn ? '#fff' : '#6b7280'; }
+      if (row) row.style.opacity = isOn ? '1' : '0.5';
+    });
   } catch(e) {}
 
   document.querySelector('.sidebar').style.visibility = 'visible';
