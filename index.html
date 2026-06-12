@@ -4827,6 +4827,32 @@ function scBar(val, max) {
 }
 function isDone(s){ return DONE_STATUSES.includes((s||'').toLowerCase()); }
 
+// Generate breakdown tooltip text for each scoring key
+function scTooltip(key, s) {
+  const d = s._detail || {};
+  switch(key) {
+    case 'sprintCommit':
+      return `Closed ${d.closed||0} of ${d.total||0} tasks = ${d.cr||0}%\n≥95%→20 | 85–94%→16 | 70–84%→12 | 50–69%→8 | <50%→4`;
+    case 'velocity':
+      return `Done+In Progress: ${(d.closed||0)+(d.inProg||0)} of ${d.total||0} = ${d.ar||0}%\n≥85%→15 | 70–84%→11 | 50–69%→7 | <50%→4`;
+    case 'bugLeakage':
+      return `${d.bugs||0} bug-type issues out of ${d.total||0} total = ${d.br||0}%\n≤5%→20 | 6–10%→16 | 11–20%→12 | >20%→6`;
+    case 'jiraDiscipline':
+      return `${d.withMeta||0} of ${d.total||0} tasks have a due date or comment\nScore = (withMeta/total) × 10`;
+    case 'jiraActivity':
+      return `${d.withCmt||0}/${d.n||0} tasks with comments (40%)\n${d.withDue||0}/${d.n||0} tasks with due date (30%)\n${d.nonStale||0}/${d.n||0} tasks not stale (30%)`;
+    case 'taskCompletion':
+      return `Closed ${d.closed||0} tasks. Team avg: ${d.teamAvgClosed||0}\nScore = (closed/avg) × 25, capped at 25`;
+    case 'onTimeDelivery':
+      return `${d.overdue||0} overdue open tasks out of ${d.n||0} total\nScore = (1 - overdue/total) × 25`;
+    case 'releaseSuccess':   return 'Manual input — Release Success Rate (0–20)';
+    case 'slaAdherence':     return 'Manual input — SLA Adherence (0–15)';
+    case 'estAccuracy':      return 'Manual input — Estimation Accuracy (0–15)';
+    case 'releaseContrib':   return 'Manual input — Release Contribution (0–20)';
+    default: return '';
+  }
+}
+
 // Name resolution: maps Jira assignee → portal member name via first-name
 function buildNameMap() {
   const map = {};
@@ -4873,9 +4899,15 @@ function computeIndividualAutoScores() {
   const nameMap = buildNameMap();
   const members = {};
 
+  // Only include known team members — skip Unassigned and unknown assignees
+  const validNames = new Set();
+  getTeamsSource().forEach(t => (t.members||[]).forEach(m => { if (m.name) validNames.add(m.name); }));
+
   issues.forEach(i => {
-    const raw    = i.assignee || 'Unassigned';
+    const raw = i.assignee || '';
+    if (!raw || raw.toLowerCase() === 'unassigned') return;
     const portal = resolvePortalName(raw, nameMap);
+    if (!validNames.has(portal)) return;
     if (!members[portal]) members[portal] = [];
     members[portal].push(i);
   });
@@ -4889,30 +4921,36 @@ function computeIndividualAutoScores() {
   Object.entries(members).forEach(([name, myIssues]) => {
     const n = myIssues.length || 1;
 
-    // A. Jira Activity (15): comments + due dates + non-stale
+    // A. Jira Activity (15)
+    // 40% weight: tasks with at least 1 comment
+    // 30% weight: tasks with a due date set
+    // 30% weight: tasks not stale (closed, or due date within last 5 days)
     const withCmt  = myIssues.filter(i=>(i.comments||[]).length>0).length;
     const withDue  = myIssues.filter(i=>i.due).length;
     const nonStale = myIssues.filter(i=>{
       if (!i.due) return true;
-      const d=(new Date(today)-new Date(i.due))/86400000;
-      return d<5 || isDone(i.status);
+      return (new Date(today)-new Date(i.due))/86400000 < 5 || isDone(i.status);
     }).length;
     const jiraActivity = Math.min(15, Math.round((0.4*(withCmt/n)+0.3*(withDue/n)+0.3*(nonStale/n))*15));
 
-    // B. Task Completion (25): relative to team average
-    const closed         = myIssues.filter(i=>isDone(i.status)).length;
+    // B. Task Completion (25)
+    // Relative to team average: (person's closed / team avg closed) × 25, capped at 25
+    const closed = myIssues.filter(i=>isDone(i.status)).length;
     const taskCompletion = Math.min(25, Math.round((closed/teamAvgClosed)*25));
 
     // C. On-Time Delivery (25)
-    const closedDue  = myIssues.filter(i=>i.due&&isDone(i.status));
-    const onTime     = closedDue.filter(i=>new Date(i.due)>=new Date(today)).length;
-    const onTimeDelivery = closedDue.length===0 ? 18 : Math.round((onTime/closedDue.length)*25);
+    // Penalises overdue open tasks: score = (1 - overdue_ratio) × 25
+    // If has closed tasks with due dates: also factor those in
+    const overdue = myIssues.filter(i=>i.due && !isDone(i.status) && new Date(i.due)<new Date(today)).length;
+    const overdueRatio = overdue / n;
+    const onTimeDelivery = Math.min(25, Math.max(0, Math.round((1 - overdueRatio) * 25)));
 
     scores[name] = {
       jiraActivity, taskCompletion, onTimeDelivery,
-      estAccuracy:0, releaseContrib:0,
-      bonus:0,
-      closed, total_tasks: myIssues.length,
+      estAccuracy:0, releaseContrib:0, bonus:0,
+      closed, total_tasks: n,
+      _detail: { withCmt, withDue, nonStale, n, closed,
+        teamAvgClosed: Math.round(teamAvgClosed*10)/10, overdue }
     };
   });
   return scores;
@@ -4927,27 +4965,43 @@ function computeTeamAutoScores() {
   getTeamsSource().forEach(team => {
     const mNames  = (team.members||[]).map(m=>m.name.toLowerCase());
     const tIssues = issues.filter(i => {
-      const pn = resolvePortalName(i.assignee||'', nameMap).toLowerCase();
-      return mNames.some(n=>pn===n||pn.startsWith(n.split(' ')[0]));
+      if (!i.assignee || i.assignee.toLowerCase()==='unassigned') return false;
+      const pn = resolvePortalName(i.assignee, nameMap).toLowerCase();
+      return mNames.some(n => pn===n || pn.startsWith(n.split(' ')[0]));
     });
-    const total  = tIssues.length||1;
-    const closed = tIssues.filter(i=>isDone(i.status)).length;
-    const bugs   = tIssues.filter(i=>(i.type||'').toLowerCase()==='bug').length;
-    const inProg = tIssues.filter(i=>(i.status||'').toLowerCase()==='in progress').length;
+    const total   = tIssues.length || 1;
+    const closed  = tIssues.filter(i=>isDone(i.status)).length;
+    const bugs    = tIssues.filter(i=>(i.type||'').toLowerCase()==='bug').length;
+    const inProg  = tIssues.filter(i=>(i.status||'').toLowerCase()==='in progress').length;
+    const today   = new Date().toISOString().slice(0,10);
+    const overdue = tIssues.filter(i=>i.due&&!isDone(i.status)&&new Date(i.due)<new Date(today)).length;
+    const withMeta = tIssues.filter(i=>i.due||(i.comments||[]).length).length;
 
+    // Sprint Commitment (20): closed% this sprint
+    // ≥95%→20 | 85–94%→16 | 70–84%→12 | 50–69%→8 | <50%→4
     const cr = closed/total;
-    const sprintCommit   = cr>=0.95?20:cr>=0.85?16:cr>=0.70?12:8;
+    const sprintCommit = cr>=0.95?20 : cr>=0.85?16 : cr>=0.70?12 : cr>=0.50?8 : 4;
+
+    // Velocity Stability (15): (closed + in-progress) % of total
+    // ≥85%→15 | 70–84%→11 | 50–69%→7 | <50%→4
     const ar = (closed+inProg)/total;
-    const velocity       = ar>=0.85?15:ar>=0.70?11:ar>=0.50?7:4;
+    const velocity = ar>=0.85?15 : ar>=0.70?11 : ar>=0.50?7 : 4;
+
+    // Bug Leakage (20): bug-type issues as % of total tasks
+    // ≤5%→20 | 6–10%→16 | 11–20%→12 | >20%→6
     const br = bugs/total;
-    const bugLeakage     = br<=0.05?20:br<=0.10?16:br<=0.20?12:6;
-    const withMeta       = tIssues.filter(i=>i.due||(i.comments||[]).length).length;
-    const jiraDiscipline = Math.min(10,Math.round((withMeta/total)*10));
+    const bugLeakage = br<=0.05?20 : br<=0.10?16 : br<=0.20?12 : 6;
+
+    // Jira Discipline (10): % tasks with due date OR ≥1 comment, scaled linearly
+    const jiraDiscipline = Math.min(10, Math.round((withMeta/total)*10));
 
     result[team.name] = {
       sprintCommit, velocity, bugLeakage, jiraDiscipline,
       releaseSuccess:0, slaAdherence:0, bonus:0,
-      total_tasks:tIssues.length, closed_tasks:closed, bug_count:bugs,
+      total_tasks: tIssues.length, closed_tasks: closed, bug_count: bugs,
+      _detail: { total, closed, cr:Math.round(cr*100),
+        inProg, ar:Math.round(ar*100), bugs, br:Math.round(br*100),
+        withMeta, overdue }
     };
   });
   return result;
@@ -4998,7 +5052,8 @@ function renderTeamScores() {
     const rows = Object.entries(TEAM_WEIGHTS).map(([key,cfg]) => {
       const val   = s[key]??0;
       const badge = cfg.auto ? `<span class="sc-auto-badge">AUTO</span>` : `<span class="sc-manual-badge">MANUAL</span>`;
-      return `<div class="score-row">
+      const tip   = scTooltip(key, s);
+      return `<div class="score-row" title="${tip.replace(/"/g,'&quot;')}">
         <span class="score-label">${cfg.label} ${badge}</span>
         ${scBar(val,cfg.w)}
         <span style="font-size:12px;font-weight:700;color:${scColor((val/cfg.w)*100)};min-width:28px;text-align:right">${val}</span>
@@ -5059,7 +5114,8 @@ function renderIndividualScores() {
     const rows = Object.entries(IND_WEIGHTS).map(([key,cfg]) => {
       const val   = s[key]??0;
       const badge = cfg.auto ? `<span class="sc-auto-badge">AUTO</span>` : `<span class="sc-manual-badge">MANUAL</span>`;
-      return `<div class="score-row">
+      const tip   = scTooltip(key, s).replace(/"/g,'&quot;');
+      return `<div class="score-row" title="${tip}">
         <span class="score-label">${cfg.label} ${badge}</span>
         ${scBar(val,cfg.w)}
         <span style="font-size:12px;font-weight:700;color:${scColor((val/cfg.w)*100)};min-width:28px;text-align:right">${val}</span>
@@ -5094,8 +5150,12 @@ function renderRankings() {
   const memberTeam = {};
   getTeamsSource().forEach(t => (t.members||[]).forEach(m => { memberTeam[m.name]=t.name; }));
 
+  const validNames = new Set();
+  getTeamsSource().forEach(t=>(t.members||[]).forEach(m=>{ if(m.name) validNames.add(m.name); }));
+
   const indRanked  = Object.entries(indScores)
     .map(([n,s]) => [resolvePortalName(n,nameMap), s, memberTeam[resolvePortalName(n,nameMap)]||''])
+    .filter(([name]) => validNames.has(name) && name.toLowerCase() !== 'unassigned')
     .sort((a,b)=>b[1].total-a[1].total);
   const teamRanked = Object.entries(teamScores).sort((a,b)=>b[1].total-a[1].total);
 
