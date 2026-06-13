@@ -1,0 +1,21 @@
+{
+  "_updated": "2026-06-13T05:50:02.416Z",
+  "_note": "Adloggs Portal config — auto-managed, do not edit manually",
+  "eod_time": "20:08",
+  "eod_tz": "Asia/Kolkata",
+  "eod_webhooks": {
+    "Raja": "https://chat.googleapis.com/v1/spaces/y9_ZDCAAAAE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=lygVW66NXMJXBngBbEv_R6vxhi9hEtLVykn1gUje6P8"
+  },
+  "eod_enabled": {
+    "Raja": false
+  },
+  "eod_dest_enabled": {},
+  "eod_fullreport": {
+    "name": "Vignesh",
+    "webhook": "https://chat.googleapis.com/v1/spaces/qr2njCAAAAE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=r3SLcgAIcyoVi01DpRIlnryWOYsOpIZwrTkQjvKxiWQ"
+  },
+  "eod_group": {
+    "name": "",
+    "webhook": ""
+  }
+}
