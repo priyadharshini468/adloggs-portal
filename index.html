@@ -169,6 +169,9 @@
   .score-label{font-size:12px;color:var(--text2)}
   .score-val{font-family:var(--serif);font-size:19px}
   .sc-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:3px;margin:0 10px}
+  .eod-day-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s}
+  .eod-day-on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .eod-day-off{background:var(--surface);color:var(--text3);border-color:var(--border)}
   .sc-bar{height:6px;border-radius:3px;transition:width 0.6s ease}
   .sc-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
   .sc-auto-badge{font-size:9px;background:rgba(26,115,232,0.1);color:var(--accent);padding:1px 5px;border-radius:3px;font-weight:600}
@@ -918,6 +921,18 @@
               <option value="America/New_York">EST (New York)</option>
             </select>
           </div>
+          <div>
+            <div class="form-label">Send on days</div>
+            <div style="display:flex;gap:4px" id="eod-days-picker">
+              <button type="button" data-day="1" onclick="toggleEodDay(this)" class="eod-day-btn eod-day-on" title="Monday">M</button>
+              <button type="button" data-day="2" onclick="toggleEodDay(this)" class="eod-day-btn eod-day-on" title="Tuesday">T</button>
+              <button type="button" data-day="3" onclick="toggleEodDay(this)" class="eod-day-btn eod-day-on" title="Wednesday">W</button>
+              <button type="button" data-day="4" onclick="toggleEodDay(this)" class="eod-day-btn eod-day-on" title="Thursday">T</button>
+              <button type="button" data-day="5" onclick="toggleEodDay(this)" class="eod-day-btn eod-day-on" title="Friday">F</button>
+              <button type="button" data-day="6" onclick="toggleEodDay(this)" class="eod-day-btn eod-day-off" title="Saturday">S</button>
+              <button type="button" data-day="0" onclick="toggleEodDay(this)" class="eod-day-btn eod-day-off" title="Sunday">S</button>
+            </div>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="saveEodConfig()" style="align-self:flex-end">Save Schedule</button>
           <button class="btn btn-ghost btn-sm" onclick="sendEodSummaryNow()" style="align-self:flex-end">▶ Send Now (Test)</button>
           <span id="eod-status" style="font-size:11px;color:var(--text3);align-self:flex-end"></span>
@@ -963,18 +978,6 @@
         </div>
         <div id="eod-member-table" style="display:flex;flex-direction:column;gap:5px"></div>
         <button class="btn btn-ghost btn-sm" onclick="reloadEodMembers()" style="margin-top:10px">↻ Reload Members from Jira</button>
-        <div style="margin-top:16px;padding:12px;background:rgba(245,166,35,0.07);border:1px solid rgba(245,166,35,0.25);border-radius:8px;font-size:11px;color:var(--text2);line-height:1.8">
-          <strong style="color:var(--text)">⚠ Webhooks are saved in this browser only.</strong><br>
-          They will be empty on a different computer or after clearing browser data.<br>
-          Use <strong>Export Config</strong> to save all webhook URLs to a file, then <strong>Import Config</strong> on the other device.
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn btn-ghost btn-sm" onclick="exportEodConfig()">⬇ Export Config</button>
-            <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">
-              ⬆ Import Config
-              <input type="file" accept=".json" onchange="importEodConfig(event)" style="display:none">
-            </label>
-          </div>
-        </div>
       </div>
 
 
@@ -1328,7 +1331,7 @@ const CLOUD_ID = '4087a625-67ca-4bbe-b2f0-3d406fdfed61';
 // Momentum:        aravind (Lead), Chinna Mani, mani, dinesh
 // Catalyst:        Sailavasan (Lead — 1 member only)
 // AI Intelligence: Jai Chandru SS (Lead), Venkateswaran E, Ramakrishnan, Muthu Rajeshwari M
-// Shared Resources: Vijayalavan T (= Vijay), Raja, Ranjith, Devika, Sethu Madhavan, Nanthakumar M
+// Shared Resources: Vijayalavan T (= Vijayalavan Tharmalingam in Jira), Raja, Ranjith, Devika
 const TEAMS_FROM_JIRA = [
   {
     id: 't1', name: 'Pinnacle', desc: 'Pod 1 · Backend & Platform', emoji: '🏆', bg: 'tb-purple',
@@ -1363,22 +1366,20 @@ const TEAMS_FROM_JIRA = [
     id: 't4', name: 'AI Intelligence', desc: 'Pod 4 · Loggi AI, MCP & Growth', emoji: '🤖', bg: 'tb-cyan',
     jiraAssignees: ['Jai Chandru SS','Venkateswaran E','Ramakrishnan','Muthu Rajeshwari M'],
     members: [
-      { name: 'Jai Chandru SS',     title: 'AI Lead',            initials: 'JC', av: 'av6',  status: 'online', jiraId: '712020:475a008b-f18b-4b72-a498-cf5118cdc942', issues: 4  },
+      { name: 'Ramakrishnan',       title: 'AI Lead',            initials: 'RK', av: 'av2',  status: 'online', jiraId: '',                                             issues: 0  },
+      { name: 'Jai Chandru SS',     title: 'AI Developer',       initials: 'JC', av: 'av6',  status: 'online', jiraId: '712020:475a008b-f18b-4b72-a498-cf5118cdc942', issues: 4  },
       { name: 'Venkateswaran E',    title: 'Data Analytics',     initials: 'VE', av: 'av10', status: 'online', jiraId: '712020:a46a85c1-442f-41b5-9478-2d91fb6ea043', issues: 0  },
-      { name: 'Ramakrishnan',       title: 'AI Developer',       initials: 'RK', av: 'av2',  status: 'online', jiraId: '',                                             issues: 0  },
       { name: 'Muthu Rajeshwari M', title: 'AI / MCP Developer', initials: 'MR', av: 'av3',  status: 'online', jiraId: '712020:1a7bcb39-8fcd-40ac-923a-75fc3ef5bfbc', issues: 1  },
     ]
   },
   {
     id: 'shared', name: 'Shared Resources', desc: 'Cross-pod · available to all pods', emoji: '🤝', bg: 'tb-shared',
-    jiraAssignees: ['Vijayalavan T','Raja'],
+    jiraAssignees: ['Vijayalavan T','Raja','Ranjith','Devika'],
     members: [
-      { name: 'Vijayalavan T',  title: 'UI — Entire Application',        initials: 'VT', av: 'av1',  status: 'online', jiraId: '', issues: 4 },
-      { name: 'Raja',           title: 'Overall Application & Team',     initials: 'RJ', av: 'av4',  status: 'online', jiraId: '', issues: 2 },
-      { name: 'Ranjith',        title: 'Deployment, CI/CD, Backend Git', initials: 'RJ', av: 'av7',  status: 'online', jiraId: '', issues: 1 },
-      { name: 'Devika',         title: 'QA',                             initials: 'DV', av: 'av9',  status: 'online', jiraId: '', issues: 0 },
-      { name: 'Sethu Madhavan', title: 'Data Analytics',                 initials: 'SM', av: 'av11', status: 'away',   jiraId: '', issues: 0 },
-      { name: 'Nanthakumar M',  title: 'Backend Developer',              initials: 'NM', av: 'av3',  status: 'away',   jiraId: '712020:1191aab8-63f0-4006-a2db-442953e7a67e', issues: 1 },
+      { name: 'Vijayalavan T', title: 'UI — Entire Application',        initials: 'VT', av: 'av1', status: 'online', jiraId: '', issues: 4 },
+      { name: 'Raja',          title: 'Overall Application & Team',     initials: 'RJ', av: 'av4', status: 'online', jiraId: '', issues: 2 },
+      { name: 'Ranjith',       title: 'Deployment, CI/CD, Backend Git', initials: 'RJ', av: 'av7', status: 'online', jiraId: '', issues: 1 },
+      { name: 'Devika',        title: 'QA',                             initials: 'DV', av: 'av9', status: 'online', jiraId: '', issues: 0 },
     ]
   },
 ];
@@ -1407,7 +1408,7 @@ const SPRINT_DATA = [
   {key:'AB-50',summary:'Design Social Media Posters (Instagram, Facebook, LinkedIn)',status:'Done',priority:'Highest',assignee:'Pravin',due:null,type:'Task',description:'Create three high-quality, visually appealing social media posters tailored for **Instagram, Facebook, and LinkedIn**. The goal is to maintain brand c',attachments:[],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-16',text:'No need testing'},{author:'Vijayalavan Tharmalingam',date:'2026-04-16',text:'We gave 2 samples, but all were rejected by management. We\'re trying to create one more poster sam'},{author:'Pravin',date:'2026-04-20',text:'I sent sample reference posters, and the team has selected their preferred styles. so now creating p'},{author:'Pravin',date:'2026-04-24',text:'Task completed, reviewed, and approved. Closing the ticket.'}]},
   {key:'AB-51',summary:'Adloggs Logo Design',status:'Done',priority:'Highest',assignee:'dinesh',due:null,type:'Task',description:'Design a modern, scalable, and brand-aligned logo shape for **Adloggs**, representing _“The Intelligent Operating System for Modern Delivery Infrastru',attachments:[{filename:'WhatsApp Image 2026-04-07 at 8.11.56 PM-20260408-034926.jpeg',mimeType:'image/jpeg',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13166'},{filename:'WhatsApp Image 2026-04-07 at 8.11.57 PM (1)-20260408-034942.',mimeType:'image/jpeg',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13167'},{filename:'WhatsApp Image 2026-04-07 at 8.11.57 PM-20260408-034932.jpeg',mimeType:'image/jpeg',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13168'}],comments:[{author:'Vijayalavan Tharmalingam',date:'2026-04-08',text:'Nivetha maam has asked for the shape options for out adloggs logo. can you please complete the task?'}]},
   {key:'AB-53',summary:'Support and Onboarding Work',status:'In Progress',priority:'Medium',assignee:'Chinna Mani',due:'2026-04-30',type:'Story',description:'Upload of newly onboarded custome information and other debugging and support works are carried on.',attachments:[],comments:[{author:'Chinna Mani',date:'2026-04-24',text:'SDC count daily updation.'},{author:'Chinna Mani',date:'2026-04-24',text:'Sumaiya shared a few orders with me and asked for the need data\'s'},{author:'Chinna Mani',date:'2026-05-04',text:'Onboard the customer (KFC - SFIL)'},{author:'Chinna Mani',date:'2026-05-04',text:'Devika shared a few orders with me and asked check the log from creation to current status'},{author:'Chinna Mani',date:'2026-05-04',text:'HariHaran shared a few orders with me and asked for the need data\'s'},{author:'Chinna Mani',date:'2026-05-04',text:'Re: Adloggs Demo @ Wed, Apr 15, 2026 2:00pm – 3:00pm (GMT+05:30) share API key production.'},{author:'Chinna Mani',date:'2026-05-12',text:'Sumaiya shared a few orders with me and asked for the need data\'s'}]},
-  {key:'AB-54',summary:'Customer Onboarding Flow',status:'Done',priority:'Medium',assignee:'raja',due:'2026-04-10',type:'Story',description:'New Customer Onboarding :   * Customers can be onboarded through website or App.  * On their first login to the dashboard, they should be able to choo',attachments:[],comments:[]},
+  {key:'AB-54',summary:'Customer Onboarding Flow',status:'Done',priority:'Medium',assignee:'Raja',due:'2026-04-10',type:'Story',description:'New Customer Onboarding :   * Customers can be onboarded through website or App.  * On their first login to the dashboard, they should be able to choo',attachments:[],comments:[]},
   {key:'AB-55',summary:'KFC Orders - Repeated Push to riders',status:'Done',priority:'Highest',assignee:'Ranjith',due:'2026-04-08',type:'Story',description:'Currently if KFC orders are not accepted by the riders, the orders are cancelled. This is reducing the order fulfillment.  * Going forward, if the ord',attachments:[],comments:[]},
   {key:'AB-56',summary:'test workflow in jira',status:'DEV QA',priority:'Medium',assignee:'priyadharshini',due:null,type:'Story',description:'',attachments:[],comments:[]},
   {key:'AB-57',summary:'Ek Bharat Office Board Designing',status:'Done',priority:'High',assignee:'dinesh',due:null,type:'Task',description:'',attachments:[],comments:[]},
@@ -1418,7 +1419,7 @@ const SPRINT_DATA = [
   {key:'AB-63',summary:'Shopify Integration',status:'In Progress',priority:'High',assignee:'mani',due:'2026-05-16',type:'Story',description:'## **Shopify Integration – Order Flow Overview**  ### **Purpose**  Enable seamless order flow from the Shopify platform to Adloggs for logistics execu',attachments:[],comments:[]},
   {key:'AB-65',summary:'Kilogram-Based Pricing + Vehicle Selection + Invoicing – Overview',status:'To Do',priority:'Medium',assignee:'Vignesh B',due:null,type:'Story',description:'## **Kilogram-Based Pricing + Vehicle Selection + Invoicing – Overview**  ### **Purpose**  Enable intelligent order allocation and accurate billing by',attachments:[],comments:[]},
   {key:'AB-67',summary:'Open Orders - Analytics',status:'Done',priority:'Medium',assignee:'aravind',due:null,type:'Story',description:'To know the number of orders picked by the riders from the open Orders screen, on click of each order from the open orders screen, data has to be stor',attachments:[],comments:[{author:'aravind',date:'2026-04-13',text:'Have implemented in the mobile app using  google analytics'}]},
-  {key:'AB-68',summary:'MyGigsters Rider Cron Changes',status:'Done',priority:'High',assignee:'Nanthakumar M',due:'2026-04-15',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-68',summary:'MyGigsters Rider Cron Changes',status:'Done',priority:'High',assignee:'Unassigned',due:'2026-04-15',type:'Task',description:'',attachments:[],comments:[]},
   {key:'AB-69',summary:'AI as standalone Plugin',status:'Done',priority:'Highest',assignee:'aravind',due:null,type:'Story',description:'A feature should act as a plugin or extension or Network Interceptor in any of the web application, which scaps the order data (Orders list, its statu',attachments:[],comments:[]},
   {key:'AB-70',summary:'Porter - Scrapping',status:'Done',priority:'Highest',assignee:'Sailavasan',due:null,type:'Story',description:'Porter has recently shut down all its API services for accepting the orders and delivering it through its 3PL. But there are lot of customers using Po',attachments:[],comments:[]},
   {key:'AB-71',summary:'Wheelseye - API - Integration',status:'Done',priority:'Highest',assignee:'Unassigned',due:null,type:'Story',description:'Whellseye - A Truck Company. It is exposing its truck information through APIs. The informations has to be extracted through APIs and to be saved on c',attachments:[],comments:[{author:'Ramakrishnan Murugan',date:'2026-05-11',text:'Created for PAFlogistics Demo and Completed'}]},
@@ -1518,9 +1519,9 @@ const SPRINT_DATA = [
   {key:'AB-185',summary:'Adloggs MCP server for Claude and other Ai chats',status:'In Progress',priority:'Medium',assignee:'Muthu Rajeshwari M',due:null,type:'Story',description:'',attachments:[],comments:[]},
   {key:'AB-186',summary:'Separate Cron Jobs from EK-Bharat Backend Repository and Deploy as Independent Service',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-11',type:'Task',description:'Currently, cron jobs are maintained inside the main EK-Bharat backend repository. To improve maintainability, deployment isolation, scalability, and o',attachments:[],comments:[{author:'Sundarapandiyan',date:'2026-05-11',text:'Today morning (2026-05-11), I requested repository access from    . Once I receive the repository ac'}]},
   {key:'AB-187',summary:'Loggi AI new updates Fastest, Cheapest, Best 3pl Prediction Module',status:'In Progress',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-14',type:'Story',description:'- [ ] UI Upgrade - [ ] Server Capacity Revalidation - [ ] Daily model upgradation from previous model - [ ] Model atleast 3 months data - [ ] Create s',attachments:[],comments:[]},
-  {key:'AB-188',summary:'mygister incentive update cron',status:'DEV QA',priority:'Medium',assignee:'raja',due:'2026-05-11',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-188',summary:'mygister incentive update cron',status:'DEV QA',priority:'Medium',assignee:'Raja',due:'2026-05-11',type:'Task',description:'',attachments:[],comments:[]},
   {key:'AB-189',summary:'Completed end-to-end testing for Swiggy Instamart integration in the development environment along w',status:'Done',priority:'Medium',assignee:'Ranjith',due:'2026-04-28',type:'Task',description:'',attachments:[],comments:[]},
-  {key:'AB-190',summary:'zoho invoice and order report mismatch - discussion and correction with sundar and silavasan',status:'In Progress',priority:'Medium',assignee:'raja',due:'2026-05-11',type:'Task',description:'',attachments:[],comments:[{author:'raja',date:'2026-05-13',text:'we sent to live invoice to abi. we are waiting they check and confirm this.'}]},
+  {key:'AB-190',summary:'zoho invoice and order report mismatch - discussion and correction with sundar and silavasan',status:'In Progress',priority:'Medium',assignee:'Raja',due:'2026-05-11',type:'Task',description:'',attachments:[],comments:[{author:'raja',date:'2026-05-13',text:'we sent to live invoice to abi. we are waiting they check and confirm this.'}]},
   {key:'AB-191',summary:'Migrating python service Zoya Rider Support Bot, Controlx service to python-server',status:'Done',priority:'Medium',assignee:'Ramakrishnan Murugan',due:'2026-05-12',type:'Story',description:'',attachments:[],comments:[]},
   {key:'AB-192',summary:'Cashfree Integration – Recron UI Data Import & Rider Payout Status Update',status:'Backlog',priority:'Medium',assignee:'Parthi',due:'2026-05-11',type:'Task',description:'Integrate the Cashfree payout/import process with the Recron UI module to fetch and import Cashfree transaction data into our system and automatically',attachments:[],comments:[]},
   {key:'AB-193',summary:'Prevent Scheduled Orders Screen Refresh on Back Navigation',status:'READY FOR TESTING',priority:'Highest',assignee:'Parthi',due:'2026-05-12',type:'Task',description:'**Description:**   In the **Scheduled Orders** screen, when a user clicks on any order to view its details and then navigates back to the Scheduled Or',attachments:[],comments:[]},
@@ -1531,7 +1532,7 @@ const SPRINT_DATA = [
   {key:'AB-202',summary:'Add Suggested Route Map Popup for Auto Assign in Scheduled Orders',status:'In Progress',priority:'Medium',assignee:'Parthi',due:'2026-05-13',type:'Story',description:'**Description:**   In the **Scheduled Orders** screen, during the **Auto Assign** process, the system should display a popup containing the **suggeste',attachments:[],comments:[]},
   {key:'AB-203',summary:'WheelEye Integration Implementation',status:'In Progress',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-13',type:'Task',description:'Implement integration with WheelEye to support vehicle/fleet tracking, shipment monitoring, and logistics data synchronization within the platform.  #',attachments:[],comments:[]},
   {key:'AB-204',summary:'Adloggs LLM api service providing python',status:'In Progress',priority:'Medium',assignee:'Ramakrishnan Murugan',due:null,type:'Story',description:'',attachments:[],comments:[]},
-  {key:'AB-205',summary:'ONDC 3pl setup - task with sailavason',status:'In Progress',priority:'Medium',assignee:'raja',due:null,type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-205',summary:'ONDC 3pl setup - task with sailavason',status:'In Progress',priority:'Medium',assignee:'Raja',due:null,type:'Task',description:'',attachments:[],comments:[]},
   {key:'AB-206',summary:'Initiate Partnership Integration Discussion with TEV Logistics in ONDC Buyer',status:'Done',priority:'Highest',assignee:'mani',due:'2026-05-11',type:'Task',description:'As discussed, please note the **BPP ID** for TEV Logistics integration:  \`tev.ondc-lsp.prosquad.ai\`  This BPP ID will be used for ONDC network-level',attachments:[],comments:[]},
   {key:'AB-207',summary:'Brozo 3PL Delivery Status API Hit Twice Causing Double Debit in Customer Wallet',status:'Done',priority:'Medium',assignee:'Sundarapandiyan',due:'2026-05-12',type:'Task',description:'The Brozo 3PL delivery status webhook/API is getting triggered twice for the same order. Due to this duplicate callback, the wallet debit logic is als',attachments:[],comments:[]},
   {key:'AB-209',summary:'CRM Migration - Orbit',status:'Done',priority:'High',assignee:'mani',due:'2026-05-12',type:'Task',description:'CRM Migration - Orbit table 1 to orbit table 2',attachments:[],comments:[]},
@@ -1541,7 +1542,7 @@ const SPRINT_DATA = [
   {key:'AB-213',summary:'Schedule order API - Sort, Swap and Rider Capacity',status:'In Progress',priority:'Highest',assignee:'Parthi',due:'2026-05-13',type:'Task',description:'',attachments:[],comments:[]},
   {key:'AB-214',summary:'Elefant Pagination in scheduled order',status:'Done',priority:'Highest',assignee:'aravind',due:'2026-05-13',type:'Task',description:'Pagination in Schedule order and live orders',attachments:[],comments:[]},
   {key:'AB-215',summary:'Session Management for Loggi AI',status:'Backlog',priority:'Medium',assignee:'Jai Chandru SS',due:'2026-05-13',type:'Story',description:'',attachments:[],comments:[{author:'Jai Chandru SS',date:'2026-05-14',text:'Session management implemented, URL token auth verified through adloggs , user info (name) stored in'}]},
-  {key:'AB-216',summary:'remove default maximum value in business config',status:'Done',priority:'Medium',assignee:'raja',due:'2026-05-13',type:'Task',description:'',attachments:[],comments:[]},
+  {key:'AB-216',summary:'remove default maximum value in business config',status:'Done',priority:'Medium',assignee:'Raja',due:'2026-05-13',type:'Task',description:'',attachments:[],comments:[]},
   {key:'AB-217',summary:'dp_day_time_wise table cron running in main and analytics db',status:'Done',priority:'Medium',assignee:'Venkateswaran E',due:'2026-05-13',type:'Story',description:'',attachments:[],comments:[{author:'Venkateswaran E',date:'2026-05-18',text:'runned for dates[May - 14,15,16,17] for two tables in two Databases'}]},
   {key:'AB-218',summary:'App.Adloggs Master – List View & UI Enhancement',status:'under testing',priority:'High',assignee:'Vijayalavan Tharmalingam',due:null,type:'Task',description:'Enhance the overall list view interface and UI experience in the App.Adloggs Master module to provide a more modern, user-friendly, responsive, and vi',attachments:[],comments:[]},
   {key:'AB-219',summary:'UI Upgradation for Logisight Rider Dashboard & Order Detection Screens',status:'Done',priority:'Medium',assignee:'dinesh',due:null,type:'Task',description:'Upgrade the current Logisight rider dashboard UI to improve visual hierarchy, readability, user engagement, and overall user experience during order d',attachments:[{filename:'Screenshot_20260513-151353_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13807'},{filename:'Screenshot_20260513-151414_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13809'},{filename:'Screenshot_20260513-151425_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13811'},{filename:'Screenshot_20260513-151429_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13808'},{filename:'Screenshot_20260513-151434_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13806'},{filename:'Screenshot_20260513-151453_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13810'},{filename:'Screenshot_20260513-151505_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13812'},{filename:'Screenshot_20260513-151548_logisight.png',mimeType:'image/png',content:'https://api.atlassian.com/ex/jira/4087a625-67ca-4bbe-b2f0-3d406fdfed61/rest/api/3/attachment/content/13813'}],comments:[]},
@@ -1843,44 +1844,91 @@ function nav(id, el) {
 // ================================================================
 async function syncTeamsFromJira() {
   const icon = document.getElementById('teams-sync-icon');
-  icon.classList.add('spin');
+  if (icon) icon.classList.add('spin');
   setPill('syncing', 'Syncing...');
 
-  // Sync sprint first if not loaded yet
-  if (SPRINT_DATA.length === 0 && STATE.jiraProxyUrl) {
+  // Fetch fresh sprint data from Worker if available
+  if (STATE.jiraProxyUrl) {
     await syncSprint();
   }
 
-  // Update live issue counts per member from SPRINT_DATA
+  // Name alias map: Jira display name (lowercase) → portal name
+  const ALIAS = {
+    'vijayalavan tharmalingam': 'Vijayalavan T',
+    'ramakrishnan murugan':     'Ramakrishnan',
+    'vijay':                    'Vijayalavan T',
+    'raja':                     'Raja',
+  };
+
+  // Resolve Jira assignee → canonical portal name
+  // First check hardcoded aliases, then buildNameMap (handles first-name matches)
+  const nameMap = buildNameMap();
+  const resolveAlias = name => {
+    if (!name) return '';
+    const lower = name.toLowerCase().trim();
+    return ALIAS[lower] || nameMap[lower] || name;
+  };
+
+  // Members explicitly removed from Jira — never re-add to any team
+  const REMOVED_FROM_JIRA = new Set([
+    'Nanthakumar M', 'Nanthakumar', 'Sethu Madhavan', 'Sethumadhavan',
+  ]);
+
+  // Build set of all live assignees from sprint data (exclude Unassigned + removed)
+  const liveAssignees = new Set(
+    SPRINT_DATA
+      .map(i => resolveAlias(i.assignee || ''))
+      .filter(a => a && a.toLowerCase() !== 'unassigned' && !REMOVED_FROM_JIRA.has(a))
+  );
+
+  // Build complete set of all known team members (all pods including shared)
+  const allKnownNames = new Set(
+    STATE.teams.flatMap(t => t.members.map(m => m.name))
+  );
+
+  // Update issue counts for all existing members using alias resolution
   STATE.teams.forEach(team => {
     team.members.forEach(m => {
-      m.issues = SPRINT_DATA.filter(i => i.assignee === m.name).length;
+      m.issues = SPRINT_DATA.filter(i => {
+        const resolved = resolveAlias(i.assignee || '');
+        return resolved === m.name;
+      }).length;
     });
   });
 
-  // Any sprint assignee not in a named pod → add to Shared Resources
-  const podMemberNames = new Set(
-    STATE.teams.filter(t => t.id !== 'shared').flatMap(t => t.members.map(m => m.name))
-  );
   const sharedTeam = STATE.teams.find(t => t.id === 'shared');
-  const allSprintAssignees = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))];
-  const avs = ['av1','av2','av3','av4','av5','av6','av7','av8','av9','av10','av11','av12'];
-  allSprintAssignees.forEach(name => {
-    if (!podMemberNames.has(name) && !sharedTeam.members.find(m => m.name === name)) {
-      const init = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-      sharedTeam.members.push({
-        name, title: 'Shared Resource', initials: init,
-        av: avs[sharedTeam.members.length % 12], status: 'online', jiraId: '',
-        issues: SPRINT_DATA.filter(i => i.assignee === name).length
-      });
-    }
-  });
+  const avPool = ['av1','av2','av3','av4','av5','av6','av7','av8','av9','av10','av11','av12'];
+
+  if (sharedTeam) {
+    // Add genuinely new assignees not in any team → Shared Resources
+    liveAssignees.forEach(name => {
+      if (!allKnownNames.has(name) && !REMOVED_FROM_JIRA.has(name)) {
+        const init = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        sharedTeam.members.push({
+          name, title: 'Shared Resource', initials: init,
+          av: avPool[sharedTeam.members.length % avPool.length],
+          status: 'online', jiraId: '', issues: SPRINT_DATA.filter(i=>resolveAlias(i.assignee||'')===name).length
+        });
+        allKnownNames.add(name); // prevent duplicate adds
+      }
+    });
+
+    // Remove auto-added Shared members no longer active in Jira or explicitly removed
+    const seedSharedNames = new Set(
+      (TEAMS_FROM_JIRA.find(t=>t.id==='shared')?.members||[]).map(m=>m.name)
+    );
+    sharedTeam.members = sharedTeam.members.filter(m =>
+      !REMOVED_FROM_JIRA.has(m.name) &&            // never keep explicitly removed
+      (seedSharedNames.has(m.name) || liveAssignees.has(m.name)) // keep seed OR active
+    );
+  }
 
   STATE.lastJiraSync = new Date();
   renderTeams();
-  icon.classList.remove('spin');
+  if (icon) icon.classList.remove('spin');
   setPill('live', 'Live');
-  document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
+  const tEl = document.getElementById('teams-sync-time');
+  if (tEl) tEl.textContent = 'Synced ' + fmt(STATE.lastJiraSync);
   showToast('Teams synced ✓');
 }
 
@@ -2358,8 +2406,8 @@ const TEAM_MAP = {
   'Vignesh B':'Pinnacle','Karthik K':'Pinnacle','Parthi':'Pinnacle','Chandru S':'Pinnacle','Sundarapandiyan':'Pinnacle','Pravin':'Pinnacle',
   'aravind':'Momentum','Chinna Mani':'Momentum','mani':'Momentum','dinesh':'Momentum',
   'Sailavasan':'Catalyst',
-  'Jai Chandru SS':'AI Intelligence','Venkateswaran E':'AI Intelligence','Ramakrishnan':'AI Intelligence','Muthu Rajeshwari M':'AI Intelligence',
-  'Vijayalavan T':'Shared','Raja':'Shared','Ranjith':'Shared','Devika':'Shared','Sethu Madhavan':'Shared','Nanthakumar M':'Shared',
+  'Ramakrishnan':'AI Intelligence','Jai Chandru SS':'AI Intelligence','Venkateswaran E':'AI Intelligence','Muthu Rajeshwari M':'AI Intelligence',
+  'Vijayalavan T':'Shared','Raja':'Shared','Ranjith':'Shared','Devika':'Shared',
 };
 
 // Filter + pagination state
@@ -4393,25 +4441,53 @@ function toggleEodDestination(key) {
   showToast(`${key === 'fullreport' ? 'Full report (person)' : 'Group chat'} ${isNowOn ? 'enabled ✓' : 'disabled'}`);
 }
 
+function toggleEodDay(btn) {
+  const isOn = btn.classList.contains('eod-day-on');
+  btn.classList.toggle('eod-day-on',  !isOn);
+  btn.classList.toggle('eod-day-off',  isOn);
+  // Save immediately
+  const days = getEodActiveDays();
+  localStorage.setItem('adloggs_eod_days', JSON.stringify(days));
+}
+
+function getEodActiveDays() {
+  const btns = document.querySelectorAll('#eod-days-picker .eod-day-btn.eod-day-on');
+  return [...btns].map(b => Number(b.dataset.day));
+}
+
+function restoreEodDayPicker() {
+  const saved = JSON.parse(localStorage.getItem('adloggs_eod_days') || '[1,2,3,4,5]');
+  document.querySelectorAll('#eod-days-picker .eod-day-btn').forEach(btn => {
+    const day = Number(btn.dataset.day);
+    const on  = saved.includes(day);
+    btn.classList.toggle('eod-day-on',  on);
+    btn.classList.toggle('eod-day-off', !on);
+  });
+}
+
 function saveEodConfig() {
   const time = document.getElementById('eod-time').value || '18:30';
   const tz   = document.getElementById('eod-tz').value   || 'Asia/Kolkata';
+  const days = getEodActiveDays();
   localStorage.setItem('adloggs_eod_time', time);
   localStorage.setItem('adloggs_eod_tz', tz);
+  localStorage.setItem('adloggs_eod_days', JSON.stringify(days));
   // Clear last-sent so rescheduling allows same-day fire
   localStorage.removeItem('adloggs_eod_last_sent');
   startEodScheduler();
   // Check immediately — if the scheduled time is right now, fire without waiting 60s
   const [h, m] = time.split(':').map(Number);
-  const fmt    = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour:'numeric', minute:'numeric', hour12:false });
-  const parts  = fmt.formatToParts(new Date());
+  const fmtObj = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour:'numeric', minute:'numeric', hour12:false });
+  const parts  = fmtObj.formatToParts(new Date());
   const ch     = Number(parts.find(p=>p.type==='hour')?.value   || 0);
   const cm     = Number(parts.find(p=>p.type==='minute')?.value || 0);
   if (ch === h && cm === m) sendEodSummaryNow();
 
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dayLabel = days.length === 5 && !days.includes(0) && !days.includes(6) ? 'Mon–Fri' : days.map(d=>dayNames[d]).join(', ');
   const statusEl = document.getElementById('eod-status');
-  if (statusEl) statusEl.textContent = `Scheduled at ${time} ✓`;
-  showToast(`EOD summary scheduled at ${time} ✓`);
+  if (statusEl) statusEl.textContent = `Scheduled at ${time} · ${dayLabel} ✓`;
+  showToast(`EOD summary scheduled at ${time} ${dayLabel} ✓`);
   saveEodConfigToWorker();
   pushConfigToGithubSilent();
 }
@@ -4835,6 +4911,14 @@ function startEodScheduler() {
     }
 
     if (ch === h && cm === m && lastSentDate !== today) {
+      // Check if today is an active day (0=Sun,1=Mon,...,6=Sat)
+      const activeDays = JSON.parse(localStorage.getItem('adloggs_eod_days') || '[1,2,3,4,5]');
+      const todayDay   = new Date().getDay(); // JS day: 0=Sun, 6=Sat
+      if (!activeDays.includes(todayDay)) {
+        // Not an active day — update status but don't send
+        if (statusEl) statusEl.textContent = `Skipped — not a scheduled day`;
+        return;
+      }
       localStorage.setItem('adloggs_eod_last_sent', today);
       sendEodSummaryNow();
     }
@@ -4904,12 +4988,13 @@ function buildEodConfigPayload() {
     eod_dest_enabled: JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')  || '{}'),
     eod_fullreport:   JSON.parse(localStorage.getItem('adloggs_eod_fullreport')    || '{}'),
     eod_group:        JSON.parse(localStorage.getItem('adloggs_eod_group')         || '{}'),
+    eod_days:         JSON.parse(localStorage.getItem('adloggs_eod_days')          || '[1,2,3,4,5]'),
   };
 }
 
 function applyEodConfigPayload(cfg) {
   if (!cfg) return;
-  const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+  const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group','eod_days'];
   keys.forEach(k => {
     if (cfg[k] === undefined) return;
     localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
@@ -5098,6 +5183,14 @@ function buildNameMap() {
     map[m.name.toLowerCase()] = m.name;
     map[m.name.split(' ')[0].toLowerCase()] = m.name;
   }));
+  // Hardcoded Jira display name → portal name aliases
+  const ALIASES = {
+    'vijayalavan tharmalingam': 'Vijayalavan T',
+    'ramakrishnan murugan':     'Ramakrishnan',
+    'vijay':                    'Vijayalavan T',
+    'raja':                     'Raja',
+  };
+  Object.entries(ALIASES).forEach(([k,v]) => { map[k] = v; });
   return map;
 }
 function resolvePortalName(jiraName, nameMap) {
@@ -5796,7 +5889,7 @@ async function loadEodConfigFromWorker() {
     const data = await res.json();
     if (!data.config) return false;
     const cfg = data.config;
-    const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+    const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group','eod_days'];
     keys.forEach(k => {
       if (cfg[k] === undefined) return;
       localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
@@ -5824,6 +5917,7 @@ function applyEodConfigToUI(cfg) {
   });
   updateEodBadge();
   startEodScheduler();
+  restoreEodDayPicker();
   setTimeout(() => renderEodMemberTable(), 400);
 }
 
@@ -5852,7 +5946,7 @@ function importEodConfig(event) {
   reader.onload = async e => {
     try {
       const cfg = JSON.parse(e.target.result);
-      const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+      const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group','eod_days'];
       keys.forEach(k => {
         if (cfg[k] === undefined) return;
         localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
@@ -5942,7 +6036,7 @@ function init() {
   if (eodTzEl)   eodTzEl.value   = eodTz;
   updateEodBadge();
   startEodScheduler();
-  // Apply from localStorage immediately, then overlay with KV if available
+  restoreEodDayPicker();
   try {
     const fr = JSON.parse(localStorage.getItem('adloggs_eod_fullreport') || '{}');
     const gr = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
