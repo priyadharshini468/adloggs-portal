@@ -1,7 +1,7 @@
 {
-  "_updated": "2026-06-13T05:52:56.007Z",
+  "_updated": "2026-06-13T05:58:17.355Z",
   "_note": "Adloggs Portal config — auto-managed, do not edit manually",
-  "eod_time": "20:08",
+  "eod_time": "19:00",
   "eod_tz": "Asia/Kolkata",
   "eod_webhooks": {
     "Raja": "https://chat.googleapis.com/v1/spaces/y9_ZDCAAAAE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=lygVW66NXMJXBngBbEv_R6vxhi9hEtLVykn1gUje6P8"
