@@ -1,5 +1,5 @@
 {
-  "_updated": "2026-06-13T05:58:17.355Z",
+  "_updated": "2026-06-13T07:47:29.028Z",
   "_note": "Adloggs Portal config — auto-managed, do not edit manually",
   "eod_time": "19:00",
   "eod_tz": "Asia/Kolkata",
@@ -17,5 +17,12 @@
   "eod_group": {
     "name": "Ad Tech Internal",
     "webhook": "https://chat.googleapis.com/v1/spaces/AAQAu6uvUqI/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=S1gDlNPfm1w6kPnNls6yfgSmo9fuzVArIcaCVAMxN6E"
-  }
+  },
+  "eod_days": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ]
 }
