@@ -1,5 +1,5 @@
 {
-  "_updated": "2026-06-13T07:47:29.028Z",
+  "_updated": "2026-06-13T07:58:40.112Z",
   "_note": "Adloggs Portal config — auto-managed, do not edit manually",
   "eod_time": "19:00",
   "eod_tz": "Asia/Kolkata",
@@ -23,6 +23,7 @@
     2,
     3,
     4,
-    5
+    5,
+    6
   ]
 }
