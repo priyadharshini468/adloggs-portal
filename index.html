@@ -859,6 +859,44 @@
       </div>
 
       <div class="cfg-block">
+        <div class="cfg-title">🐙 GitHub Config Sync
+          <span class="cfg-badge" id="github-cfg-badge" style="background:rgba(245,166,35,0.12);color:var(--amber)">⚠ Not configured</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px">
+          Saves all webhook URLs and EOD settings to a <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">config.json</code> file in your GitHub repo.
+          Works on any browser, laptop, or computer — no Cloudflare KV needed.
+        </div>
+        <div style="background:rgba(26,115,232,0.05);border:1px solid rgba(26,115,232,0.15);border-radius:7px;padding:10px 12px;font-size:12px;margin-bottom:12px;line-height:1.9">
+          <strong style="color:var(--text)">One-time setup (~2 min):</strong><br>
+          1. GitHub → Settings → Developer settings → <strong>Personal access tokens → Fine-grained tokens</strong><br>
+          2. Click <strong>Generate new token</strong> → set expiry → select your <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">adloggs-portal</code> repo<br>
+          3. Under <strong>Repository permissions</strong> → <strong>Contents → Read and Write</strong><br>
+          4. Generate → copy the token → paste below<br>
+          5. Click <strong>Save & Sync</strong> — config.json is created in your repo automatically
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="flex:1;min-width:200px">
+            <div class="form-label">GitHub Username</div>
+            <input class="input" id="cfg-github-user" placeholder="priyadharshini468" />
+          </div>
+          <div style="flex:1;min-width:200px">
+            <div class="form-label">Repository Name</div>
+            <input class="input" id="cfg-github-repo" placeholder="adloggs-portal" />
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Personal Access Token (stored in this browser only — never sent to anyone else)</div>
+          <input class="input" id="cfg-github-token" type="password" placeholder="github_pat_..." />
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveGithubConfig()">Save Settings</button>
+          <button class="btn btn-primary btn-sm" onclick="pushConfigToGithub()">⬆ Push Config to GitHub</button>
+          <button class="btn btn-ghost btn-sm" onclick="pullConfigFromGithub()">⬇ Pull Config from GitHub</button>
+          <span id="github-sync-status" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <div class="cfg-block">
         <div class="cfg-title">📋 EOD Daily Summary
           <span class="cfg-badge" id="eod-cfg-badge" style="background:rgba(245,166,35,0.12);color:var(--amber)">⚠ Not configured</span>
         </div>
@@ -924,7 +962,19 @@
           Paste each person's DM webhook next to their name. Pod lead rows are highlighted.
         </div>
         <div id="eod-member-table" style="display:flex;flex-direction:column;gap:5px"></div>
-        <button class="btn btn-ghost btn-sm" onclick="renderEodMemberTable()" style="margin-top:10px">↻ Reload Members</button>
+        <button class="btn btn-ghost btn-sm" onclick="reloadEodMembers()" style="margin-top:10px">↻ Reload Members from Jira</button>
+        <div style="margin-top:16px;padding:12px;background:rgba(245,166,35,0.07);border:1px solid rgba(245,166,35,0.25);border-radius:8px;font-size:11px;color:var(--text2);line-height:1.8">
+          <strong style="color:var(--text)">⚠ Webhooks are saved in this browser only.</strong><br>
+          They will be empty on a different computer or after clearing browser data.<br>
+          Use <strong>Export Config</strong> to save all webhook URLs to a file, then <strong>Import Config</strong> on the other device.
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-ghost btn-sm" onclick="exportEodConfig()">⬇ Export Config</button>
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">
+              ⬆ Import Config
+              <input type="file" accept=".json" onchange="importEodConfig(event)" style="display:none">
+            </label>
+          </div>
+        </div>
       </div>
 
 
@@ -4310,6 +4360,7 @@ function saveEodFullReport() {
   document.getElementById('eod-fullreport-status').textContent = webhook ? '✓ Saved' : '';
   updateEodBadge();
   showToast('Full-report destination saved ✓');
+  saveEodConfigToWorker(); pushConfigToGithubSilent();
 }
 
 function saveEodGroup() {
@@ -4319,6 +4370,7 @@ function saveEodGroup() {
   document.getElementById('eod-group-status').textContent = webhook ? '✓ Saved' : '';
   updateEodBadge();
   showToast('Group chat destination saved ✓');
+  saveEodConfigToWorker(); pushConfigToGithubSilent();
 }
 
 function toggleEodDestination(key) {
@@ -4360,6 +4412,8 @@ function saveEodConfig() {
   const statusEl = document.getElementById('eod-status');
   if (statusEl) statusEl.textContent = `Scheduled at ${time} ✓`;
   showToast(`EOD summary scheduled at ${time} ✓`);
+  saveEodConfigToWorker();
+  pushConfigToGithubSilent();
 }
 
 function saveEodMemberWebhook(name, url) {
@@ -4369,6 +4423,7 @@ function saveEodMemberWebhook(name, url) {
   const el = document.getElementById(`eod-wh-status-${CSS.escape(name)}`);
   if (el) el.textContent = url.trim() ? '✓' : '';
   updateEodBadge();
+  saveEodConfigToWorker(); pushConfigToGithubSilent();
 }
 
 function toggleEodMember(name) {
@@ -4760,11 +4815,9 @@ function startEodScheduler() {
   const scheduledTime = localStorage.getItem('adloggs_eod_time') || '18:30';
   const [h, m] = scheduledTime.split(':').map(Number);
   const tz = localStorage.getItem('adloggs_eod_tz') || 'Asia/Kolkata';
-
-  // Use Intl.DateTimeFormat parts — immune to locale 12h/24h formatting quirks
   const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: 'numeric', minute: 'numeric', hour12: false });
 
-  _eodSchedulerTimer = setInterval(() => {
+  function checkAndFire() {
     const now   = new Date();
     const parts = fmt.formatToParts(now);
     const ch    = Number(parts.find(p => p.type === 'hour')?.value   || 0);
@@ -4772,22 +4825,206 @@ function startEodScheduler() {
     const today = now.toISOString().slice(0, 10);
     const lastSentDate = localStorage.getItem('adloggs_eod_last_sent') || '';
 
-    // Update live countdown in status label
+    // Update live countdown
     const statusEl = document.getElementById('eod-status');
-    if (statusEl && document.getElementById('sec-settings')?.classList.contains('active')) {
+    if (statusEl) {
       const minsLeft = ((h * 60 + m) - (ch * 60 + cm) + 1440) % 1440;
-      if (minsLeft === 0) {
-        statusEl.textContent = '⏳ Sending now…';
-      } else {
-        statusEl.textContent = `Next send in ${minsLeft < 60 ? `${minsLeft}m` : `${Math.floor(minsLeft/60)}h ${minsLeft%60}m`}`;
-      }
+      statusEl.textContent = minsLeft === 0
+        ? '⏳ Sending now…'
+        : `Next send in ${minsLeft < 60 ? `${minsLeft}m` : `${Math.floor(minsLeft/60)}h ${minsLeft%60}m`}`;
     }
 
     if (ch === h && cm === m && lastSentDate !== today) {
       localStorage.setItem('adloggs_eod_last_sent', today);
       sendEodSummaryNow();
     }
-  }, 60000); // check every minute
+  }
+
+  // Check every minute via setInterval
+  _eodSchedulerTimer = setInterval(checkAndFire, 60000);
+
+  // ALSO check immediately when tab becomes visible again (handles sleeping/background)
+  document.removeEventListener('visibilitychange', _eodVisibilityHandler);
+  window.removeEventListener('focus', _eodFocusHandler);
+  _eodVisibilityHandler = () => { if (document.visibilityState === 'visible') checkAndFire(); };
+  _eodFocusHandler      = () => checkAndFire();
+  document.addEventListener('visibilitychange', _eodVisibilityHandler);
+  window.addEventListener('focus', _eodFocusHandler);
+}
+let _eodVisibilityHandler = null;
+let _eodFocusHandler      = null;
+
+// ================================================================
+// GITHUB CONFIG SYNC
+// Reads/writes config.json in the GitHub repo via GitHub API
+// Token stored in localStorage — never sent anywhere except api.github.com
+// ================================================================
+
+function getGithubSettings() {
+  return {
+    user:  localStorage.getItem('adloggs_github_user')  || '',
+    repo:  localStorage.getItem('adloggs_github_repo')  || '',
+    token: localStorage.getItem('adloggs_github_token') || '',
+  };
+}
+
+function saveGithubConfig() {
+  const user  = document.getElementById('cfg-github-user').value.trim();
+  const repo  = document.getElementById('cfg-github-repo').value.trim();
+  const token = document.getElementById('cfg-github-token').value.trim();
+  if (!user || !repo || !token) { showToast('Fill in all three fields'); return; }
+  localStorage.setItem('adloggs_github_user',  user);
+  localStorage.setItem('adloggs_github_repo',  repo);
+  localStorage.setItem('adloggs_github_token', token);
+  updateGithubBadge();
+  showToast('GitHub settings saved ✓');
+}
+
+function updateGithubBadge() {
+  const { user, repo, token } = getGithubSettings();
+  const badge = document.getElementById('github-cfg-badge');
+  if (!badge) return;
+  if (user && repo && token) {
+    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
+    badge.textContent = `✓ ${user}/${repo}`;
+  } else {
+    badge.style.background = 'rgba(245,166,35,0.12)'; badge.style.color = 'var(--amber)';
+    badge.textContent = '⚠ Not configured';
+  }
+}
+
+function buildEodConfigPayload() {
+  return {
+    _updated:         new Date().toISOString(),
+    _note:            'Adloggs Portal config — auto-managed, do not edit manually',
+    eod_time:         localStorage.getItem('adloggs_eod_time')             || '18:30',
+    eod_tz:           localStorage.getItem('adloggs_eod_tz')               || 'Asia/Kolkata',
+    eod_webhooks:     JSON.parse(localStorage.getItem('adloggs_eod_webhooks')      || '{}'),
+    eod_enabled:      JSON.parse(localStorage.getItem('adloggs_eod_enabled')       || '{}'),
+    eod_dest_enabled: JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')  || '{}'),
+    eod_fullreport:   JSON.parse(localStorage.getItem('adloggs_eod_fullreport')    || '{}'),
+    eod_group:        JSON.parse(localStorage.getItem('adloggs_eod_group')         || '{}'),
+  };
+}
+
+function applyEodConfigPayload(cfg) {
+  if (!cfg) return;
+  const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+  keys.forEach(k => {
+    if (cfg[k] === undefined) return;
+    localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
+  });
+  applyEodConfigToUI(cfg);
+}
+
+async function pushConfigToGithub() {
+  const { user, repo, token } = getGithubSettings();
+  if (!user || !repo || !token) { showToast('Configure GitHub settings first'); return; }
+
+  const statusEl = document.getElementById('github-sync-status');
+  statusEl.textContent = '⏳ Pushing…';
+
+  const content = JSON.stringify(buildEodConfigPayload(), null, 2);
+  const encoded = btoa(unescape(encodeURIComponent(content))); // UTF-8 safe base64
+
+  const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/adloggs-config.json`;
+
+  try {
+    // First: try to GET the existing file to obtain its SHA (required for updates)
+    let sha = null;
+    const getRes = await fetch(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      }
+    });
+    if (getRes.ok) {
+      const existing = await getRes.json();
+      sha = existing.sha;
+    } else if (getRes.status !== 404) {
+      throw new Error(`GitHub GET failed: ${getRes.status}`);
+    }
+
+    // PUT (create or update)
+    const body = {
+      message: `chore: update portal config ${new Date().toISOString().slice(0,10)}`,
+      content: encoded,
+      ...(sha ? { sha } : {}),
+    };
+    const putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!putRes.ok) {
+      const err = await putRes.json();
+      throw new Error(err.message || `PUT failed ${putRes.status}`);
+    }
+
+    statusEl.textContent = `✓ Pushed at ${new Date().toLocaleTimeString()}`;
+    showToast('Config pushed to GitHub ✓');
+  } catch(e) {
+    statusEl.textContent = `✗ ${e.message}`;
+    showToast(`Push failed: ${e.message}`);
+    console.error('GitHub push error:', e);
+  }
+}
+
+async function pullConfigFromGithub() {
+  const { user, repo, token } = getGithubSettings();
+  if (!user || !repo || !token) { showToast('Configure GitHub settings first'); return; }
+
+  const statusEl = document.getElementById('github-sync-status');
+  statusEl.textContent = '⏳ Pulling…';
+
+  const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/adloggs-config.json`;
+
+  try {
+    const res = await fetch(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      }
+    });
+    if (!res.ok) {
+      if (res.status === 404) throw new Error('Config file not found — push from your main device first');
+      throw new Error(`GitHub GET failed: ${res.status}`);
+    }
+    const data    = await res.json();
+    const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    const cfg     = JSON.parse(decoded);
+    applyEodConfigPayload(cfg);
+    statusEl.textContent = `✓ Pulled at ${new Date().toLocaleTimeString()} (saved ${cfg._updated?.slice(0,16)||'unknown'})`;
+    showToast('Config pulled from GitHub ✓');
+  } catch(e) {
+    statusEl.textContent = `✗ ${e.message}`;
+    showToast(`Pull failed: ${e.message}`);
+    console.error('GitHub pull error:', e);
+  }
+}
+
+// Auto-pull on page load if GitHub is configured
+async function autoSyncFromGithub() {
+  const { user, repo, token } = getGithubSettings();
+  if (!user || !repo || !token) return;
+  try {
+    await pullConfigFromGithub();
+  } catch(e) { /* silent — don't block page load */ }
+}
+
+// Call this after any config save to keep GitHub in sync
+async function pushConfigToGithubSilent() {
+  const { token } = getGithubSettings();
+  if (!token) return; // not configured — skip silently
+  try { await pushConfigToGithub(); } catch(e) { /* silent */ }
 }
 
 // ================================================================
@@ -5519,6 +5756,118 @@ function renderManualInputs() {
   container.innerHTML = html;
 }
 
+async function reloadEodMembers() {
+  const btn = document.querySelector('[onclick="reloadEodMembers()"]');
+  if (btn) { btn.textContent = '⏳ Syncing from Jira…'; btn.disabled = true; }
+  try {
+    await syncTeamsFromJira();
+  } catch(e) { console.warn('Team sync failed:', e); }
+  renderEodMemberTable();
+  if (btn) { btn.textContent = '↻ Reload Members from Jira'; btn.disabled = false; }
+  showToast('Members reloaded from Jira ✓');
+}
+
+// ── KV Config sync ───────────────────────────────────────────────
+async function saveEodConfigToWorker() {
+  if (!STATE.jiraProxyUrl) return;
+  const config = {
+    eod_time:         localStorage.getItem('adloggs_eod_time')             || '18:30',
+    eod_tz:           localStorage.getItem('adloggs_eod_tz')               || 'Asia/Kolkata',
+    eod_webhooks:     JSON.parse(localStorage.getItem('adloggs_eod_webhooks')      || '{}'),
+    eod_enabled:      JSON.parse(localStorage.getItem('adloggs_eod_enabled')       || '{}'),
+    eod_dest_enabled: JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')  || '{}'),
+    eod_fullreport:   JSON.parse(localStorage.getItem('adloggs_eod_fullreport')    || '{}'),
+    eod_group:        JSON.parse(localStorage.getItem('adloggs_eod_group')         || '{}'),
+  };
+  try {
+    await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+  } catch(e) { console.warn('KV save failed:', e.message); }
+}
+
+async function loadEodConfigFromWorker() {
+  if (!STATE.jiraProxyUrl) return false;
+  try {
+    const res  = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config');
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data.config) return false;
+    const cfg = data.config;
+    const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+    keys.forEach(k => {
+      if (cfg[k] === undefined) return;
+      localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
+    });
+    return cfg;
+  } catch(e) { console.warn('KV load failed:', e.message); return false; }
+}
+
+function applyEodConfigToUI(cfg) {
+  if (!cfg) return;
+  const te = document.getElementById('eod-time'); if (te && cfg.eod_time) te.value = cfg.eod_time;
+  const ze = document.getElementById('eod-tz');   if (ze && cfg.eod_tz)   ze.value = cfg.eod_tz;
+  const fr = cfg.eod_fullreport || {}, gr = cfg.eod_group || {};
+  if (fr.name)    { const el=document.getElementById('eod-fullreport-name');    if(el) el.value=fr.name; }
+  if (fr.webhook) { const el=document.getElementById('eod-fullreport-webhook'); if(el) el.value=fr.webhook; const s=document.getElementById('eod-fullreport-status'); if(s) s.textContent='✓ Saved'; }
+  if (gr.name)    { const el=document.getElementById('eod-group-name');    if(el) el.value=gr.name; }
+  if (gr.webhook) { const el=document.getElementById('eod-group-webhook'); if(el) el.value=gr.webhook; const s=document.getElementById('eod-group-status'); if(s) s.textContent='✓ Saved'; }
+  const de = cfg.eod_dest_enabled || {};
+  ['fullreport','group'].forEach(key => {
+    const isOn = de[key] !== false;
+    const btn = document.getElementById(`eod-toggle-${key}`);
+    const row = document.getElementById(`eod-${key}-row`);
+    if (btn) { btn.textContent=isOn?'ON':'OFF'; btn.style.background=isOn?'#22c55e':'#d1d5db'; btn.style.color=isOn?'#fff':'#6b7280'; }
+    if (row)   row.style.opacity = isOn ? '1' : '0.5';
+  });
+  updateEodBadge();
+  startEodScheduler();
+  setTimeout(() => renderEodMemberTable(), 400);
+}
+
+function exportEodConfig() {
+  const config = {
+    _exported: new Date().toISOString(),
+    eod_time:         localStorage.getItem('adloggs_eod_time')             || '18:30',
+    eod_tz:           localStorage.getItem('adloggs_eod_tz')               || 'Asia/Kolkata',
+    eod_webhooks:     JSON.parse(localStorage.getItem('adloggs_eod_webhooks')      || '{}'),
+    eod_enabled:      JSON.parse(localStorage.getItem('adloggs_eod_enabled')       || '{}'),
+    eod_dest_enabled: JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')  || '{}'),
+    eod_fullreport:   JSON.parse(localStorage.getItem('adloggs_eod_fullreport')    || '{}'),
+    eod_group:        JSON.parse(localStorage.getItem('adloggs_eod_group')         || '{}'),
+  };
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `adloggs-eod-config-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  showToast('Config exported ✓');
+}
+
+function importEodConfig(event) {
+  const file = event.target.files?.[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const cfg = JSON.parse(e.target.result);
+      const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+      keys.forEach(k => {
+        if (cfg[k] === undefined) return;
+        localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
+      });
+      applyEodConfigToUI(cfg);
+      await saveEodConfigToWorker(); // push to KV so other devices auto-sync
+      showToast('Config imported and synced to Worker ✓');
+    } catch(err) { showToast('Import failed — invalid file'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+
+
 function saveManualScores() {
   const indManual  = JSON.parse(localStorage.getItem('adloggs_manual_ind_scores')  ||'{}');
   const teamManual = JSON.parse(localStorage.getItem('adloggs_manual_team_scores') ||'{}');
@@ -5584,7 +5933,7 @@ function init() {
   }
   startReminderTimer();
 
-  // Restore EOD config
+  // Restore EOD config — try KV first, fall back to localStorage
   const eodTime = localStorage.getItem('adloggs_eod_time') || '18:30';
   const eodTz   = localStorage.getItem('adloggs_eod_tz')   || 'Asia/Kolkata';
   const eodTimeEl = document.getElementById('eod-time');
@@ -5593,26 +5942,38 @@ function init() {
   if (eodTzEl)   eodTzEl.value   = eodTz;
   updateEodBadge();
   startEodScheduler();
-  setTimeout(() => renderEodMemberTable(), 3000);
-
-  // Restore full-report + group destinations
+  // Apply from localStorage immediately, then overlay with KV if available
   try {
     const fr = JSON.parse(localStorage.getItem('adloggs_eod_fullreport') || '{}');
+    const gr = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
     if (fr.name)    document.getElementById('eod-fullreport-name').value    = fr.name;
     if (fr.webhook) { document.getElementById('eod-fullreport-webhook').value = fr.webhook; document.getElementById('eod-fullreport-status').textContent = '✓ Saved'; }
-    const gr = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
     if (gr.name)    document.getElementById('eod-group-name').value    = gr.name;
     if (gr.webhook) { document.getElementById('eod-group-webhook').value = gr.webhook; document.getElementById('eod-group-status').textContent = '✓ Saved'; }
-    // Restore destination toggle states
     const destEnabled = JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled') || '{}');
-    ['fullreport', 'group'].forEach(key => {
+    ['fullreport','group'].forEach(key => {
       const isOn = destEnabled[key] !== false;
       const btn  = document.getElementById(`eod-toggle-${key}`);
       const row  = document.getElementById(`eod-${key}-row`);
-      if (btn) { btn.textContent = isOn ? 'ON' : 'OFF'; btn.style.background = isOn ? '#22c55e' : '#d1d5db'; btn.style.color = isOn ? '#fff' : '#6b7280'; }
+      if (btn) { btn.textContent=isOn?'ON':'OFF'; btn.style.background=isOn?'#22c55e':'#d1d5db'; btn.style.color=isOn?'#fff':'#6b7280'; }
       if (row) row.style.opacity = isOn ? '1' : '0.5';
     });
   } catch(e) {}
+  // Restore GitHub config settings
+  const ghUser  = localStorage.getItem('adloggs_github_user')  || '';
+  const ghRepo  = localStorage.getItem('adloggs_github_repo')  || '';
+  const ghToken = localStorage.getItem('adloggs_github_token') || '';
+  if (ghUser)  { const el=document.getElementById('cfg-github-user');  if(el) el.value=ghUser; }
+  if (ghRepo)  { const el=document.getElementById('cfg-github-repo');  if(el) el.value=ghRepo; }
+  if (ghToken) { const el=document.getElementById('cfg-github-token'); if(el) el.value=ghToken; }
+  updateGithubBadge();
+  // Auto-pull config from GitHub on load (silent — won't block if not configured)
+  setTimeout(() => autoSyncFromGithub(), 2000);
+  // Also try KV if Worker is configured
+  loadEodConfigFromWorker().then(cfg => {
+    if (cfg) { applyEodConfigToUI(cfg); showToast('EOD config synced from Worker ✓'); }
+  }).catch(() => {});
+  setTimeout(() => renderEodMemberTable(), 1500);
 
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility    = 'visible';
