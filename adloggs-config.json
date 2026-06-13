@@ -1,5 +1,5 @@
 {
-  "_updated": "2026-06-13T07:58:40.112Z",
+  "_updated": "2026-06-13T07:59:08.068Z",
   "_note": "Adloggs Portal config — auto-managed, do not edit manually",
   "eod_time": "19:00",
   "eod_tz": "Asia/Kolkata",
@@ -9,7 +9,9 @@
   "eod_enabled": {
     "Raja": false
   },
-  "eod_dest_enabled": {},
+  "eod_dest_enabled": {
+    "fullreport": false
+  },
   "eod_fullreport": {
     "name": "Vignesh",
     "webhook": "https://chat.googleapis.com/v1/spaces/qr2njCAAAAE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=r3SLcgAIcyoVi01DpRIlnryWOYsOpIZwrTkQjvKxiWQ"
