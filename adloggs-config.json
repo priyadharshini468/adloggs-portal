@@ -1,8 +1,23 @@
 {
-  "_updated": "2026-06-13T07:59:08.068Z",
-  "_note": "Adloggs Portal config — auto-managed, do not edit manually",
+  "_updated": "2026-06-15T07:49:14.791Z",
+  "_note": "Adloggs Portal config — auto-managed by portal",
+  "jiraProxyUrl": "https://jira-proxy.priyadharshini468.workers.dev",
+  "scriptUrl": "https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec",
+  "gchatWebhookUrl": "",
+  "reminderInterval": 30,
+  "github_user": "priyadharshini468",
+  "github_repo": "adloggs-portal",
+  "github_token_enc": "SW52L8tUNeh5NU5eoKRtocrjfKBCTITJejtCoxTljSlAG216+pEC8tFz/0PUUrH5bJLbFTgiannn8JAJtMzbtQd2cHPm5FVgqQMRTk/I/PlyhW5RNLfpfQYbk82F46L3+tmRmulVpELPS6aRMim8LlZcAUd+SByyTQ==",
   "eod_time": "19:00",
   "eod_tz": "Asia/Kolkata",
+  "eod_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
   "eod_webhooks": {
     "Raja": "https://chat.googleapis.com/v1/spaces/y9_ZDCAAAAE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=lygVW66NXMJXBngBbEv_R6vxhi9hEtLVykn1gUje6P8"
   },
@@ -19,13 +34,5 @@
   "eod_group": {
     "name": "Ad Tech Internal",
     "webhook": "https://chat.googleapis.com/v1/spaces/AAQAu6uvUqI/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=S1gDlNPfm1w6kPnNls6yfgSmo9fuzVArIcaCVAMxN6E"
-  },
-  "eod_days": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6
-  ]
+  }
 }
