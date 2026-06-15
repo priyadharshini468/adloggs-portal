@@ -889,8 +889,8 @@
           </div>
         </div>
         <div class="form-group" style="margin-bottom:8px">
-          <div class="form-label">Personal Access Token <span style="font-weight:400;color:var(--text3)">(write-only — stays in this browser, never uploaded)</span></div>
-          <input class="input" id="cfg-github-token" type="password" placeholder="github_pat_... (needed only to save settings)" />
+          <div class="form-label">Personal Access Token <span style="font-weight:400;color:var(--text3)">(saved encrypted in config — auto-restored on any device)</span></div>
+          <input class="input" id="cfg-github-token" type="password" placeholder="github_pat_..." />
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:8px">
           Get token: <a href="https://github.com/settings/tokens?type=beta" target="_blank" style="color:var(--accent)">github.com/settings/tokens?type=beta</a> → Generate → repo: adloggs-portal → Contents: Read &amp; Write
@@ -4994,9 +4994,16 @@ function saveGithubConfig() {
   const token = document.getElementById('cfg-github-token').value.trim();
   localStorage.setItem('adloggs_github_user', user);
   localStorage.setItem('adloggs_github_repo', repo);
-  if (token) localStorage.setItem('adloggs_github_token', token);
+  if (token) {
+    localStorage.setItem('adloggs_github_token', token);
+    // Also store encrypted version for config file
+    encryptToken(token).then(enc => {
+      if (enc) localStorage.setItem('adloggs_github_token_enc', enc);
+    });
+  }
   updateGithubBadge();
   showToast('GitHub settings saved ✓');
+  pushConfigToGithubSilent(); // push immediately so token is synced
 }
 
 function updateGithubBadge() {
@@ -5012,19 +5019,60 @@ function updateGithubBadge() {
   }
 }
 
+// ── Token encryption using WebCrypto (AES-GCM) ───────────────────
+// Passphrase is derived from the repo identity — not a user-entered password.
+// This prevents the raw token being readable as plain text in the config file.
+async function getEncryptionKey() {
+  const passphrase = `adloggs-${GITHUB_DEFAULT_USER}-${GITHUB_DEFAULT_REPO}-portal-config`;
+  const enc  = new TextEncoder();
+  const raw  = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  const salt = enc.encode('adloggs-salt-v1');
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' },
+    raw, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+
+async function encryptToken(token) {
+  if (!token) return '';
+  try {
+    const key = await getEncryptionKey();
+    const iv  = crypto.getRandomValues(new Uint8Array(12));
+    const enc = new TextEncoder();
+    const ct  = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc.encode(token));
+    // Pack iv + ciphertext as base64
+    const combined = new Uint8Array(iv.byteLength + ct.byteLength);
+    combined.set(iv, 0);
+    combined.set(new Uint8Array(ct), iv.byteLength);
+    return btoa(String.fromCharCode(...combined));
+  } catch(e) { console.warn('Token encrypt failed:', e); return ''; }
+}
+
+async function decryptToken(encrypted) {
+  if (!encrypted) return '';
+  try {
+    const key  = await getEncryptionKey();
+    const data = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
+    const iv   = data.slice(0, 12);
+    const ct   = data.slice(12);
+    const pt   = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+    return new TextDecoder().decode(pt);
+  } catch(e) { console.warn('Token decrypt failed:', e); return ''; }
+}
+
 function buildEodConfigPayload() {
-  // NOTE: GitHub token excluded — stays browser-only for security
+  // github_token_enc is set asynchronously via buildEodConfigPayloadAsync
+  // This sync version is used for KV saves where token isn't critical
   return {
     _updated:         new Date().toISOString(),
     _note:            'Adloggs Portal config — auto-managed by portal',
-    // Integrations
     jiraProxyUrl:     STATE.jiraProxyUrl     || localStorage.getItem('adloggs_jira_proxy')    || '',
     scriptUrl:        STATE.scriptUrl        || localStorage.getItem('adloggs_script_url')    || '',
     gchatWebhookUrl:  STATE.gchatWebhookUrl  || localStorage.getItem('adloggs_gchat_webhook') || '',
     reminderInterval: STATE.reminderInterval || Number(localStorage.getItem('adloggs_reminder_interval') || 30),
     github_user:      localStorage.getItem('adloggs_github_user') || '',
     github_repo:      localStorage.getItem('adloggs_github_repo') || '',
-    // EOD
+    github_token_enc: localStorage.getItem('adloggs_github_token_enc') || '',
     eod_time:         localStorage.getItem('adloggs_eod_time')             || '18:30',
     eod_tz:           localStorage.getItem('adloggs_eod_tz')               || 'Asia/Kolkata',
     eod_days:         JSON.parse(localStorage.getItem('adloggs_eod_days')          || '[1,2,3,4,5]'),
@@ -5034,6 +5082,13 @@ function buildEodConfigPayload() {
     eod_fullreport:   JSON.parse(localStorage.getItem('adloggs_eod_fullreport')    || '{}'),
     eod_group:        JSON.parse(localStorage.getItem('adloggs_eod_group')         || '{}'),
   };
+}
+
+async function buildEodConfigPayloadAsync() {
+  const token    = localStorage.getItem('adloggs_github_token') || '';
+  const tokenEnc = await encryptToken(token);
+  if (tokenEnc) localStorage.setItem('adloggs_github_token_enc', tokenEnc);
+  return { ...buildEodConfigPayload(), github_token_enc: tokenEnc };
 }
 
 function applyEodConfigPayload(cfg) {
@@ -5066,6 +5121,17 @@ function applyEodConfigPayload(cfg) {
   }
   if (cfg.github_user) { localStorage.setItem('adloggs_github_user', cfg.github_user); const el=document.getElementById('cfg-github-user'); if(el) el.value=cfg.github_user; }
   if (cfg.github_repo) { localStorage.setItem('adloggs_github_repo', cfg.github_repo); const el=document.getElementById('cfg-github-repo'); if(el) el.value=cfg.github_repo; }
+  // Decrypt and restore the token
+  if (cfg.github_token_enc) {
+    localStorage.setItem('adloggs_github_token_enc', cfg.github_token_enc);
+    decryptToken(cfg.github_token_enc).then(token => {
+      if (token) {
+        localStorage.setItem('adloggs_github_token', token);
+        const el = document.getElementById('cfg-github-token');
+        if (el) el.value = token;
+      }
+    }).catch(() => {});
+  }
   updateGithubBadge();
 
   // Apply EOD fields to localStorage
@@ -5105,8 +5171,9 @@ async function pushConfigToGithub() {
   const statusEl = document.getElementById('github-sync-status');
   statusEl.textContent = '⏳ Pushing…';
 
-  const content = JSON.stringify(buildEodConfigPayload(), null, 2);
-  const encoded = btoa(unescape(encodeURIComponent(content))); // UTF-8 safe base64
+  const payload = await buildEodConfigPayloadAsync();
+  const content = JSON.stringify(payload, null, 2);
+  const encoded = btoa(unescape(encodeURIComponent(content)));
 
   const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/adloggs-config.json`;
 
@@ -5953,10 +6020,11 @@ async function reloadEodMembers() {
 async function saveEodConfigToWorker() {
   if (!STATE.jiraProxyUrl) return;
   try {
+    const payload = await buildEodConfigPayloadAsync();
     await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildEodConfigPayload()),
+      body: JSON.stringify(payload),
     });
   } catch(e) { console.warn('KV save failed:', e.message); }
 }
