@@ -863,38 +863,42 @@
 
       <div class="cfg-block">
         <div class="cfg-title">🐙 GitHub Config Sync
-          <span class="cfg-badge" id="github-cfg-badge" style="background:rgba(245,166,35,0.12);color:var(--amber)">⚠ Not configured</span>
+          <span class="cfg-badge" id="github-cfg-badge" style="background:rgba(62,207,142,0.12);color:var(--green)">✓ Auto-sync active</span>
         </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px">
-          Saves all webhook URLs and EOD settings to a <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">config.json</code> file in your GitHub repo.
-          Works on any browser, laptop, or computer — no Cloudflare KV needed.
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+          All settings are saved to <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">adloggs-config.json</code> in your GitHub repo and <strong>auto-loaded on every page open — on any device, any browser, with zero setup.</strong>
         </div>
-        <div style="background:rgba(26,115,232,0.05);border:1px solid rgba(26,115,232,0.15);border-radius:7px;padding:10px 12px;font-size:12px;margin-bottom:12px;line-height:1.9">
-          <strong style="color:var(--text)">One-time setup (~2 min):</strong><br>
-          1. GitHub → Settings → Developer settings → <strong>Personal access tokens → Fine-grained tokens</strong><br>
-          2. Click <strong>Generate new token</strong> → set expiry → select your <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">adloggs-portal</code> repo<br>
-          3. Under <strong>Repository permissions</strong> → <strong>Contents → Read and Write</strong><br>
-          4. Generate → copy the token → paste below<br>
-          5. Click <strong>Save & Sync</strong> — config.json is created in your repo automatically
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:rgba(62,207,142,0.07);border:1px solid rgba(62,207,142,0.2);border-radius:7px;padding:8px 12px;font-size:11px">
+            <div style="font-weight:700;margin-bottom:2px">📖 Reading (any device)</div>
+            No setup needed. Config loads automatically from the public repo URL on every page open.
+          </div>
+          <div style="background:rgba(26,115,232,0.06);border:1px solid rgba(26,115,232,0.2);border-radius:7px;padding:8px 12px;font-size:11px">
+            <div style="font-weight:700;margin-bottom:2px">✏️ Writing (admin device only)</div>
+            Needs a GitHub Personal Access Token once. Only the device that saves settings needs this.
+          </div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-          <div style="flex:1;min-width:200px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <div style="flex:1;min-width:160px">
             <div class="form-label">GitHub Username</div>
-            <input class="input" id="cfg-github-user" placeholder="priyadharshini468" />
+            <input class="input" id="cfg-github-user" placeholder="priyadharshini468" value="priyadharshini468" />
           </div>
-          <div style="flex:1;min-width:200px">
+          <div style="flex:1;min-width:160px">
             <div class="form-label">Repository Name</div>
-            <input class="input" id="cfg-github-repo" placeholder="adloggs-portal" />
+            <input class="input" id="cfg-github-repo" placeholder="adloggs-portal" value="adloggs-portal" />
           </div>
         </div>
-        <div class="form-group">
-          <div class="form-label">Personal Access Token (stored in this browser only — never sent to anyone else)</div>
-          <input class="input" id="cfg-github-token" type="password" placeholder="github_pat_..." />
+        <div class="form-group" style="margin-bottom:8px">
+          <div class="form-label">Personal Access Token <span style="font-weight:400;color:var(--text3)">(write-only — stays in this browser, never uploaded)</span></div>
+          <input class="input" id="cfg-github-token" type="password" placeholder="github_pat_... (needed only to save settings)" />
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">
+          Get token: <a href="https://github.com/settings/tokens?type=beta" target="_blank" style="color:var(--accent)">github.com/settings/tokens?type=beta</a> → Generate → repo: adloggs-portal → Contents: Read &amp; Write
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="saveGithubConfig()">Save Settings</button>
-          <button class="btn btn-primary btn-sm" onclick="pushConfigToGithub()">⬆ Push Config to GitHub</button>
-          <button class="btn btn-ghost btn-sm" onclick="pullConfigFromGithub()">⬇ Pull Config from GitHub</button>
+          <button class="btn btn-primary btn-sm" onclick="saveGithubConfig()">Save Token</button>
+          <button class="btn btn-primary btn-sm" onclick="pushConfigToGithub()">⬆ Push Config Now</button>
+          <button class="btn btn-ghost btn-sm" onclick="pullConfigFromGithub()">⬇ Pull Config Now</button>
           <span id="github-sync-status" style="font-size:11px;color:var(--text3)"></span>
         </div>
       </div>
@@ -1619,7 +1623,7 @@ const STATE = {
   scriptUrl: localStorage.getItem('adloggs_script_url') || 'https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec',
   addingToTeam: null,
   timers: {},
-  jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || 'https://jira-proxy.priyadharshini.workers.dev',
+  jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || 'https://jira-proxy.priyadharshini468.workers.dev',
   gchatWebhookUrl:  localStorage.getItem('adloggs_gchat_webhook') || '',
   reminderInterval: parseInt(localStorage.getItem('adloggs_reminder_interval') || '0'),
   reminderTimer:    null,
@@ -2678,6 +2682,7 @@ function saveJiraProxy() {
     badge.textContent = '✓ Proxy configured';
   }
   showToast('Jira proxy URL saved ✓');
+  pushConfigToGithubSilent();
 }
 
 async function testJiraProxy() {
@@ -4084,6 +4089,7 @@ function saveScriptUrl() {
   localStorage.setItem('adloggs_script_url', url);
   showToast('Apps Script URL saved ✓');
   if (url) loadRequirementsFromSheet();
+  pushConfigToGithubSilent();
 }
 
 function showScriptCode() {
@@ -4226,6 +4232,7 @@ function saveGChatWebhook() {
     badge.textContent = '✓ Webhook configured';
   }
   showToast('Google Chat webhook saved ✓');
+  pushConfigToGithubSilent();
 }
 
 async function testGChatWebhook() {
@@ -4969,22 +4976,25 @@ let _eodFocusHandler      = null;
 // Token stored in localStorage — never sent anywhere except api.github.com
 // ================================================================
 
+// Hardcoded defaults — every device can read config without any setup
+const GITHUB_DEFAULT_USER = 'priyadharshini468';
+const GITHUB_DEFAULT_REPO = 'adloggs-portal';
+
 function getGithubSettings() {
   return {
-    user:  localStorage.getItem('adloggs_github_user')  || '',
-    repo:  localStorage.getItem('adloggs_github_repo')  || '',
+    user:  localStorage.getItem('adloggs_github_user')  || GITHUB_DEFAULT_USER,
+    repo:  localStorage.getItem('adloggs_github_repo')  || GITHUB_DEFAULT_REPO,
     token: localStorage.getItem('adloggs_github_token') || '',
   };
 }
 
 function saveGithubConfig() {
-  const user  = document.getElementById('cfg-github-user').value.trim();
-  const repo  = document.getElementById('cfg-github-repo').value.trim();
+  const user  = document.getElementById('cfg-github-user').value.trim()  || GITHUB_DEFAULT_USER;
+  const repo  = document.getElementById('cfg-github-repo').value.trim()  || GITHUB_DEFAULT_REPO;
   const token = document.getElementById('cfg-github-token').value.trim();
-  if (!user || !repo || !token) { showToast('Fill in all three fields'); return; }
-  localStorage.setItem('adloggs_github_user',  user);
-  localStorage.setItem('adloggs_github_repo',  repo);
-  localStorage.setItem('adloggs_github_token', token);
+  localStorage.setItem('adloggs_github_user', user);
+  localStorage.setItem('adloggs_github_repo', repo);
+  if (token) localStorage.setItem('adloggs_github_token', token);
   updateGithubBadge();
   showToast('GitHub settings saved ✓');
 }
@@ -4993,9 +5003,9 @@ function updateGithubBadge() {
   const { user, repo, token } = getGithubSettings();
   const badge = document.getElementById('github-cfg-badge');
   if (!badge) return;
-  if (user && repo && token) {
+  if (user && repo) {
     badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
-    badge.textContent = `✓ ${user}/${repo}`;
+    badge.textContent = token ? `✓ ${user}/${repo} (read+write)` : `✓ ${user}/${repo} (read-only)`;
   } else {
     badge.style.background = 'rgba(245,166,35,0.12)'; badge.style.color = 'var(--amber)';
     badge.textContent = '⚠ Not configured';
@@ -5003,29 +5013,90 @@ function updateGithubBadge() {
 }
 
 function buildEodConfigPayload() {
+  // NOTE: GitHub token excluded — stays browser-only for security
   return {
     _updated:         new Date().toISOString(),
-    _note:            'Adloggs Portal config — auto-managed, do not edit manually',
+    _note:            'Adloggs Portal config — auto-managed by portal',
+    // Integrations
+    jiraProxyUrl:     STATE.jiraProxyUrl     || localStorage.getItem('adloggs_jira_proxy')    || '',
+    scriptUrl:        STATE.scriptUrl        || localStorage.getItem('adloggs_script_url')    || '',
+    gchatWebhookUrl:  STATE.gchatWebhookUrl  || localStorage.getItem('adloggs_gchat_webhook') || '',
+    reminderInterval: STATE.reminderInterval || Number(localStorage.getItem('adloggs_reminder_interval') || 30),
+    github_user:      localStorage.getItem('adloggs_github_user') || '',
+    github_repo:      localStorage.getItem('adloggs_github_repo') || '',
+    // EOD
     eod_time:         localStorage.getItem('adloggs_eod_time')             || '18:30',
     eod_tz:           localStorage.getItem('adloggs_eod_tz')               || 'Asia/Kolkata',
+    eod_days:         JSON.parse(localStorage.getItem('adloggs_eod_days')          || '[1,2,3,4,5]'),
     eod_webhooks:     JSON.parse(localStorage.getItem('adloggs_eod_webhooks')      || '{}'),
     eod_enabled:      JSON.parse(localStorage.getItem('adloggs_eod_enabled')       || '{}'),
     eod_dest_enabled: JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')  || '{}'),
     eod_fullreport:   JSON.parse(localStorage.getItem('adloggs_eod_fullreport')    || '{}'),
     eod_group:        JSON.parse(localStorage.getItem('adloggs_eod_group')         || '{}'),
-    eod_days:         JSON.parse(localStorage.getItem('adloggs_eod_days')          || '[1,2,3,4,5]'),
   };
 }
 
 function applyEodConfigPayload(cfg) {
   if (!cfg) return;
-  const keys = ['eod_time','eod_tz','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group','eod_days'];
-  keys.forEach(k => {
+
+  // Apply Integrations fields
+  if (cfg.jiraProxyUrl) {
+    STATE.jiraProxyUrl = cfg.jiraProxyUrl;
+    localStorage.setItem('adloggs_jira_proxy', cfg.jiraProxyUrl);
+    const el = document.getElementById('cfg-jira-proxy'); if (el) el.value = cfg.jiraProxyUrl;
+    const badge = document.getElementById('jira-cfg-badge');
+    if (badge) { badge.style.background='rgba(62,207,142,0.12)'; badge.style.color='var(--green)'; badge.textContent='✓ Proxy URL set'; }
+  }
+  if (cfg.scriptUrl) {
+    STATE.scriptUrl = cfg.scriptUrl;
+    localStorage.setItem('adloggs_script_url', cfg.scriptUrl);
+    const el = document.getElementById('cfg-script-url'); if (el) el.value = cfg.scriptUrl;
+  }
+  if (cfg.gchatWebhookUrl) {
+    STATE.gchatWebhookUrl = cfg.gchatWebhookUrl;
+    localStorage.setItem('adloggs_gchat_webhook', cfg.gchatWebhookUrl);
+    const el = document.getElementById('cfg-gchat-webhook'); if (el) el.value = cfg.gchatWebhookUrl;
+    const badge = document.getElementById('gchat-cfg-badge');
+    if (badge) { badge.style.background='rgba(62,207,142,0.12)'; badge.style.color='var(--green)'; badge.textContent='✓ Webhook set'; }
+  }
+  if (cfg.reminderInterval) {
+    STATE.reminderInterval = cfg.reminderInterval;
+    localStorage.setItem('adloggs_reminder_interval', String(cfg.reminderInterval));
+    const el = document.getElementById('reminder-interval'); if (el) el.value = String(cfg.reminderInterval);
+  }
+  if (cfg.github_user) { localStorage.setItem('adloggs_github_user', cfg.github_user); const el=document.getElementById('cfg-github-user'); if(el) el.value=cfg.github_user; }
+  if (cfg.github_repo) { localStorage.setItem('adloggs_github_repo', cfg.github_repo); const el=document.getElementById('cfg-github-repo'); if(el) el.value=cfg.github_repo; }
+  updateGithubBadge();
+
+  // Apply EOD fields to localStorage
+  const eodKeys = ['eod_time','eod_tz','eod_days','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+  eodKeys.forEach(k => {
     if (cfg[k] === undefined) return;
     localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
   });
-  applyEodConfigToUI(cfg);
+
+  // Restore EOD UI
+  const te = document.getElementById('eod-time'); if (te && cfg.eod_time) te.value = cfg.eod_time;
+  const ze = document.getElementById('eod-tz');   if (ze && cfg.eod_tz)   ze.value = cfg.eod_tz;
+  const fr = cfg.eod_fullreport || {}, gr = cfg.eod_group || {};
+  if (fr.name)    { const el=document.getElementById('eod-fullreport-name');    if(el) el.value=fr.name; }
+  if (fr.webhook) { const el=document.getElementById('eod-fullreport-webhook'); if(el) el.value=fr.webhook; const s=document.getElementById('eod-fullreport-status'); if(s) s.textContent='✓ Saved'; }
+  if (gr.name)    { const el=document.getElementById('eod-group-name');    if(el) el.value=gr.name; }
+  if (gr.webhook) { const el=document.getElementById('eod-group-webhook'); if(el) el.value=gr.webhook; const s=document.getElementById('eod-group-status'); if(s) s.textContent='✓ Saved'; }
+  const de = cfg.eod_dest_enabled || {};
+  ['fullreport','group'].forEach(key => {
+    const isOn = de[key] !== false;
+    const btn = document.getElementById(`eod-toggle-${key}`);
+    const row = document.getElementById(`eod-${key}-row`);
+    if (btn) { btn.textContent=isOn?'ON':'OFF'; btn.style.background=isOn?'#22c55e':'#d1d5db'; btn.style.color=isOn?'#fff':'#6b7280'; }
+    if (row)   row.style.opacity = isOn ? '1' : '0.5';
+  });
+  updateEodBadge();
+  startEodScheduler();
+  restoreEodDayPicker();
+  setTimeout(() => renderEodMemberTable(), 400);
 }
+
 
 async function pushConfigToGithub() {
   const { user, repo, token } = getGithubSettings();
@@ -5088,46 +5159,39 @@ async function pushConfigToGithub() {
 }
 
 async function pullConfigFromGithub() {
-  const { user, repo, token } = getGithubSettings();
-  if (!user || !repo || !token) { showToast('Configure GitHub settings first'); return; }
+  const { user, repo } = getGithubSettings();
+  if (!user || !repo) { showToast('GitHub user/repo not configured'); return; }
 
   const statusEl = document.getElementById('github-sync-status');
-  statusEl.textContent = '⏳ Pulling…';
+  if (statusEl) statusEl.textContent = '⏳ Pulling…';
 
-  const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/adloggs-config.json`;
+  // Use raw public URL — works on ANY device with NO token required
+  // Cache-busted with timestamp so browsers don't serve stale config
+  const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/adloggs-config.json?t=${Date.now()}`;
 
   try {
-    const res = await fetch(apiUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      }
-    });
+    const res = await fetch(rawUrl);
     if (!res.ok) {
-      if (res.status === 404) throw new Error('Config file not found — push from your main device first');
-      throw new Error(`GitHub GET failed: ${res.status}`);
+      if (res.status === 404) throw new Error('Config file not found — push from main device first');
+      throw new Error(`Fetch failed: ${res.status}`);
     }
-    const data    = await res.json();
-    const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
-    const cfg     = JSON.parse(decoded);
+    const cfg = await res.json();
     applyEodConfigPayload(cfg);
-    statusEl.textContent = `✓ Pulled at ${new Date().toLocaleTimeString()} (saved ${cfg._updated?.slice(0,16)||'unknown'})`;
-    showToast('Config pulled from GitHub ✓');
+    if (statusEl) statusEl.textContent = `✓ Pulled at ${new Date().toLocaleTimeString()} (saved ${cfg._updated?.slice(0,16)||'unknown'})`;
+    showToast('Config loaded from GitHub ✓');
+    return cfg;
   } catch(e) {
-    statusEl.textContent = `✗ ${e.message}`;
-    showToast(`Pull failed: ${e.message}`);
-    console.error('GitHub pull error:', e);
+    if (statusEl) statusEl.textContent = `✗ ${e.message}`;
+    console.warn('GitHub pull error:', e.message);
+    throw e;
   }
 }
 
-// Auto-pull on page load if GitHub is configured
+// Auto-pull on page load — works on ANY device, no token needed
 async function autoSyncFromGithub() {
-  const { user, repo, token } = getGithubSettings();
-  if (!user || !repo || !token) return;
   try {
     await pullConfigFromGithub();
-  } catch(e) { /* silent — don't block page load */ }
+  } catch(e) { /* silent on load — file may not exist yet */ }
 }
 
 // Call this after any config save to keep GitHub in sync
@@ -5888,20 +5952,11 @@ async function reloadEodMembers() {
 // ── KV Config sync ───────────────────────────────────────────────
 async function saveEodConfigToWorker() {
   if (!STATE.jiraProxyUrl) return;
-  const config = {
-    eod_time:         localStorage.getItem('adloggs_eod_time')             || '18:30',
-    eod_tz:           localStorage.getItem('adloggs_eod_tz')               || 'Asia/Kolkata',
-    eod_webhooks:     JSON.parse(localStorage.getItem('adloggs_eod_webhooks')      || '{}'),
-    eod_enabled:      JSON.parse(localStorage.getItem('adloggs_eod_enabled')       || '{}'),
-    eod_dest_enabled: JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')  || '{}'),
-    eod_fullreport:   JSON.parse(localStorage.getItem('adloggs_eod_fullreport')    || '{}'),
-    eod_group:        JSON.parse(localStorage.getItem('adloggs_eod_group')         || '{}'),
-  };
   try {
     await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config),
+      body: JSON.stringify(buildEodConfigPayload()),
     });
   } catch(e) { console.warn('KV save failed:', e.message); }
 }
@@ -6029,8 +6084,16 @@ function switchScoreTab(tab) {
 }
 
 
-function init() {
-  // Restore saved config
+async function init() {
+  // ── Step 1: Pull config from GitHub FIRST (no token needed, public raw URL)
+  // This ensures all fields are populated before anything else runs
+  try {
+    await pullConfigFromGithub();
+  } catch(e) {
+    // Silent — config file may not exist yet, fall through to localStorage
+  }
+
+  // ── Step 2: Restore all UI from STATE / localStorage (now updated by GitHub pull)
   if (STATE.scriptUrl) document.getElementById('cfg-script-url').value = STATE.scriptUrl;
   if (STATE.jiraProxyUrl) {
     document.getElementById('cfg-jira-proxy').value = STATE.jiraProxyUrl;
@@ -6038,30 +6101,31 @@ function init() {
     badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
     badge.textContent = '✓ Cloudflare Worker connected';
   }
-
   if (STATE.gchatWebhookUrl) {
     document.getElementById('cfg-gchat-webhook').value = STATE.gchatWebhookUrl;
     const badge = document.getElementById('gchat-cfg-badge');
     badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
     badge.textContent = '✓ Webhook configured';
   }
-  // Restore reminder interval selector
   if (STATE.reminderInterval) {
     const sel = document.getElementById('reminder-interval');
     if (sel) sel.value = String(STATE.reminderInterval);
   }
-  startReminderTimer();
 
-  // Restore EOD config — try KV first, fall back to localStorage
+  // GitHub UI
+  const ghUser  = localStorage.getItem('adloggs_github_user')  || GITHUB_DEFAULT_USER;
+  const ghRepo  = localStorage.getItem('adloggs_github_repo')  || GITHUB_DEFAULT_REPO;
+  const ghToken = localStorage.getItem('adloggs_github_token') || '';
+  const guEl = document.getElementById('cfg-github-user');  if (guEl) guEl.value = ghUser;
+  const grEl = document.getElementById('cfg-github-repo');  if (grEl) grEl.value = ghRepo;
+  const gtEl = document.getElementById('cfg-github-token'); if (gtEl && ghToken) gtEl.value = ghToken;
+  updateGithubBadge();
+
+  // EOD UI
   const eodTime = localStorage.getItem('adloggs_eod_time') || '18:30';
   const eodTz   = localStorage.getItem('adloggs_eod_tz')   || 'Asia/Kolkata';
-  const eodTimeEl = document.getElementById('eod-time');
-  const eodTzEl   = document.getElementById('eod-tz');
-  if (eodTimeEl) eodTimeEl.value = eodTime;
-  if (eodTzEl)   eodTzEl.value   = eodTz;
-  updateEodBadge();
-  startEodScheduler();
-  restoreEodDayPicker();
+  const eodTimeEl = document.getElementById('eod-time'); if (eodTimeEl) eodTimeEl.value = eodTime;
+  const eodTzEl   = document.getElementById('eod-tz');   if (eodTzEl)   eodTzEl.value   = eodTz;
   try {
     const fr = JSON.parse(localStorage.getItem('adloggs_eod_fullreport') || '{}');
     const gr = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
@@ -6078,29 +6142,20 @@ function init() {
       if (row) row.style.opacity = isOn ? '1' : '0.5';
     });
   } catch(e) {}
-  // Restore GitHub config settings
-  const ghUser  = localStorage.getItem('adloggs_github_user')  || '';
-  const ghRepo  = localStorage.getItem('adloggs_github_repo')  || '';
-  const ghToken = localStorage.getItem('adloggs_github_token') || '';
-  if (ghUser)  { const el=document.getElementById('cfg-github-user');  if(el) el.value=ghUser; }
-  if (ghRepo)  { const el=document.getElementById('cfg-github-repo');  if(el) el.value=ghRepo; }
-  if (ghToken) { const el=document.getElementById('cfg-github-token'); if(el) el.value=ghToken; }
-  updateGithubBadge();
-  // Auto-pull config from GitHub on load (silent — won't block if not configured)
-  setTimeout(() => autoSyncFromGithub(), 2000);
-  // Also try KV if Worker is configured
-  loadEodConfigFromWorker().then(cfg => {
-    if (cfg) { applyEodConfigToUI(cfg); showToast('EOD config synced from Worker ✓'); }
-  }).catch(() => {});
-  setTimeout(() => renderEodMemberTable(), 1500);
+  updateEodBadge();
+  restoreEodDayPicker();
+  startEodScheduler();
+  startReminderTimer();
+  setTimeout(() => renderEodMemberTable(), 800);
 
+  // ── Step 3: Show UI
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility    = 'visible';
 
   renderTeams();
   populateMemberFilter();
 
-  // Load sprint from localStorage cache first (instant display)
+  // Load sprint from localStorage cache (instant display)
   try {
     const cached = localStorage.getItem('adloggs_sprint_cache');
     const cacheTime = parseInt(localStorage.getItem('adloggs_sprint_cache_time') || '0');
@@ -6123,7 +6178,7 @@ function init() {
   document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
   document.getElementById('req-sheet-time').textContent  = 'Loading...';
 
-  if (STATE.scriptUrl) setTimeout(() => loadRequirementsFromSheet(), 800);
+  if (STATE.scriptUrl)    setTimeout(() => loadRequirementsFromSheet(), 800);
   if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
   startAutoSync();
 }
