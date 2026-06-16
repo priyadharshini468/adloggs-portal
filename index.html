@@ -4655,7 +4655,6 @@ async function sendEodSummaryNow() {
       if (res.ok) {
         const data = await res.json();
         issues = (data.issues || []).map(i => {
-          // Extract comments added or updated today
           const allComments = i.fields?.comment?.comments || [];
           const todayComments = allComments
             .filter(c => (c.updated || c.created || '').slice(0, 10) === todayStr)
@@ -4672,16 +4671,19 @@ async function sendEodSummaryNow() {
             comments: todayComments,
           };
         });
+        // issues is now the definitive list — even if empty (nobody updated anything today)
+        // Do NOT fall back to SPRINT_DATA; empty = no activity today
+      } else {
+        throw new Error(`Worker responded ${res.status}`);
       }
+    } else {
+      throw new Error('No Worker URL configured');
     }
-  } catch(e) { console.warn('Jira fetch failed, using local data:', e.message); }
-
-  // Fall back to in-memory SPRINT_DATA
-  if (!issues.length) {
-    issues = SPRINT_DATA.map(i => ({
-      key: i.key, summary: i.summary || '', status: i.status || '',
-      priority: i.priority || '', assignee: i.assignee || '', comments: [],
-    }));
+  } catch(e) {
+    console.warn('Jira fetch failed:', e.message);
+    statusEl.textContent = `⚠ Could not fetch from Jira: ${e.message}. Report not sent.`;
+    showToast('EOD fetch failed — check Worker URL in Integrations');
+    return; // Stop — do NOT send stale/wrong data
   }
 
   // Build per-member issue map
