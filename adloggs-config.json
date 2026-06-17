@@ -1,13 +1,13 @@
 {
-  "_updated": "2026-06-15T14:01:29.069Z",
+  "_updated": "2026-06-17T11:55:28.590Z",
   "_note": "Adloggs Portal config — auto-managed by portal",
-  "jiraProxyUrl": "https://jira-proxy.priyadharshini468.workers.dev",
+  "jiraProxyUrl": "https://jira-proxy.priyadharshini.workers.dev",
   "scriptUrl": "https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec",
   "gchatWebhookUrl": "",
   "reminderInterval": 30,
   "github_user": "priyadharshini468",
   "github_repo": "adloggs-portal",
-  "github_token_enc": "3btLuDpBzd9QAvMFQWoe2AKkWkucSRa9kK+woihaEC4h5DH195WIVXFxsHbzwne67VNh6O/JfDxspvcwMwkCWyyCyJXxxh/RYKJGPBlmNSnbyFSrUNOqprxmzvVy6fmDtMZ8XQbGMJhCPPHpmk/flmJjzE9TRzuLMA==",
+  "github_token_enc": "YG11Xk0FMSRmW0H6EeYsOF/XEJ8UzzH/gPMccxuJ85yfysOABK9USoGlxHUWdvkNjSrYLC4nvtvm1lZ1Nf3IWWLT0IZw9AZZMQWWUIQqsc8ThAbj25XfGQszQHc+ERb/5XEMvgQ8i9asuEohLg6UOQRsetPfsTev+Q==",
   "eod_time": "19:32",
   "eod_tz": "Asia/Kolkata",
   "eod_days": [
