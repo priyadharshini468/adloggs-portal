@@ -5089,6 +5089,11 @@ function buildEodConfigPayload() {
     github_user:      localStorage.getItem('adloggs_github_user') || '',
     github_repo:      localStorage.getItem('adloggs_github_repo') || '',
     github_token_enc: localStorage.getItem('adloggs_github_token_enc') || '',
+    // Team structure for full report grouping in cron
+    team_data: getTeamsSource().map(t => ({
+      name: t.name,
+      members: (t.members||[]).map(m => ({ name: m.name }))
+    })),
     eod_time:         localStorage.getItem('adloggs_eod_time')             || '18:30',
     eod_tz:           localStorage.getItem('adloggs_eod_tz')               || 'Asia/Kolkata',
     eod_days:         JSON.parse(localStorage.getItem('adloggs_eod_days')          || '[1,2,3,4,5]'),
