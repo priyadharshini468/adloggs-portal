@@ -1,5 +1,5 @@
 {
-  "_updated": "2026-06-17T12:34:35.804Z",
+  "_updated": "2026-06-17T12:54:16.235Z",
   "_note": "Adloggs Portal config — auto-managed by portal",
   "jiraProxyUrl": "https://jira-proxy.priyadharshini.workers.dev",
   "scriptUrl": "https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec",
@@ -7,7 +7,7 @@
   "reminderInterval": 30,
   "github_user": "priyadharshini468",
   "github_repo": "adloggs-portal",
-  "github_token_enc": "pXIxz5KLEpBZwhIDD08xU+1E6pgO8bC1v6G+f3cHxuzqLkxayM3LoDfX+XZOa1CS8rFFP5ZzihYR4f/dSN+IxQFoEQrBPJH4GwdLFL9tgEIHRwlaaJPp8/ZyDcjysw0L8Dpnzo7xq4oA6n2Wrp2aMK8dDAyhDn8pIg==",
+  "github_token_enc": "oVxvuGhEasnsz/t9etOtX4Ff8mD7v/JVXekdYK8MK8ca7NYFkotSS3nvM9weVwTXC40RnxJDh9AZbz7J8xvoCAU5QE5FVhs90leq+/ju7f+EhdI9sBFprHQ2hL79krqPaUT+tcZ1mT7liHYU46TQHjoG5lFqwhwZrg==",
   "eod_time": "19:32",
   "eod_tz": "Asia/Kolkata",
   "eod_days": [
