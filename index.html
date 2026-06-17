@@ -784,13 +784,14 @@
 
         <div class="form-group">
           <div class="form-label">Cloudflare Worker URL</div>
-          <input class="input" id="cfg-jira-proxy" placeholder="https://jira-proxy.priyadharshini468.workers.dev" />
+          <input class="input" id="cfg-jira-proxy" placeholder="https://jira-proxy.priyadharshini.workers.dev" />
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-primary btn-sm" onclick="saveJiraProxy()">Save URL</button>
           <button class="btn btn-ghost btn-sm" onclick="testJiraProxy()">Test Connection</button>
           <button class="btn btn-ghost btn-sm" onclick="syncSprint()">↻ Sync Sprint</button>
           <button class="btn btn-ghost btn-sm" onclick="renderReleases()">↻ Sync Releases</button>
+          <button class="btn btn-ghost btn-sm" onclick="fixWorkerUrl()" title="Reset to correct URL">⚠ Fix URL</button>
           <a href="https://adloggss.atlassian.net" target="_blank" class="btn btn-ghost btn-sm">Open Jira ↗</a>
           <span id="jira-proxy-status" style="font-size:11px;color:var(--text3)"></span>
         </div>
@@ -1623,7 +1624,7 @@ const STATE = {
   scriptUrl: localStorage.getItem('adloggs_script_url') || 'https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec',
   addingToTeam: null,
   timers: {},
-  jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || 'https://jira-proxy.priyadharshini468.workers.dev',
+  jiraProxyUrl: localStorage.getItem('adloggs_jira_proxy') || 'https://jira-proxy.priyadharshini.workers.dev',
   gchatWebhookUrl:  localStorage.getItem('adloggs_gchat_webhook') || '',
   reminderInterval: parseInt(localStorage.getItem('adloggs_reminder_interval') || '0'),
   reminderTimer:    null,
@@ -2669,6 +2670,18 @@ function renderSprint(issues) {
   renderFilteredBoard();
   updateSprintMeta();
   document.getElementById('sprint-sub').querySelector && null; // handled by updateSprintMeta
+}
+
+function fixWorkerUrl() {
+  const correct = 'https://jira-proxy.priyadharshini.workers.dev';
+  STATE.jiraProxyUrl = correct;
+  localStorage.setItem('adloggs_jira_proxy', correct);
+  const el = document.getElementById('cfg-jira-proxy');
+  if (el) el.value = correct;
+  const badge = document.getElementById('jira-cfg-badge');
+  if (badge) { badge.style.background='rgba(62,207,142,0.12)'; badge.style.color='var(--green)'; badge.textContent='✓ URL fixed'; }
+  pushConfigToGithubSilent();
+  showToast('Worker URL fixed ✓ — click Test Connection to verify');
 }
 
 function saveJiraProxy() {
@@ -4642,48 +4655,49 @@ async function sendEodSummaryNow() {
   const statusEl = document.getElementById('eod-status');
   statusEl.textContent = '⏳ Fetching Jira activity…';
 
-  // Load all issues updated today
+  // Validate URL before attempting fetch
+  if (!STATE.jiraProxyUrl) {
+    statusEl.textContent = '⚠ No Worker URL set — go to Integrations → Jira Proxy URL';
+    showToast('Set your Worker URL in Integrations first');
+    return;
+  }
+
   let issues = [];
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr   = new Date().toISOString().slice(0, 10);
   const todayLabel = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const workerBase = STATE.jiraProxyUrl.replace(/\/+$/, '');
 
   try {
-    if (STATE.jiraProxyUrl) {
-      const workerBase = STATE.jiraProxyUrl.replace(/\/+$/, '');
-      const jql = `project=AB AND updated>="${todayStr}" ORDER BY updated DESC`;
-      const res = await fetch(`${workerBase}/issues?jql=${encodeURIComponent(jql)}&maxResults=200`);
-      if (res.ok) {
-        const data = await res.json();
-        issues = (data.issues || []).map(i => {
-          const allComments = i.fields?.comment?.comments || [];
-          const todayComments = allComments
-            .filter(c => (c.updated || c.created || '').slice(0, 10) === todayStr)
-            .map(c => ({
-              author: c.author?.displayName || c.updateAuthor?.displayName || 'Unknown',
-              body:   extractCommentText(c.body),
-            }));
-          return {
-            key:      i.key,
-            summary:  i.fields?.summary || '',
-            status:   i.fields?.status?.name || '',
-            priority: i.fields?.priority?.name || '',
-            assignee: i.fields?.assignee?.displayName || '',
-            comments: todayComments,
-          };
-        });
-        // issues is now the definitive list — even if empty (nobody updated anything today)
-        // Do NOT fall back to SPRINT_DATA; empty = no activity today
-      } else {
-        throw new Error(`Worker responded ${res.status}`);
-      }
+    const jql      = `project=AB AND updated>="${todayStr}" ORDER BY updated DESC`;
+    const fetchUrl = `${workerBase}/issues?jql=${encodeURIComponent(jql)}&maxResults=200`;
+    const res      = await fetch(fetchUrl);
+    if (res.ok) {
+      const data = await res.json();
+      issues = (data.issues || []).map(i => {
+        const allComments  = i.fields?.comment?.comments || [];
+        const todayComments = allComments
+          .filter(c => (c.updated || c.created || '').slice(0, 10) === todayStr)
+          .map(c => ({
+            author: c.author?.displayName || c.updateAuthor?.displayName || 'Unknown',
+            body:   extractCommentText(c.body),
+          }));
+        return {
+          key:      i.key,
+          summary:  i.fields?.summary || '',
+          status:   i.fields?.status?.name || '',
+          priority: i.fields?.priority?.name || '',
+          assignee: i.fields?.assignee?.displayName || '',
+          comments: todayComments,
+        };
+      });
     } else {
-      throw new Error('No Worker URL configured');
+      throw new Error(`Worker responded ${res.status} — URL: ${workerBase}`);
     }
   } catch(e) {
     console.warn('Jira fetch failed:', e.message);
-    statusEl.textContent = `⚠ Could not fetch from Jira: ${e.message}. Report not sent.`;
-    showToast('EOD fetch failed — check Worker URL in Integrations');
-    return; // Stop — do NOT send stale/wrong data
+    statusEl.textContent = `⚠ Fetch failed (${workerBase}): ${e.message}`;
+    showToast(`EOD fetch failed — using: ${workerBase}`);
+    return;
   }
 
   // Build per-member issue map
@@ -5068,7 +5082,7 @@ function buildEodConfigPayload() {
   return {
     _updated:         new Date().toISOString(),
     _note:            'Adloggs Portal config — auto-managed by portal',
-    jiraProxyUrl:     STATE.jiraProxyUrl     || localStorage.getItem('adloggs_jira_proxy')    || '',
+    jiraProxyUrl:     (STATE.jiraProxyUrl || localStorage.getItem('adloggs_jira_proxy') || ''),
     scriptUrl:        STATE.scriptUrl        || localStorage.getItem('adloggs_script_url')    || '',
     gchatWebhookUrl:  STATE.gchatWebhookUrl  || localStorage.getItem('adloggs_gchat_webhook') || '',
     reminderInterval: STATE.reminderInterval || Number(localStorage.getItem('adloggs_reminder_interval') || 30),
