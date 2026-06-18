@@ -1,5 +1,5 @@
 {
-  "_updated": "2026-06-17T13:06:42.028Z",
+  "_updated": "2026-06-18T06:16:06.902Z",
   "_note": "Adloggs Portal config — auto-managed by portal",
   "jiraProxyUrl": "https://jira-proxy.priyadharshini.workers.dev",
   "scriptUrl": "https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec",
@@ -7,7 +7,91 @@
   "reminderInterval": 30,
   "github_user": "priyadharshini468",
   "github_repo": "adloggs-portal",
-  "github_token_enc": "EFWlln4VM2Aqq5RhsTIOpUPpVHxURBCbgGx814g5wcfYb8T0tQ3IkoU1kZDMXPBeygLSih6FqcdkSko+15lUaaTqrnde7Tdu+Q24Q7Wl3XOlMilJqFCZiNHMtVEZVuT6e/xd0KYpmlyq1vO7JHpa+juLi8iNaR5/KA==",
+  "github_token_enc": "mttx/7iCJaCzg0DeQDIktVRLyDEbbKvMblSZDr2nmV46NzRL+9FBN4xjKRebWyiHhJD+C+ayRQW5r5f22E8x38xJteNDRNhygXe4sGmjHVhRTjyf1OcRLqYLwArgfY6FFaR05zGxFfpFveH8zQS1YsVJXjunCuWCqA==",
+  "team_data": [
+    {
+      "name": "Pinnacle",
+      "members": [
+        {
+          "name": "Vignesh B"
+        },
+        {
+          "name": "Karthik K"
+        },
+        {
+          "name": "Parthi"
+        },
+        {
+          "name": "Chandru S"
+        },
+        {
+          "name": "Sundarapandiyan"
+        },
+        {
+          "name": "Pravin"
+        }
+      ]
+    },
+    {
+      "name": "Momentum",
+      "members": [
+        {
+          "name": "aravind"
+        },
+        {
+          "name": "Chinna Mani"
+        },
+        {
+          "name": "mani"
+        },
+        {
+          "name": "dinesh"
+        }
+      ]
+    },
+    {
+      "name": "Catalyst",
+      "members": [
+        {
+          "name": "Sailavasan"
+        }
+      ]
+    },
+    {
+      "name": "AI Intelligence",
+      "members": [
+        {
+          "name": "Ramakrishnan"
+        },
+        {
+          "name": "Jai Chandru SS"
+        },
+        {
+          "name": "Venkateswaran E"
+        },
+        {
+          "name": "Muthu Rajeshwari M"
+        }
+      ]
+    },
+    {
+      "name": "Shared Resources",
+      "members": [
+        {
+          "name": "Vijayalavan T"
+        },
+        {
+          "name": "Raja"
+        },
+        {
+          "name": "Ranjith"
+        },
+        {
+          "name": "Devika"
+        }
+      ]
+    }
+  ],
   "eod_time": "18:25",
   "eod_tz": "Asia/Kolkata",
   "eod_days": [
@@ -26,7 +110,7 @@
   },
   "eod_dest_enabled": {
     "fullreport": true,
-    "group": false
+    "group": true
   },
   "eod_fullreport": {
     "name": "Vignesh",
