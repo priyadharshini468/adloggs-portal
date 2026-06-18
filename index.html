@@ -4442,9 +4442,8 @@ function saveEodGroup() {
 }
 
 function toggleEodDestination(key) {
-  // key = 'fullreport' or 'group'
   const stored  = JSON.parse(localStorage.getItem(`adloggs_eod_dest_enabled`) || '{}');
-  const current = stored[key] !== false; // default ON
+  const current = stored[key] !== false;
   stored[key]   = !current;
   localStorage.setItem('adloggs_eod_dest_enabled', JSON.stringify(stored));
   const isNowOn = stored[key] !== false;
@@ -4452,13 +4451,15 @@ function toggleEodDestination(key) {
   const btn = document.getElementById(`eod-toggle-${key}`);
   const row = document.getElementById(`eod-${key}-row`);
   if (btn) {
-    btn.textContent    = isNowOn ? 'ON' : 'OFF';
+    btn.textContent      = isNowOn ? 'ON' : 'OFF';
     btn.style.background = isNowOn ? '#22c55e' : '#d1d5db';
     btn.style.color      = isNowOn ? '#fff'    : '#6b7280';
   }
   if (row) row.style.opacity = isNowOn ? '1' : '0.5';
   updateEodBadge();
   showToast(`${key === 'fullreport' ? 'Full report (person)' : 'Group chat'} ${isNowOn ? 'enabled ✓' : 'disabled'}`);
+  saveEodConfigToWorker();
+  pushConfigToGithubSilent();
 }
 
 function toggleEodDay(btn) {
@@ -4543,6 +4544,8 @@ function toggleEodMember(name) {
 
   updateEodBadge();
   showToast(`${name} EOD summary ${isNowOn ? 'enabled ✓' : 'disabled'}`);
+  saveEodConfigToWorker();
+  pushConfigToGithubSilent();
 }
 
 function updateEodBadge() {
