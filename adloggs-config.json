@@ -1,5 +1,5 @@
 {
-  "_updated": "2026-06-20T08:04:10.028Z",
+  "_updated": "2026-06-20T08:04:46.898Z",
   "_note": "Adloggs Portal config — auto-managed by portal",
   "jiraProxyUrl": "https://jira-proxy.priyadharshini.workers.dev",
   "scriptUrl": "https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec",
@@ -7,7 +7,7 @@
   "reminderInterval": 30,
   "github_user": "priyadharshini468",
   "github_repo": "adloggs-portal",
-  "github_token_enc": "RZl9Jblb5Yc3KTwi1vwzef8An+cg9m/lVmcrzidBiQl7/4rTo7cOI1RLmBD4E7sIh9GNMSfSzWG+otIgWwJpo+DFkODZj0TLMyg94cXqfjdTWF4Y5dUzgDZ3uzSNP0xyc+CZQtQMXbmIQbHiC7WYglnP73j89fwTJw==",
+  "github_token_enc": "q/c6LmHtelp8HidglMMI0mqzval3dYfqZehno/dG8yP2vgT7/oZL7zsFzZ/lV7NDrWNCPbkk5FHECmZ0rBmLzzp9qbpgu6uvZXaeYSZMQauaxZubpatbcbiciIwpAiEQjx8IlbLqreOCBVo4LVtIdZ5tRi/5RIMw9w==",
   "team_data": [
     {
       "name": "Pinnacle",
@@ -109,7 +109,7 @@
     "Raja": false
   },
   "eod_dest_enabled": {
-    "fullreport": false,
+    "fullreport": true,
     "group": false
   },
   "eod_fullreport": {
