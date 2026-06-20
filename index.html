@@ -6177,12 +6177,22 @@ function switchScoreTab(tab) {
 
 
 async function init() {
-  // ── Step 1: Pull config from GitHub FIRST (no token needed, public raw URL)
-  // This ensures all fields are populated before anything else runs
+  // ── Step 1: Load config — KV first (always fresh), then GitHub fallback
+  // KV is updated on every toggle/save even without a GitHub token
+  // GitHub is the fallback for new devices that haven't set up KV yet
+  let configLoaded = false;
   try {
-    await pullConfigFromGithub();
-  } catch(e) {
-    // Silent — config file may not exist yet, fall through to localStorage
+    const kvCfg = await loadEodConfigFromWorker();
+    if (kvCfg) {
+      applyEodConfigPayload(kvCfg);
+      configLoaded = true;
+    }
+  } catch(e) { /* KV not available */ }
+
+  if (!configLoaded) {
+    try {
+      await pullConfigFromGithub();
+    } catch(e) { /* silent — config file may not exist yet */ }
   }
 
   // ── Step 2: Restore all UI from STATE / localStorage (now updated by GitHub pull)
