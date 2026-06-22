@@ -4486,31 +4486,34 @@ function restoreEodDayPicker() {
   });
 }
 
-function saveEodConfig() {
+async function saveEodConfig() {
   const time = document.getElementById('eod-time').value || '18:30';
   const tz   = document.getElementById('eod-tz').value   || 'Asia/Kolkata';
   const days = getEodActiveDays();
   localStorage.setItem('adloggs_eod_time', time);
   localStorage.setItem('adloggs_eod_tz', tz);
   localStorage.setItem('adloggs_eod_days', JSON.stringify(days));
-  // Clear last-sent so rescheduling allows same-day fire
-  localStorage.removeItem('adloggs_eod_last_sent');
+  localStorage.removeItem('adloggs_eod_last_sent'); // allow same-day resend
+  // Also clear KV last_sent so cron fires again today if rescheduled
+  if (STATE.jiraProxyUrl) {
+    try {
+      await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config/reset-sent', { method:'POST' });
+    } catch(e) { /* ignore — KV reset is best-effort */ }
+  }
   startEodScheduler();
-  // Check immediately — if the scheduled time is right now, fire without waiting 60s
-  const [h, m] = time.split(':').map(Number);
-  const fmtObj = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour:'numeric', minute:'numeric', hour12:false });
-  const parts  = fmtObj.formatToParts(new Date());
-  const ch     = Number(parts.find(p=>p.type==='hour')?.value   || 0);
-  const cm     = Number(parts.find(p=>p.type==='minute')?.value || 0);
-  if (ch === h && cm === m) sendEodSummaryNow();
 
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const dayLabel = days.length === 5 && !days.includes(0) && !days.includes(6) ? 'Mon–Fri' : days.map(d=>dayNames[d]).join(', ');
+  const dayLabel = days.length === 5 && !days.includes(0) && !days.includes(6)
+    ? 'Mon–Fri' : days.map(d=>dayNames[d]).join(', ');
   const statusEl = document.getElementById('eod-status');
-  if (statusEl) statusEl.textContent = `Scheduled at ${time} · ${dayLabel} ✓`;
-  showToast(`EOD summary scheduled at ${time} ${dayLabel} ✓`);
-  saveEodConfigToWorker();
+  if (statusEl) statusEl.textContent = `Saving…`;
+
+  // Await saves so we know they succeeded
+  await saveEodConfigToWorker();
   pushConfigToGithubSilent();
+
+  if (statusEl) statusEl.textContent = `Scheduled at ${time} · ${dayLabel} ✓`;
+  showToast(`EOD summary saved: ${time} · ${dayLabel} ✓`);
 }
 
 function saveEodMemberWebhook(name, url) {
@@ -6042,15 +6045,18 @@ async function reloadEodMembers() {
 
 // ── KV Config sync ───────────────────────────────────────────────
 async function saveEodConfigToWorker() {
-  if (!STATE.jiraProxyUrl) return;
+  if (!STATE.jiraProxyUrl) { console.warn('KV save skipped — no Worker URL'); return false; }
   try {
     const payload = await buildEodConfigPayloadAsync();
-    await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config', {
+    const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-  } catch(e) { console.warn('KV save failed:', e.message); }
+    if (!res.ok) { console.warn('KV save failed:', res.status); return false; }
+    console.log('Config saved to KV ✓');
+    return true;
+  } catch(e) { console.warn('KV save error:', e.message); return false; }
 }
 
 async function loadEodConfigFromWorker() {
