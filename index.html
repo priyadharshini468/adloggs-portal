@@ -4490,30 +4490,46 @@ async function saveEodConfig() {
   const time = document.getElementById('eod-time').value || '18:30';
   const tz   = document.getElementById('eod-tz').value   || 'Asia/Kolkata';
   const days = getEodActiveDays();
+
+  // Save to localStorage first
   localStorage.setItem('adloggs_eod_time', time);
   localStorage.setItem('adloggs_eod_tz', tz);
   localStorage.setItem('adloggs_eod_days', JSON.stringify(days));
-  localStorage.removeItem('adloggs_eod_last_sent'); // allow same-day resend
-  // Also clear KV last_sent so cron fires again today if rescheduled
-  if (STATE.jiraProxyUrl) {
-    try {
-      await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config/reset-sent', { method:'POST' });
-    } catch(e) { /* ignore — KV reset is best-effort */ }
-  }
+  localStorage.removeItem('adloggs_eod_last_sent');
+
   startEodScheduler();
+  restoreEodDayPicker(); // re-render day buttons from saved state
 
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const dayLabel = days.length === 5 && !days.includes(0) && !days.includes(6)
-    ? 'Mon–Fri' : days.map(d=>dayNames[d]).join(', ');
-  const statusEl = document.getElementById('eod-status');
-  if (statusEl) statusEl.textContent = `Saving…`;
+    ? 'Mon–Fri' : days.map(d => dayNames[d]).join(', ');
 
-  // Await saves so we know they succeeded
-  await saveEodConfigToWorker();
+  const statusEl = document.getElementById('eod-status');
+  if (statusEl) statusEl.textContent = '⏳ Saving to server…';
+
+  // Save to KV (awaited so we know it worked)
+  const kvOk = await saveEodConfigToWorker();
+
+  // Also push to GitHub (best effort)
   pushConfigToGithubSilent();
 
-  if (statusEl) statusEl.textContent = `Scheduled at ${time} · ${dayLabel} ✓`;
-  showToast(`EOD summary saved: ${time} · ${dayLabel} ✓`);
+  // Clear KV last_sent so cron can fire again today if rescheduled
+  try {
+    if (STATE.jiraProxyUrl) {
+      await fetch(STATE.jiraProxyUrl.replace(/\/+$/, '') + '/config/reset-sent', { method: 'POST' });
+    }
+  } catch(e) { /* ignore */ }
+
+  if (statusEl) {
+    if (kvOk) {
+      statusEl.textContent = `✓ Saved: ${time} · ${dayLabel}`;
+      statusEl.style.color = 'var(--green)';
+    } else {
+      statusEl.textContent = `⚠ Saved locally only (Worker unreachable) — ${time} · ${dayLabel}`;
+      statusEl.style.color = 'var(--amber)';
+    }
+  }
+  showToast(kvOk ? `Schedule saved ✓ ${time} · ${dayLabel}` : `Saved locally — check Worker URL`);
 }
 
 function saveEodMemberWebhook(name, url) {
@@ -6229,11 +6245,20 @@ async function init() {
   const gtEl = document.getElementById('cfg-github-token'); if (gtEl && ghToken) gtEl.value = ghToken;
   updateGithubBadge();
 
-  // EOD UI
+  // EOD UI — read from localStorage (now updated by KV/GitHub pull above)
   const eodTime = localStorage.getItem('adloggs_eod_time') || '18:30';
   const eodTz   = localStorage.getItem('adloggs_eod_tz')   || 'Asia/Kolkata';
   const eodTimeEl = document.getElementById('eod-time'); if (eodTimeEl) eodTimeEl.value = eodTime;
   const eodTzEl   = document.getElementById('eod-tz');   if (eodTzEl)   eodTzEl.value   = eodTz;
+  const eodStatusEl = document.getElementById('eod-status');
+  if (eodStatusEl) {
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const days = JSON.parse(localStorage.getItem('adloggs_eod_days') || '[1,2,3,4,5]');
+    const dayLabel = days.length===5 && !days.includes(0) && !days.includes(6)
+      ? 'Mon–Fri' : days.map(d=>dayNames[d]).join(', ');
+    eodStatusEl.textContent = `Scheduled: ${eodTime} · ${dayLabel}`;
+    eodStatusEl.style.color = 'var(--text3)';
+  }
   try {
     const fr = JSON.parse(localStorage.getItem('adloggs_eod_fullreport') || '{}');
     const gr = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
