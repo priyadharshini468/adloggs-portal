@@ -5815,8 +5815,8 @@ function renderManualInputs(){
       </div>
     </div>`;
   });
-  html+=`<div style="font-size:12px;font-weight:700;color:var(--text);margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">👤 Individual — Manual Sprint + Behavioural Metrics</div>
-  <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Enter Release Success, SLA Adherence, and all 7 behavioural scores per person.</div>`;
+  html+=`<div style="font-size:12px;font-weight:700;color:var(--text);margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">👤 Individual — Behavioural Metrics</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Enter the 7 behavioural scores per person. Sprint metrics (Sprint Commitment, Velocity, Bug Leakage, Jira Discipline) are auto-computed from Jira.</div>`;
   TEAMS_FROM_JIRA.forEach(team=>{
     const pColor=POD_COLORS[team.name]||'#6b7280';
     (team.members||[]).forEach(m=>{
@@ -5830,7 +5830,7 @@ function renderManualInputs(){
           <span style="font-size:10px;color:var(--text3)">${esc(team.name)}</span>
         </div>
         <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
-          ${[...sprintManual,...behavFields].map(f=>`<div>
+          ${[...behavFields].map(f=>`<div>
             <div style="font-size:10px;color:var(--text2);margin-bottom:3px;line-height:1.4">${f.label} <span style="color:var(--text3)">(0–${f.max})</span></div>
             <input type="number" min="0" max="${f.max}" class="input" data-member="${esc(m.name)}" data-key="${f.key}" value="${saved[f.key]??''}" placeholder="0–${f.max}" style="width:100%;font-size:12px"/>
           </div>`).join('')}
