@@ -4441,8 +4441,8 @@ function saveEodGroup() {
   saveEodConfigToWorker(); pushConfigToGithubSilent();
 }
 
-function toggleEodDestination(key) {
-  const stored  = JSON.parse(localStorage.getItem(`adloggs_eod_dest_enabled`) || '{}');
+async function toggleEodDestination(key) {
+  const stored  = JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled') || '{}');
   const current = stored[key] !== false;
   stored[key]   = !current;
   localStorage.setItem('adloggs_eod_dest_enabled', JSON.stringify(stored));
@@ -4457,18 +4457,21 @@ function toggleEodDestination(key) {
   }
   if (row) row.style.opacity = isNowOn ? '1' : '0.5';
   updateEodBadge();
-  showToast(`${key === 'fullreport' ? 'Full report (person)' : 'Group chat'} ${isNowOn ? 'enabled ✓' : 'disabled'}`);
-  saveEodConfigToWorker();
+  const label = key === 'fullreport' ? 'Full report' : 'Group chat';
+  const kvOk = await saveEodConfigToWorker();
   pushConfigToGithubSilent();
+  showToast(`${label} ${isNowOn ? 'enabled' : 'disabled'} ${kvOk ? '✓ saved' : '⚠ saved locally only'}`);
 }
 
 function toggleEodDay(btn) {
   const isOn = btn.classList.contains('eod-day-on');
-  btn.classList.toggle('eod-day-on',  !isOn);
-  btn.classList.toggle('eod-day-off',  isOn);
-  // Save immediately
+  btn.classList.toggle('eod-day-on',   !isOn);
+  btn.classList.toggle('eod-day-off',   isOn);
   const days = getEodActiveDays();
   localStorage.setItem('adloggs_eod_days', JSON.stringify(days));
+  // Save to KV+GitHub so day selection persists across devices
+  saveEodConfigToWorker();
+  pushConfigToGithubSilent();
 }
 
 function getEodActiveDays() {
@@ -4542,17 +4545,15 @@ function saveEodMemberWebhook(name, url) {
   saveEodConfigToWorker(); pushConfigToGithubSilent();
 }
 
-function toggleEodMember(name) {
+async function toggleEodMember(name) {
   const enabled = JSON.parse(localStorage.getItem('adloggs_eod_enabled') || '{}');
-  const current = enabled[name] !== false; // default ON
-  enabled[name] = !current;               // flip
+  const current = enabled[name] !== false;
+  enabled[name] = !current;
   localStorage.setItem('adloggs_eod_enabled', JSON.stringify(enabled));
-
-  // Update the button in-place without full re-render
   const isNowOn = enabled[name] !== false;
+
   const btn = document.getElementById(`eod-toggle-${CSS.escape(name)}`);
   const row = document.getElementById(`eod-row-${CSS.escape(name)}`);
-
   if (btn) {
     btn.textContent      = isNowOn ? 'ON' : 'OFF';
     btn.style.background = isNowOn ? '#22c55e' : '#d1d5db';
@@ -4562,9 +4563,9 @@ function toggleEodMember(name) {
   if (row) row.style.opacity = isNowOn ? '1' : '0.5';
 
   updateEodBadge();
-  showToast(`${name} EOD summary ${isNowOn ? 'enabled ✓' : 'disabled'}`);
-  saveEodConfigToWorker();
+  const kvOk = await saveEodConfigToWorker();
   pushConfigToGithubSilent();
+  showToast(`${name} ${isNowOn ? 'enabled' : 'disabled'} ${kvOk ? '✓ saved' : '⚠ saved locally only'}`);
 }
 
 function updateEodBadge() {
@@ -5071,6 +5072,41 @@ function updateGithubBadge() {
     badge.textContent = '⚠ Not configured';
   }
 }
+
+// ── KV Config sync ───────────────────────────────────────────────
+async function saveEodConfigToWorker() {
+  if (!STATE.jiraProxyUrl) { console.warn('KV save skipped — no Worker URL'); return false; }
+  try {
+    const payload = await buildEodConfigPayloadAsync();
+    const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) { console.warn('KV save failed:', res.status); return false; }
+    console.log('Config saved to KV ✓');
+    return true;
+  } catch(e) { console.warn('KV save error:', e.message); return false; }
+}
+
+async function loadEodConfigFromWorker() {
+  if (!STATE.jiraProxyUrl) return false;
+  try {
+    const res  = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/config');
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data.config) return false;
+    const cfg  = data.config;
+    const keys = ['eod_time','eod_tz','eod_days','eod_webhooks','eod_enabled','eod_dest_enabled','eod_fullreport','eod_group'];
+    keys.forEach(k => {
+      if (cfg[k] === undefined) return;
+      localStorage.setItem('adloggs_' + k, typeof cfg[k] === 'string' ? cfg[k] : JSON.stringify(cfg[k]));
+    });
+    return cfg;
+  } catch(e) { console.warn('KV load failed:', e.message); return false; }
+}
+
+function applyEodConfigToUI(cfg) { if (cfg) applyEodConfigPayload(cfg); }
 
 // ── Token encryption using WebCrypto (AES-GCM) ───────────────────
 // Passphrase is derived from the repo identity — not a user-entered password.
