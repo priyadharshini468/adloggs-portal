@@ -310,6 +310,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       Team Scores
     </div>
+    <div class="nav-item" onclick="nav('myreports',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      My Daily Reports
+    </div>
     <div class="nav-section">Config</div>
     <div class="nav-item" onclick="nav('settings',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -756,6 +760,165 @@
       </div>
     </div>
 
+
+    <!-- ===== MY DAILY REPORTS ===== -->
+    <section id="sec-myreports" class="section">
+      <div class="section-head">
+        <h2>My Daily Reports</h2>
+        <p>Standup auto-generated from Jira · Evening status typed by you · Sent to Google Chat + Email</p>
+      </div>
+
+      <!-- Settings -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px;margin-bottom:20px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px">⚙️ Settings</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:12px">
+          <div>
+            <div class="form-label">Google Chat Webhook URL</div>
+            <input class="input" id="mr-webhook" placeholder="https://chat.googleapis.com/v1/spaces/..." />
+          </div>
+          <div>
+            <div class="form-label">Email Recipients <span style="font-weight:400;color:var(--text3)">(comma-separated)</span></div>
+            <input class="input" id="mr-emails" placeholder="you@adloggs.com, manager@adloggs.com" />
+          </div>
+          <div>
+            <div class="form-label">Standup send time</div>
+            <input type="time" class="input" id="mr-standup-time" value="11:00" />
+          </div>
+          <div>
+            <div class="form-label">Evening status send time</div>
+            <input type="time" class="input" id="mr-evening-time" value="18:00" />
+          </div>
+        </div>
+        <div style="background:rgba(26,115,232,0.06);border:1px solid rgba(26,115,232,0.2);border-radius:7px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.8">
+          <strong>Email setup:</strong> Add this function to your existing Google Apps Script, then paste the same Script URL above in Integrations → Apps Script URL.<br>
+          The portal will call <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">?action=sendEmail</code> on your script to send emails.
+          <button class="btn btn-ghost btn-sm" onclick="showAppsScriptCode()" style="margin-left:8px">View Apps Script Code</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary btn-sm" onclick="saveMrConfig()">Save Settings</button>
+          <span id="mr-save-status" style="font-size:11px;color:var(--green)"></span>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
+        <button id="mr-tab-standup" onclick="switchMrTab('standup')" style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">🗣 Standup</button>
+        <button id="mr-tab-status"  onclick="switchMrTab('status')"  style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">📊 Evening Status</button>
+        <button id="mr-tab-history" onclick="switchMrTab('history')" style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">📂 History</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-ghost btn-sm" id="mr-refresh-btn" onclick="generateStandupDraft()" style="margin-bottom:6px;align-self:flex-end">⟳ Refresh from Jira</button>
+      </div>
+
+      <!-- Standup Panel -->
+      <div id="mr-panel-standup">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">
+          Auto-generated from Jira — In Progress tasks per member. Edit freely before sending.
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">📋 Standup Content</div>
+            <span style="font-size:10px;color:var(--text3)">Edit directly below</span>
+          </div>
+          <textarea id="mr-standup-draft" class="input" rows="14" placeholder="Click ⟳ Refresh from Jira to generate..." style="width:100%;font-size:12px;resize:vertical;font-family:monospace;line-height:1.6"></textarea>
+        </div>
+        <!-- Editable notes -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase">📝 Add Notes / Blockers</div>
+          <textarea id="mr-standup-notes" class="input" rows="3" placeholder="Any blockers, dependencies, or additional context..." style="width:100%;font-size:12px;resize:vertical"></textarea>
+        </div>
+        <!-- Destinations -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase">📤 Send To</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="mr-standup-to-chat" checked style="accent-color:var(--accent)"> Google Chat
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="mr-standup-to-email" checked style="accent-color:var(--accent)"> Email
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="mr-standup-auto" style="accent-color:var(--accent)"> Auto-send at <span id="mr-standup-time-label" style="font-weight:600;margin-left:3px">11:00 AM</span>
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="sendMrReport('standup')">▶ Send Standup Now</button>
+          <span id="mr-standup-status" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <!-- Evening Status Panel -->
+      <div id="mr-panel-status" style="display:none">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">
+          Write your daily status update. No Jira auto-fill — this is your personal summary.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase">✅ What I worked on today</div>
+            <textarea id="mr-status-worked" class="input" rows="4" placeholder="Tasks completed, meetings attended, decisions made..." style="width:100%;font-size:12px;resize:vertical"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase">🎯 Key Wins</div>
+              <textarea id="mr-status-wins" class="input" rows="3" placeholder="Achievements, milestones reached..." style="width:100%;font-size:12px;resize:vertical"></textarea>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase">⏭ Tomorrow</div>
+              <textarea id="mr-status-tomorrow" class="input" rows="3" placeholder="Plans and priorities for tomorrow..." style="width:100%;font-size:12px;resize:vertical"></textarea>
+            </div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase">🚧 Blockers / Escalations</div>
+            <textarea id="mr-status-blockers" class="input" rows="2" placeholder="Anything needing attention or escalation..." style="width:100%;font-size:12px;resize:vertical"></textarea>
+          </div>
+        </div>
+        <!-- Destinations -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase">📤 Send To</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="mr-status-to-chat" checked style="accent-color:var(--accent)"> Google Chat
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="mr-status-to-email" checked style="accent-color:var(--accent)"> Email
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="mr-status-auto" style="accent-color:var(--accent)"> Auto-send at <span id="mr-evening-time-label" style="font-weight:600;margin-left:3px">6:00 PM</span>
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="sendMrReport('status')">▶ Send Status Now</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearMrStatus()">Clear</button>
+          <span id="mr-status-status" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <!-- History Panel -->
+      <div id="mr-panel-history" style="display:none">
+        <div id="mr-history-list"><div style="font-size:13px;color:var(--text3);padding:20px">No sent reports yet.</div></div>
+      </div>
+    </section>
+
+    <!-- Apps Script Modal -->
+    <div id="mr-script-modal" class="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+      <div class="modal" style="max-width:600px">
+        <div class="modal-header">
+          <div class="modal-title">📧 Add to Google Apps Script</div>
+          <button class="modal-close" onclick="closeModal('mr-script-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.7">
+            Add this function to your existing Apps Script (the one connected in Integrations). It handles <code>?action=sendEmail</code> requests.
+          </div>
+          <pre id="mr-script-code" style="font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:12px;overflow-x:auto;max-height:340px;white-space:pre;font-family:monospace"></pre>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="copyAppsScriptCode()">Copy Code</button>
+            <button class="btn btn-ghost btn-sm" onclick="closeModal('mr-script-modal')">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ===== SETTINGS ===== -->
     <section id="sec-settings" class="section">
@@ -1829,7 +1992,7 @@ function nav(id, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('sec-' + id).classList.add('active');
   if (el) el.classList.add('active');
-  const titles = {teams:'Teams & Members',sprint:'Current Sprint',releases:'Releases',weekly:'Weekly Updates',requirements:'Stakeholder Requirements',roadmap:'Product Roadmap',scores:'Team Scores',settings:'Integrations & Config'};
+  const titles = {teams:'Teams & Members',sprint:'Current Sprint',releases:'Releases',weekly:'Weekly Updates',requirements:'Stakeholder Requirements',roadmap:'Product Roadmap',scores:'Team Scores',myreports:'My Daily Reports',settings:'Integrations & Config'};
   document.getElementById('topbar-title').textContent = titles[id] || id;
   if (id === 'weekly') {
     const el = document.getElementById('weekly-last-open');
@@ -1840,6 +2003,9 @@ function nav(id, el) {
   }
   if (id === 'scores') {
     setTimeout(() => { computeAllScores(); }, 100);
+  }
+  if (id === 'myreports') {
+    setTimeout(() => { if(typeof generateStandupDraft==='function') generateStandupDraft(); }, 200);
   }
   document.getElementById('topbar-title').textContent = titles[id] || id;
 }
@@ -2721,7 +2887,7 @@ async function testJiraProxy() {
 
 async function syncSprint() {
   const icon = document.getElementById('sprint-sync-icon');
-  icon.classList.add('spin');
+  if (icon) icon.classList.add('spin');
   setPill('syncing', 'Syncing Jira...');
 
   try {
@@ -2812,7 +2978,7 @@ async function syncSprint() {
     setPill('error', 'Sync failed');
     setTimeout(() => setPill('live','Live'), 4000);
   } finally {
-    icon.classList.remove('spin');
+    if (icon) icon.classList.remove('spin');
   }
 }
 
@@ -2821,10 +2987,10 @@ async function syncSprint() {
 // ================================================================
 function renderReleases() {
   const icon = document.getElementById('rel-sync-icon');
-  icon.classList.add('spin');
+  if (icon) icon.classList.add('spin');
 
   const doRender = (releases) => {
-    icon.classList.remove('spin');
+    if (icon) icon.classList.remove('spin');
     const tl = document.getElementById('releases-tl');
     tl.innerHTML = '';
     [...releases].reverse().forEach(r => {
@@ -3730,7 +3896,7 @@ function downloadRoadmapPDF() {
     <div class="no-print" style="margin-top:24px;text-align:center">
       <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:14px;cursor:pointer">Print / Save as PDF</button>
     </div>
-  </body></html>`);
+  </html>`);
   printWin.document.close();
   showToast('Roadmap opened in new tab — click Print / Save as PDF');
 }
@@ -4332,16 +4498,23 @@ function startAutoSync() {
 }
 
 async function syncAll() {
-  document.getElementById('sync-icon').classList.add('spin');
+  const syncIcon = document.getElementById('sync-icon');
+  if (syncIcon) syncIcon.classList.add('spin');
   setPill('syncing','Syncing...');
-  syncTeamsFromJira();
-  await new Promise(r => setTimeout(r, 500));
-  syncSprint();
-  await new Promise(r => setTimeout(r, 500));
-  if (STATE.scriptUrl) await loadRequirementsFromSheet();
-  document.getElementById('sync-icon').classList.remove('spin');
-  setPill('live','Live');
-  showToast('All synced ✓');
+  try {
+    await syncTeamsFromJira();
+    await new Promise(r => setTimeout(r, 300));
+    await syncSprint();
+    await new Promise(r => setTimeout(r, 300));
+    if (STATE.scriptUrl) await loadRequirementsFromSheet();
+    setPill('live','Live');
+    showToast('All synced ✓');
+  } catch(e) {
+    setPill('live','Live');
+    showToast('Sync error: ' + e.message);
+    console.error('syncAll error:', e);
+  }
+  if (syncIcon) syncIcon.classList.remove('spin');
 }
 
 // ================================================================
@@ -5363,14 +5536,482 @@ async function pushConfigToGithubSilent() {
 }
 
 // ================================================================
-// SCORING ENGINE v4
-// 6 sprint metrics for both Teams and Individuals
-// Sprint Commitment, Release Success Rate, Velocity Stability,
-// Bug Leakage Score, Jira Discipline, SLA Adherence
-// + 7 behavioural metrics for individuals
+// MY DAILY REPORTS — Standup (from Jira) + Evening Status (manual)
+// Sends to Google Chat + Email via Apps Script
 // ================================================================
 
-// ── Helpers ───────────────────────────────────────────────────────
+const APPS_SCRIPT_EMAIL_CODE = `// Add this to your existing Google Apps Script
+// It handles ?action=sendEmail POST requests from the portal
+
+function doPost(e) {
+  const params = JSON.parse(e.postData.contents);
+  if (params.action === 'sendEmail') {
+    return handleSendEmail(params);
+  }
+  // ... your existing doPost code here
+}
+
+function handleSendEmail(params) {
+  try {
+    const { to, subject, body, htmlBody } = params;
+    if (!to || !subject || !body) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Missing to/subject/body' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    const recipients = Array.isArray(to) ? to.join(',') : to;
+    GmailApp.sendEmail(recipients, subject, body, {
+      htmlBody: htmlBody || body.replace(/\\n/g, '<br>'),
+      name: 'Adloggs Portal'
+    });
+    return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+function getMrConfig() {
+  return JSON.parse(localStorage.getItem('adloggs_mr_config') || '{}');
+}
+
+function saveMrConfig() {
+  const cfg = {
+    webhook:      document.getElementById('mr-webhook')?.value.trim()      || '',
+    emails:       document.getElementById('mr-emails')?.value.trim()       || '',
+    standupTime:  document.getElementById('mr-standup-time')?.value        || '11:00',
+    eveningTime:  document.getElementById('mr-evening-time')?.value        || '18:00',
+    standupAuto:  document.getElementById('mr-standup-auto')?.checked      || false,
+    statusAuto:   document.getElementById('mr-status-auto')?.checked       || false,
+    standupToChat:document.getElementById('mr-standup-to-chat')?.checked !== false,
+    standupToEmail:document.getElementById('mr-standup-to-email')?.checked !== false,
+    statusToChat: document.getElementById('mr-status-to-chat')?.checked   !== false,
+    statusToEmail:document.getElementById('mr-status-to-email')?.checked  !== false,
+  };
+  localStorage.setItem('adloggs_mr_config', JSON.stringify(cfg));
+  updateMrTimeLabels(cfg);
+  startMrScheduler();
+  const st = document.getElementById('mr-save-status');
+  if (st) { st.textContent = '✓ Saved'; setTimeout(() => st.textContent = '', 2000); }
+  showToast('Daily Reports settings saved ✓');
+}
+
+function updateMrTimeLabels(cfg) {
+  cfg = cfg || getMrConfig();
+  const fmt = t => { if (!t) return ''; const [h,m]=t.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`; };
+  const sl = document.getElementById('mr-standup-time-label'); if (sl) sl.textContent = fmt(cfg.standupTime || '11:00');
+  const el = document.getElementById('mr-evening-time-label'); if (el) el.textContent = fmt(cfg.eveningTime || '18:00');
+}
+
+function restoreMrConfig() {
+  const cfg = getMrConfig();
+  const set = (id,v) => { const el=document.getElementById(id); if(el&&v!==undefined) el.value=v; };
+  const chk = (id,v) => { const el=document.getElementById(id); if(el) el.checked=v!==false; };
+  set('mr-webhook',       cfg.webhook     || '');
+  set('mr-emails',        cfg.emails      || '');
+  set('mr-standup-time',  cfg.standupTime || '11:00');
+  set('mr-evening-time',  cfg.eveningTime || '18:00');
+  chk('mr-standup-auto',  cfg.standupAuto);
+  chk('mr-status-auto',   cfg.statusAuto);
+  chk('mr-standup-to-chat',  cfg.standupToChat  !== false);
+  chk('mr-standup-to-email', cfg.standupToEmail !== false);
+  chk('mr-status-to-chat',   cfg.statusToChat   !== false);
+  chk('mr-status-to-email',  cfg.statusToEmail  !== false);
+  updateMrTimeLabels(cfg);
+  // Restore status draft
+  const d = JSON.parse(localStorage.getItem('adloggs_mr_status_draft') || '{}');
+  if (d.worked)   { const el=document.getElementById('mr-status-worked');   if(el) el.value=d.worked; }
+  if (d.wins)     { const el=document.getElementById('mr-status-wins');     if(el) el.value=d.wins; }
+  if (d.tomorrow) { const el=document.getElementById('mr-status-tomorrow'); if(el) el.value=d.tomorrow; }
+  if (d.blockers) { const el=document.getElementById('mr-status-blockers'); if(el) el.value=d.blockers; }
+  startMrScheduler();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────
+function switchMrTab(tab) {
+  ['standup','status','history'].forEach(t => {
+    const panel = document.getElementById(`mr-panel-${t}`);
+    const btn   = document.getElementById(`mr-tab-${t}`);
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+    if (btn) {
+      btn.style.color        = t === tab ? 'var(--accent)' : 'var(--text3)';
+      btn.style.borderBottom = t === tab ? '2px solid var(--accent)' : '2px solid transparent';
+      btn.style.fontWeight   = t === tab ? '700' : '500';
+    }
+  });
+  const rb = document.getElementById('mr-refresh-btn');
+  if (rb) rb.style.display = tab === 'history' ? 'none' : '';
+  if (tab === 'history') renderMrHistory();
+}
+
+// ── Standup draft from Jira ───────────────────────────────────────
+async function generateStandupDraft() {
+  const textarea = document.getElementById('mr-standup-draft');
+  if (!textarea) return;
+  textarea.value = '⏳ Fetching from Jira...';
+  textarea.style.color = 'var(--text3)';
+
+  if (STATE.jiraProxyUrl) {
+    try { await syncSprint(); } catch(e) {}
+  }
+
+  const issues  = SPRINT_DATA || [];
+  const nameMap = buildNameMap();
+  const date    = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  if (!issues.length) {
+    textarea.value = 'No sprint data — connect Jira in Integrations first.';
+    textarea.style.color = 'var(--text3)';
+    return;
+  }
+
+  let text = `🗣 Daily Standup — ${date}
+`;
+  TEAMS_FROM_JIRA.forEach(team => {
+    const mNames  = (team.members||[]).map(m => m.name.toLowerCase());
+    const tIssues = issues.filter(i => {
+      if (!i.assignee || i.assignee.toLowerCase() === 'unassigned') return false;
+      const pn = resolvePortalName(i.assignee, nameMap).toLowerCase();
+      return mNames.some(n => pn === n || pn.startsWith(n.split(' ')[0]));
+    });
+    const teamLines = [];
+    (team.members||[]).forEach(m => {
+      const mine   = tIssues.filter(i => resolvePortalName(i.assignee||'', nameMap).toLowerCase() === m.name.toLowerCase() ||
+                                         resolvePortalName(i.assignee||'', nameMap).split(' ')[0].toLowerCase() === m.name.split(' ')[0].toLowerCase());
+      const active = mine.filter(i => (i.status||'').toLowerCase() === 'in progress');
+      if (!active.length) return;
+      teamLines.push(`  👤 ${m.name}`);
+      active.forEach(i => teamLines.push(`    🔄 [${i.key}] ${i.summary}`));
+    });
+    if (teamLines.length) text += '\n' + team.name + '\n' + teamLines.join('\n') + '\n';
+  });
+
+  textarea.value = text;
+  textarea.style.color = '';
+  showToast('Standup draft ready — edit freely and send');
+}
+
+// ── Build message text ────────────────────────────────────────────
+function buildStandupText() {
+  // Read directly from the editable textarea — user may have modified it
+  const draft = document.getElementById('mr-standup-draft')?.value.trim() || '';
+  const notes = document.getElementById('mr-standup-notes')?.value.trim() || '';
+  let text = draft;
+  if (notes && !draft.includes(notes)) text += `\n\n📝 Notes / Blockers\n${notes}`;
+  // Wrap in Google Chat bold for header line
+  return text.replace(/^(🗣 Daily Standup — .+)$/m, '*$1*');
+}
+
+function buildStatusText() {
+  const date     = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const worked   = document.getElementById('mr-status-worked')?.value.trim()   || '—';
+  const wins     = document.getElementById('mr-status-wins')?.value.trim()     || '—';
+  const tomorrow = document.getElementById('mr-status-tomorrow')?.value.trim() || '—';
+  const blockers = document.getElementById('mr-status-blockers')?.value.trim() || 'None';
+  return `*📊 End of Day Status — Priya*\n_${date}_\n\n*✅ What I worked on*\n${worked}\n\n*🎯 Key Wins*\n${wins}\n\n*⏭ Tomorrow's Focus*\n${tomorrow}\n\n*🚧 Blockers / Escalations*\n${blockers}`;
+}
+
+function buildStatusHtml() {
+  const date     = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const worked   = document.getElementById('mr-status-worked')?.value.trim().replace(/\n/g,'<br>') || '—';
+  const wins     = document.getElementById('mr-status-wins')?.value.trim().replace(/\n/g,'<br>')   || '—';
+  const tomorrow = document.getElementById('mr-status-tomorrow')?.value.trim().replace(/\n/g,'<br>') || '—';
+  const blockers = document.getElementById('mr-status-blockers')?.value.trim().replace(/\n/g,'<br>') || 'None';
+  return `<h2 style="color:#1a73e8">📊 End of Day Status — Priya</h2>
+<p style="color:#666">${date}</p>
+<h3>✅ What I worked on</h3><p>${worked}</p>
+<h3>🎯 Key Wins</h3><p>${wins}</p>
+<h3>⏭ Tomorrow's Focus</h3><p>${tomorrow}</p>
+<h3>🚧 Blockers / Escalations</h3><p>${blockers}</p>
+<hr><p style="color:#999;font-size:12px">Sent from Adloggs Portal</p>`;
+}
+
+function buildStandupHtml() {
+  // Convert the edited textarea content to HTML for email
+  const draft = document.getElementById('mr-standup-draft')?.value.trim() || '';
+  const notes = document.getElementById('mr-standup-notes')?.value.trim() || '';
+  const content = notes && !draft.includes(notes) ? draft + '\n\n📝 Notes / Blockers\n' + notes : draft;
+  // Convert plain text to simple HTML
+  const htmlLines = content.split('\n').map(line => {
+    if (line.startsWith('🗣')) return `<h2 style="color:#1a73e8">${esc(line)}</h2>`;
+    if (/^[A-Z]/.test(line) && !line.startsWith(' ')) return `<h3 style="color:#444;margin-top:14px">${esc(line)}</h3>`;
+    if (line.includes('👤')) return `<p style="margin:6px 0;font-weight:600">${esc(line.trim())}</p>`;
+    if (line.includes('🔄')) return `<p style="margin:2px 0 2px 20px;color:#555">${esc(line.trim())}</p>`;
+    if (line.includes('📝')) return `<h3 style="color:#444;margin-top:14px">${esc(line.trim())}</h3>`;
+    return line.trim() ? `<p style="margin:2px 0 2px 20px;color:#666">${esc(line.trim())}</p>` : '';
+  }).join('');
+  return `${htmlLines}<hr><p style="color:#999;font-size:12px">Sent from Adloggs Portal</p>`;
+}
+
+// ── Send ──────────────────────────────────────────────────────────
+async function sendMrReport(type) {
+  const cfg = getMrConfig();
+  const statusEl = document.getElementById(`mr-${type}-status`);
+  const toChat  = document.getElementById(`mr-${type}-to-chat`)?.checked;
+  const toEmail = document.getElementById(`mr-${type}-to-email`)?.checked;
+
+  if (!toChat && !toEmail) { showToast('Select at least one destination'); return; }
+  if (toChat  && !cfg.webhook) { showToast('Add webhook URL in Settings'); return; }
+  if (toEmail && !cfg.emails)  { showToast('Add email recipients in Settings'); return; }
+  if (toEmail && !STATE.scriptUrl) { showToast('Add Apps Script URL in Integrations first'); return; }
+
+  if (statusEl) statusEl.textContent = '⏳ Sending…';
+
+  const text     = type === 'standup' ? buildStandupText()  : buildStatusText();
+  const htmlBody = type === 'standup' ? buildStandupHtml()  : buildStatusHtml();
+  const subject  = type === 'standup'
+    ? `Standup — ${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}`
+    : `EOD Status — ${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}`;
+
+  const results = [];
+
+  // Google Chat
+  if (toChat && cfg.webhook) {
+    try {
+      const url = STATE.jiraProxyUrl
+        ? STATE.jiraProxyUrl.replace(/\/+$/,'') + '/gchat'
+        : cfg.webhook;
+      const body = STATE.jiraProxyUrl
+        ? JSON.stringify({ webhookUrl: cfg.webhook, text })
+        : JSON.stringify({ text });
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+      results.push(res.ok ? '✓ Chat' : '✗ Chat failed');
+    } catch(e) { results.push('✗ Chat: ' + e.message); }
+  }
+
+  // Email via Apps Script
+  if (toEmail && cfg.emails && STATE.scriptUrl) {
+    try {
+      const res = await fetch(STATE.scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sendEmail',
+          to: cfg.emails.split(',').map(e=>e.trim()).filter(Boolean),
+          subject,
+          body: text,
+          htmlBody,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      results.push(data.ok ? '✓ Email' : `✗ Email: ${data.error||'failed'}`);
+    } catch(e) { results.push('✗ Email: ' + e.message); }
+  }
+
+  const resultText = results.join(' · ');
+  if (statusEl) statusEl.textContent = resultText + ` at ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`;
+
+  // Save to history
+  const history = JSON.parse(localStorage.getItem('adloggs_mr_history') || '[]');
+  history.unshift({ type, text, subject, date: new Date().toISOString(),
+    label: new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) });
+  localStorage.setItem('adloggs_mr_history', JSON.stringify(history.slice(0,60)));
+
+  // Save status draft
+  if (type === 'status') {
+    localStorage.setItem('adloggs_mr_status_draft', JSON.stringify({
+      worked:   document.getElementById('mr-status-worked')?.value   || '',
+      wins:     document.getElementById('mr-status-wins')?.value     || '',
+      tomorrow: document.getElementById('mr-status-tomorrow')?.value || '',
+      blockers: document.getElementById('mr-status-blockers')?.value || '',
+    }));
+  }
+
+  showToast(`Report sent: ${resultText}`);
+}
+
+function clearMrStatus() {
+  ['mr-status-worked','mr-status-wins','mr-status-tomorrow','mr-status-blockers'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  localStorage.removeItem('adloggs_mr_status_draft');
+  showToast('Status cleared');
+}
+
+// ── History ───────────────────────────────────────────────────────
+function renderMrHistory() {
+  const list    = document.getElementById('mr-history-list');
+  if (!list) return;
+  const history = JSON.parse(localStorage.getItem('adloggs_mr_history') || '[]');
+  if (!history.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:20px">No sent reports yet.</div>';
+    return;
+  }
+  list.innerHTML = history.map(h => `
+    <div class="score-card" style="padding:14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:18px">${h.type==='standup'?'🗣':'📊'}</span>
+        <span style="font-size:12px;font-weight:700">${h.type==='standup'?'Standup':'Evening Status'}</span>
+        <span style="font-size:11px;color:var(--text3)">${h.label} · ${new Date(h.date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <pre style="font-size:11px;white-space:pre-wrap;color:var(--text2);margin:0;font-family:monospace;background:var(--bg);padding:10px;border-radius:6px;max-height:150px;overflow-y:auto">${esc(h.text)}</pre>
+    </div>`).join('');
+}
+
+// ── Apps Script code modal ────────────────────────────────────────
+function showAppsScriptCode() {
+  const pre = document.getElementById('mr-script-code');
+  if (pre) pre.textContent = APPS_SCRIPT_EMAIL_CODE;
+  openModal('mr-script-modal');
+}
+function copyAppsScriptCode() {
+  navigator.clipboard.writeText(APPS_SCRIPT_EMAIL_CODE)
+    .then(() => showToast('Code copied ✓'))
+    .catch(() => showToast('Select and copy manually'));
+}
+
+// ── Scheduler (browser backup) ────────────────────────────────────
+let _mrTimer = null;
+function startMrScheduler() {
+  if (_mrTimer) clearInterval(_mrTimer);
+  const cfg = getMrConfig();
+  if (!cfg.standupAuto && !cfg.statusAuto) return;
+  const tz  = localStorage.getItem('adloggs_eod_tz') || 'Asia/Kolkata';
+  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone:tz, hour:'numeric', minute:'numeric', hour12:false });
+  _mrTimer = setInterval(async () => {
+    const now   = new Date();
+    const parts = fmt.formatToParts(now);
+    const ch    = Number(parts.find(p=>p.type==='hour')?.value   || 0);
+    const cm    = Number(parts.find(p=>p.type==='minute')?.value || 0);
+    const today = now.toISOString().slice(0,10);
+    const check = async (time, type, autoKey) => {
+      if (!time || !cfg[autoKey]) return;
+      const [h,m] = time.split(':').map(Number);
+      if (ch !== h || cm !== m) return;
+      const sentKey = `adloggs_mr_sent_${type}_${today}`;
+      if (localStorage.getItem(sentKey)) return;
+      localStorage.setItem(sentKey, '1');
+      if (type === 'standup') await generateStandupDraft();
+      await sendMrReport(type);
+    };
+    await check(cfg.standupTime, 'standup', 'standupAuto');
+    await check(cfg.eveningTime, 'status',  'statusAuto');
+  }, 60000);
+}
+
+
+
+
+// ================================================================
+// INIT
+// ================================================================
+async function init() {
+  // Step 1: Load config from KV first, then GitHub fallback
+  let configLoaded = false;
+  try {
+    const kvCfg = await loadEodConfigFromWorker();
+    if (kvCfg) { applyEodConfigPayload(kvCfg); configLoaded = true; }
+  } catch(e) {}
+  if (!configLoaded) {
+    try { await pullConfigFromGithub(); } catch(e) {}
+  }
+
+  // Step 2: Restore UI
+  if (STATE.scriptUrl) { const el=document.getElementById('cfg-script-url'); if(el) el.value=STATE.scriptUrl; }
+  if (STATE.jiraProxyUrl) {
+    const el=document.getElementById('cfg-jira-proxy'); if(el) el.value=STATE.jiraProxyUrl;
+    const badge=document.getElementById('jira-cfg-badge');
+    if(badge){badge.style.background='rgba(62,207,142,0.12)';badge.style.color='var(--green)';badge.textContent='✓ Cloudflare Worker connected';}
+  }
+  if (STATE.gchatWebhookUrl) {
+    const el=document.getElementById('cfg-gchat-webhook'); if(el) el.value=STATE.gchatWebhookUrl;
+    const badge=document.getElementById('gchat-cfg-badge');
+    if(badge){badge.style.background='rgba(62,207,142,0.12)';badge.style.color='var(--green)';badge.textContent='✓ Webhook configured';}
+  }
+  if (STATE.reminderInterval) { const sel=document.getElementById('reminder-interval'); if(sel) sel.value=String(STATE.reminderInterval); }
+
+  const ghUser  = localStorage.getItem('adloggs_github_user')  || GITHUB_DEFAULT_USER;
+  const ghRepo  = localStorage.getItem('adloggs_github_repo')  || GITHUB_DEFAULT_REPO;
+  const ghToken = localStorage.getItem('adloggs_github_token') || '';
+  const guEl=document.getElementById('cfg-github-user'); if(guEl) guEl.value=ghUser;
+  const grEl=document.getElementById('cfg-github-repo'); if(grEl) grEl.value=ghRepo;
+  const gtEl=document.getElementById('cfg-github-token'); if(gtEl&&ghToken) gtEl.value=ghToken;
+  updateGithubBadge();
+  restoreMrConfig();
+  startMrScheduler();
+
+  // EOD UI
+  const eodTime=localStorage.getItem('adloggs_eod_time')||'18:30';
+  const eodTz=localStorage.getItem('adloggs_eod_tz')||'Asia/Kolkata';
+  const eodTimeEl=document.getElementById('eod-time'); if(eodTimeEl) eodTimeEl.value=eodTime;
+  const eodTzEl=document.getElementById('eod-tz'); if(eodTzEl) eodTzEl.value=eodTz;
+  const eodStatusEl=document.getElementById('eod-status');
+  if(eodStatusEl){
+    const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const days=JSON.parse(localStorage.getItem('adloggs_eod_days')||'[1,2,3,4,5]');
+    const dayLabel=days.length===5&&!days.includes(0)&&!days.includes(6)?'Mon–Fri':days.map(d=>dayNames[d]).join(', ');
+    eodStatusEl.textContent=`Scheduled: ${eodTime} · ${dayLabel}`;
+    eodStatusEl.style.color='var(--text3)';
+  }
+  try {
+    const fr=JSON.parse(localStorage.getItem('adloggs_eod_fullreport')||'{}');
+    const gr=JSON.parse(localStorage.getItem('adloggs_eod_group')||'{}');
+    if(fr.name){const el=document.getElementById('eod-fullreport-name');if(el)el.value=fr.name;}
+    if(fr.webhook){const el=document.getElementById('eod-fullreport-webhook');if(el)el.value=fr.webhook;const s=document.getElementById('eod-fullreport-status');if(s)s.textContent='✓ Saved';}
+    if(gr.name){const el=document.getElementById('eod-group-name');if(el)el.value=gr.name;}
+    if(gr.webhook){const el=document.getElementById('eod-group-webhook');if(el)el.value=gr.webhook;const s=document.getElementById('eod-group-status');if(s)s.textContent='✓ Saved';}
+    const destEnabled=JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')||'{}');
+    ['fullreport','group'].forEach(key=>{
+      const isOn=destEnabled[key]!==false;
+      const btn=document.getElementById(`eod-toggle-${key}`);
+      const row=document.getElementById(`eod-${key}-row`);
+      if(btn){btn.textContent=isOn?'ON':'OFF';btn.style.background=isOn?'#22c55e':'#d1d5db';btn.style.color=isOn?'#fff':'#6b7280';}
+      if(row) row.style.opacity=isOn?'1':'0.5';
+    });
+  } catch(e){}
+  updateEodBadge();
+  restoreEodDayPicker();
+  startEodScheduler();
+  startReminderTimer();
+  setTimeout(()=>renderEodMemberTable(),600);
+
+  // Step 3: Show UI
+  document.querySelector('.sidebar').style.visibility='visible';
+  document.querySelector('.main').style.visibility='visible';
+  renderTeams();
+  populateMemberFilter();
+
+  try {
+    const cached=localStorage.getItem('adloggs_sprint_cache');
+    const cacheTime=parseInt(localStorage.getItem('adloggs_sprint_cache_time')||'0');
+    if(cached&&(Date.now()-cacheTime<24*60*60*1000)){
+      const parsed=JSON.parse(cached);
+      if(parsed.length>0){
+        SPRINT_DATA.length=0;
+        parsed.forEach(i=>SPRINT_DATA.push(i));
+        const badge=document.getElementById('sprint-badge');
+        if(badge) badge.textContent=SPRINT_DATA.length;
+      }
+    }
+  } catch(e){}
+
+  renderFilteredBoard();
+  updateSprintMeta();
+  renderReleases();
+  renderRequirements();
+  STATE.lastJiraSync=new Date();
+  const tst=document.getElementById('teams-sync-time'); if(tst) tst.textContent='Synced '+fmt(STATE.lastJiraSync);
+  const rst=document.getElementById('req-sheet-time');  if(rst) rst.textContent='Loading...';
+  if(STATE.scriptUrl) setTimeout(()=>loadRequirementsFromSheet(),800);
+  if(STATE.jiraProxyUrl) setTimeout(()=>syncSprint(),1200);
+
+  loadEodConfigFromWorker().then(cfg=>{
+    if(cfg){applyEodConfigPayload(cfg);showToast('Config synced ✓');}
+  }).catch(()=>{});
+
+  startAutoSync();
+}
+
+init();
+
+// ================================================================
+// SCORING ENGINE v4
+// ================================================================
+// ================================================================
+// SCORING ENGINE v4
+// 6 sprint metrics for both Teams and Individuals
+// ================================================================
+
 function getBonusLog()      { try{return JSON.parse(localStorage.getItem('adloggs_bonus_log')||'[]');}catch(e){return[];} }
 function saveBonusLog(log)  { localStorage.setItem('adloggs_bonus_log',JSON.stringify(log)); }
 function bonusFor(name)     { return getBonusLog().filter(b=>b.recipient===name).reduce((s,b)=>s+(Number(b.points)||0),0); }
@@ -5397,7 +6038,6 @@ function resolvePortalName(jiraName,nameMap) {
   return nameMap[lower]||nameMap[jiraName.split(' ')[0].toLowerCase()]||jiraName;
 }
 
-// ── Metric definitions ────────────────────────────────────────────
 const SPRINT_METRICS = {
   sprintCommit:   { w:20, label:'Sprint Commitment',    auto:true,  max:20 },
   releaseSuccess: { w:20, label:'Release Success Rate', auto:false, max:20 },
@@ -5417,9 +6057,7 @@ const IND_BEHAVIOURAL = {
 };
 const IND_WEIGHTS  = { ...SPRINT_METRICS, ...IND_BEHAVIOURAL };
 const TEAM_WEIGHTS = SPRINT_METRICS;
-// Team max = 100; Individual raw max = 175, normalised to 100
 const MAX_IND_TOTAL = 175;
-
 const DONE_STATUSES=['done','closed','completed','released'];
 const RANK_MEDALS=['🥇','🥈','🥉'];
 const POD_COLORS={'Pinnacle':'#2563eb','Momentum':'#059669','Catalyst':'#d97706','AI Intelligence':'#7c3aed','Shared Resources':'#6b7280'};
@@ -5434,48 +6072,38 @@ function scBar(val,max){
 function scTooltip(key,d){
   d=d||{};
   const tips={
-    sprintCommit:   `${d.closed||0}/${d.total||0} tasks closed = ${d.cr||0}%\n≥95%→20 | 85–94%→16 | 70–84%→12 | 50–69%→8 | <50%→4`,
-    velocity:       `${d.active||0}/${d.total||0} tasks done or in-progress = ${d.ar||0}%\n≥85%→15 | 70–84%→11 | 50–69%→7 | <50%→4`,
-    bugLeakage:     `${d.bugs||0} bug-type tasks out of ${d.total||0} = ${d.br||0}%\n0 bugs→20 | ≤5%→18 | ≤10%→14 | ≤20%→10 | >20%→5`,
-    jiraDiscipline: `${d.withMeta||0}/${d.total||0} tasks have due date or comment\nScore = (withMeta/total)×10`,
-    releaseSuccess: 'Manual input (0–20): Release quality and success rate this sprint',
-    slaAdherence:   'Manual input (0–15): SLA compliance and on-time delivery rate',
-    crossCollab:    'Manual input (0–10): Collaboration across pods and functions',
-    ownership:      'Manual input (0–15): End-to-end ownership of assigned tasks',
-    reporting:      'Manual input (0–15): Regular updates, blockers raised on time',
-    communication:  'Manual input (0–10): Active and responsive in email and chat',
-    aiAdoption:     'Manual input (0–10): Uses AI tools and adoption initiatives',
-    discussions:    'Manual input (0–10): Active participation in discussions and brainstorming',
-    knowledgeRepo:  'Manual input (0–5): Contributes to documentation and knowledge sharing',
+    sprintCommit:`${d.closed||0}/${d.total||0} closed=${d.cr||0}% | ≥95%→20|85%→16|70%→12|50%→8|<50%→4`,
+    velocity:`${d.active||0}/${d.total||0} active=${d.ar||0}% | ≥85%→15|70%→11|50%→7|<50%→4`,
+    bugLeakage:`${d.bugs||0} bugs=${d.br||0}% | 0→20|≤5%→18|≤10%→14|≤20%→10|>20%→5`,
+    jiraDiscipline:`${d.withMeta||0}/${d.total||0} with due/comment | score=(withMeta/total)×10`,
+    releaseSuccess:'Manual (0–20): Release quality this sprint',
+    slaAdherence:'Manual (0–15): SLA compliance this sprint',
+    crossCollab:'Manual (0–10)',ownership:'Manual (0–15)',reporting:'Manual (0–15)',
+    communication:'Manual (0–10)',aiAdoption:'Manual (0–10)',discussions:'Manual (0–10)',knowledgeRepo:'Manual (0–5)',
   };
   return tips[key]||'';
 }
 
-// ── Core sprint metric computation (used for both team and individual) ─
 function computeSprintMetrics(issues) {
-  const total   = issues.length||1;
-  const closed  = issues.filter(i=>isDone(i.status)).length;
-  const inProg  = issues.filter(i=>(i.status||'').toLowerCase()==='in progress').length;
-  const bugs    = issues.filter(i=>(i.type||'').toLowerCase()==='bug').length;
-  const active  = closed+inProg;
-  const withMeta= issues.filter(i=>i.due||(i.comments||[]).length>0).length;
-  const cr=Math.round((closed/total)*100);
-  const ar=Math.round((active/total)*100);
-  const br=Math.round((bugs/total)*100);
+  const total=issues.length||1;
+  const closed=issues.filter(i=>isDone(i.status)).length;
+  const inProg=issues.filter(i=>(i.status||'').toLowerCase()==='in progress').length;
+  const bugs=issues.filter(i=>(i.type||'').toLowerCase()==='bug').length;
+  const active=closed+inProg;
+  const withMeta=issues.filter(i=>i.due||(i.comments||[]).length>0).length;
+  const cr=Math.round((closed/total)*100),ar=Math.round((active/total)*100),br=Math.round((bugs/total)*100);
   return {
-    sprintCommit:   cr>=95?20:cr>=85?16:cr>=70?12:cr>=50?8:4,
-    velocity:       ar>=85?15:ar>=70?11:ar>=50?7:4,
-    bugLeakage:     bugs===0?20:br<=5?18:br<=10?14:br<=20?10:5,
-    jiraDiscipline: Math.min(10,Math.round((withMeta/total)*10)),
-    releaseSuccess: 0,
-    slaAdherence:   0,
+    sprintCommit:cr>=95?20:cr>=85?16:cr>=70?12:cr>=50?8:4,
+    velocity:ar>=85?15:ar>=70?11:ar>=50?7:4,
+    bugLeakage:bugs===0?20:br<=5?18:br<=10?14:br<=20?10:5,
+    jiraDiscipline:Math.min(10,Math.round((withMeta/total)*10)),
+    releaseSuccess:0,slaAdherence:0,
     _detail:{total,closed,active,bugs,withMeta,cr,ar,br}
   };
 }
 
-// ── Auto scores ───────────────────────────────────────────────────
 function computeTeamAutoScores() {
-  const issues=SPRINT_DATA||[], nameMap=buildNameMap(), result={};
+  const issues=SPRINT_DATA||[],nameMap=buildNameMap(),result={};
   TEAMS_FROM_JIRA.forEach(team=>{
     const mNames=(team.members||[]).map(m=>m.name.toLowerCase());
     const tIssues=issues.filter(i=>{
@@ -5490,7 +6118,7 @@ function computeTeamAutoScores() {
 }
 
 function computeIndividualAutoScores() {
-  const issues=SPRINT_DATA||[], nameMap=buildNameMap(), members={};
+  const issues=SPRINT_DATA||[],nameMap=buildNameMap(),members={};
   const validNames=new Set();
   TEAMS_FROM_JIRA.forEach(t=>(t.members||[]).forEach(m=>{if(m.name)validNames.add(m.name);}));
   issues.forEach(i=>{
@@ -5509,15 +6137,14 @@ function computeIndividualAutoScores() {
   return scores;
 }
 
-// ── Merge auto + manual ───────────────────────────────────────────
 function getMergedTeamScores() {
   const auto=computeTeamAutoScores();
   const manual=JSON.parse(localStorage.getItem('adloggs_manual_team_scores')||'{}');
   TEAMS_FROM_JIRA.forEach(team=>{
-    const s=auto[team.name]; if(!s)return;
+    const s=auto[team.name];if(!s)return;
     const m=manual[team.name]||{};
     s.releaseSuccess=Math.min(20,Number(m.releaseSuccess)||0);
-    s.slaAdherence  =Math.min(15,Number(m.slaAdherence)  ||0);
+    s.slaAdherence=Math.min(15,Number(m.slaAdherence)||0);
     s.bonus=teamBonusFor(team.name);
     s.total=Math.min(100,s.sprintCommit+s.releaseSuccess+s.velocity+s.bugLeakage+s.jiraDiscipline+s.slaAdherence+s.bonus);
   });
@@ -5532,36 +6159,34 @@ function getMergedIndividualScores() {
     const pName=resolvePortalName(jiraName,nameMap);
     const m=manual[pName]||manual[jiraName]||{};
     s.releaseSuccess=Math.min(20,Number(m.releaseSuccess)||0);
-    s.slaAdherence  =Math.min(15,Number(m.slaAdherence)  ||0);
-    s.crossCollab   =Math.min(10,Number(m.crossCollab)   ||0);
-    s.ownership     =Math.min(15,Number(m.ownership)     ||0);
-    s.reporting     =Math.min(15,Number(m.reporting)     ||0);
-    s.communication =Math.min(10,Number(m.communication) ||0);
-    s.aiAdoption    =Math.min(10,Number(m.aiAdoption)    ||0);
-    s.discussions   =Math.min(10,Number(m.discussions)   ||0);
-    s.knowledgeRepo =Math.min(5, Number(m.knowledgeRepo) ||0);
+    s.slaAdherence=Math.min(15,Number(m.slaAdherence)||0);
+    s.crossCollab=Math.min(10,Number(m.crossCollab)||0);
+    s.ownership=Math.min(15,Number(m.ownership)||0);
+    s.reporting=Math.min(15,Number(m.reporting)||0);
+    s.communication=Math.min(10,Number(m.communication)||0);
+    s.aiAdoption=Math.min(10,Number(m.aiAdoption)||0);
+    s.discussions=Math.min(10,Number(m.discussions)||0);
+    s.knowledgeRepo=Math.min(5,Number(m.knowledgeRepo)||0);
     s.bonus=bonusFor(pName);
-    const raw=s.sprintCommit+s.releaseSuccess+s.velocity+s.bugLeakage+s.jiraDiscipline+s.slaAdherence+
-              s.crossCollab+s.ownership+s.reporting+s.communication+s.aiAdoption+s.discussions+s.knowledgeRepo+s.bonus;
+    const raw=s.sprintCommit+s.releaseSuccess+s.velocity+s.bugLeakage+s.jiraDiscipline+s.slaAdherence+s.crossCollab+s.ownership+s.reporting+s.communication+s.aiAdoption+s.discussions+s.knowledgeRepo+s.bonus;
     s.total=Math.min(100,Math.round((raw/MAX_IND_TOTAL)*100));
   });
   return auto;
 }
 
-// ── Render: Team Scores ───────────────────────────────────────────
 function renderTeamScores() {
   const grid=document.getElementById('team-score-grid');
   if(!grid)return;
   const scores=getMergedTeamScores();
   const ranked=Object.entries(scores).sort((a,b)=>b[1].total-a[1].total);
-  if(!ranked.length){grid.innerHTML='<div style="padding:20px;font-size:13px;color:var(--text3)">No team data found.</div>';return;}
+  if(!ranked.length){grid.innerHTML='<div style="padding:20px;font-size:13px;color:var(--text3)">No team data. Sync Jira first.</div>';return;}
   grid.innerHTML=ranked.map(([team,s],idx)=>{
     const tColor=scColor(s.total),pColor=POD_COLORS[team]||'#6b7280',medal=RANK_MEDALS[idx]||`#${idx+1}`;
     const d=s._detail||{};
     const rows=Object.entries(TEAM_WEIGHTS).map(([key,cfg])=>{
       const val=s[key]??0;
-      const badge=cfg.auto?`<span class="sc-auto-badge">AUTO</span>`:`<span class="sc-manual-badge">MANUAL</span>`;
-      return `<div class="score-row" title="${scTooltip(key,d).replace(/"/g,'&quot;')}">
+      const badge=cfg.auto?'<span class="sc-auto-badge">AUTO</span>':'<span class="sc-manual-badge">MANUAL</span>';
+      return `<div class="score-row" title="${scTooltip(key,d)}">
         <span class="score-label">${cfg.label} ${badge}</span>
         ${scBar(val,cfg.max)}
         <span style="font-size:12px;font-weight:700;color:${scColor((val/cfg.max)*100)};min-width:28px;text-align:right">${val}</span>
@@ -5573,21 +6198,16 @@ function renderTeamScores() {
       <div style="position:absolute;top:12px;right:12px;font-size:22px">${medal}</div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="width:36px;height:36px;border-radius:8px;background:${pColor};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">${team.slice(0,2).toUpperCase()}</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700">${esc(team)}</div>
-          <div style="font-size:11px;color:var(--text3)">${d.closed||0} closed · ${d.total||0} total · ${d.bugs||0} bugs</div>
-        </div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">${esc(team)}</div>
+        <div style="font-size:11px;color:var(--text3)">${d.closed||0} closed · ${d.total||0} total · ${d.bugs||0} bugs</div></div>
         <div style="text-align:right;margin-right:28px">
           <div style="font-family:var(--serif);font-size:28px;color:${tColor};font-weight:700">${s.total}</div>
           <div style="font-size:10px;font-weight:600;color:${tColor}">${scLabel(s.total)}</div>
         </div>
-      </div>
-      ${rows}${bonusRow}
-    </div>`;
+      </div>${rows}${bonusRow}</div>`;
   }).join('');
 }
 
-// ── Render: Individual Scores ─────────────────────────────────────
 function renderIndividualScores() {
   const grid=document.getElementById('individual-score-grid');
   if(!grid)return;
@@ -5602,39 +6222,32 @@ function renderIndividualScores() {
   let entries=Object.entries(scores).map(([n,s])=>[resolvePortalName(n,nameMap),s,memberTeam[resolvePortalName(n,nameMap)]||'']);
   if(filterTeam)entries=entries.filter(([,,t])=>t===filterTeam);
   entries.sort((a,b)=>sortBy==='name'?a[0].localeCompare(b[0]):sortBy==='completion'?(b[1].sprintCommit||0)-(a[1].sprintCommit||0):(b[1].total||0)-(a[1].total||0));
-  if(!entries.length){grid.innerHTML='<div style="padding:20px;font-size:13px;color:var(--text3)">No data — click ⟳ Recompute.</div>';return;}
+  if(!entries.length){grid.innerHTML='<div style="padding:20px;font-size:13px;color:var(--text3)">No data — sync Jira first.</div>';return;}
   grid.innerHTML=entries.map(([name,s,team],idx)=>{
-    const tColor=scColor(s.total);
+    const tColor=scColor(s.total),d=s._detail||{};
     const initials=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const d=s._detail||{};
     const sprintRows=Object.entries(SPRINT_METRICS).map(([key,cfg])=>{
       const val=s[key]??0;
-      const badge=cfg.auto?`<span class="sc-auto-badge">AUTO</span>`:`<span class="sc-manual-badge">MANUAL</span>`;
-      return `<div class="score-row" title="${scTooltip(key,d).replace(/"/g,'&quot;')}">
-        <span class="score-label">${cfg.label} ${badge}</span>
-        ${scBar(val,cfg.max)}
+      const badge=cfg.auto?'<span class="sc-auto-badge">AUTO</span>':'<span class="sc-manual-badge">MANUAL</span>';
+      return `<div class="score-row" title="${scTooltip(key,d)}">
+        <span class="score-label">${cfg.label} ${badge}</span>${scBar(val,cfg.max)}
         <span style="font-size:12px;font-weight:700;color:${scColor((val/cfg.max)*100)};min-width:28px;text-align:right">${val}</span>
-        <span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right">/${cfg.max}</span>
-      </div>`;
+        <span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right">/${cfg.max}</span></div>`;
     }).join('');
     const behavRows=Object.entries(IND_BEHAVIOURAL).map(([key,cfg])=>{
       const val=s[key]??0;
-      return `<div class="score-row" title="${scTooltip(key,d).replace(/"/g,'&quot;')}">
-        <span class="score-label">${cfg.label} <span class="sc-manual-badge">MANUAL</span></span>
-        ${scBar(val,cfg.max)}
+      return `<div class="score-row" title="${scTooltip(key,d)}">
+        <span class="score-label">${cfg.label} <span class="sc-manual-badge">MANUAL</span></span>${scBar(val,cfg.max)}
         <span style="font-size:12px;font-weight:700;color:${scColor((val/cfg.max)*100)};min-width:28px;text-align:right">${val}</span>
-        <span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right">/${cfg.max}</span>
-      </div>`;
+        <span style="font-size:10px;color:var(--text3);min-width:26px;text-align:right">/${cfg.max}</span></div>`;
     }).join('');
     const bonusRow=s.bonus?`<div class="score-row"><span class="score-label">🌟 Bonus</span>${scBar(s.bonus,20)}<span style="font-size:12px;font-weight:700;color:#f59e0b;min-width:28px;text-align:right">+${s.bonus}</span></div>`:'';
     return `<div class="score-card" style="position:relative">
       <div style="position:absolute;top:12px;right:12px;font-size:20px">${RANK_MEDALS[idx]||''}</div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="width:36px;height:36px;border-radius:50%;background:${POD_COLORS[team]||'var(--accent)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">${initials}</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700">${esc(name)}</div>
-          <div style="font-size:10px;color:var(--text3)">${esc(team)} · ${d.closed||0}/${d.total||0} closed · ${d.bugs||0} bugs</div>
-        </div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">${esc(name)}</div>
+        <div style="font-size:10px;color:var(--text3)">${esc(team)} · ${d.closed||0}/${d.total||0} closed · ${d.bugs||0} bugs</div></div>
         <div style="text-align:right;margin-right:28px">
           <div style="font-family:var(--serif);font-size:28px;color:${tColor};font-weight:700">${s.total}</div>
           <div style="font-size:10px;font-weight:600;color:${tColor}">${scLabel(s.total)}</div>
@@ -5643,43 +6256,38 @@ function renderIndividualScores() {
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Sprint Metrics</div>
       ${sprintRows}
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px">Behavioural Metrics</div>
-      ${behavRows}${bonusRow}
-    </div>`;
+      ${behavRows}${bonusRow}</div>`;
   }).join('');
 }
 
-// ── Rankings ──────────────────────────────────────────────────────
 function renderRankings() {
   const panel=document.getElementById('score-panel-rankings');
   if(!panel)return;
-  const indScores=getMergedIndividualScores(), teamScores=getMergedTeamScores();
-  const nameMap=buildNameMap(), memberTeam={};
+  const indScores=getMergedIndividualScores(),teamScores=getMergedTeamScores();
+  const nameMap=buildNameMap(),memberTeam={};
   TEAMS_FROM_JIRA.forEach(t=>(t.members||[]).forEach(m=>{memberTeam[m.name]=t.name;}));
   const validNames=new Set(TEAMS_FROM_JIRA.flatMap(t=>(t.members||[]).map(m=>m.name)));
   const indRanked=Object.entries(indScores)
     .map(([n,s])=>[resolvePortalName(n,nameMap),s,memberTeam[resolvePortalName(n,nameMap)]||''])
-    .filter(([name])=>validNames.has(name)&&name.toLowerCase()!=='unassigned')
+    .filter(([name])=>validNames.has(name))
     .sort((a,b)=>b[1].total-a[1].total);
   const teamRanked=Object.entries(teamScores).sort((a,b)=>b[1].total-a[1].total);
-  const teamRows=teamRanked.map(([team,s],i)=>`<tr style="border-bottom:1px solid var(--border)">
+  const teamRows=teamRanked.map(([t,s],i)=>`<tr style="border-bottom:1px solid var(--border)">
     <td style="padding:6px 10px;font-size:16px">${RANK_MEDALS[i]||`#${i+1}`}</td>
-    <td style="padding:6px 10px;font-size:12px;font-weight:600">${esc(team)}</td>
+    <td style="padding:6px 10px;font-size:12px;font-weight:600">${esc(t)}</td>
     <td style="padding:6px 10px;font-size:13px;font-weight:700;color:${scColor(s.total)}">${s.total}</td>
-    <td style="padding:6px 10px;font-size:11px;color:#f59e0b">${s.bonus?`+${s.bonus} 🌟`:''}</td>
-  </tr>`).join('');
+    <td style="padding:6px 10px;font-size:11px;color:#f59e0b">${s.bonus?`+${s.bonus} 🌟`:''}</td></tr>`).join('');
   const indRows=indRanked.map(([name,s,team],i)=>`<tr style="border-bottom:1px solid var(--border)">
     <td style="padding:6px 10px;font-size:16px">${RANK_MEDALS[i]||`#${i+1}`}</td>
     <td style="padding:6px 10px;font-size:12px;font-weight:600">${esc(name)}</td>
     <td style="padding:6px 10px;font-size:11px;color:var(--text3)">${esc(team)}</td>
     <td style="padding:6px 10px;font-size:13px;font-weight:700;color:${scColor(s.total)}">${s.total}</td>
-    <td style="padding:6px 10px;font-size:11px;color:#f59e0b">${s.bonus?`+${s.bonus} 🌟`:''}</td>
-  </tr>`).join('');
+    <td style="padding:6px 10px;font-size:11px;color:#f59e0b">${s.bonus?`+${s.bonus} 🌟`:''}</td></tr>`).join('');
   const topJira=indRanked.reduce((a,b)=>(b[1].jiraDiscipline||0)>(a[1].jiraDiscipline||0)?b:a,indRanked[0]||['—',{},'']);
   const topCommit=indRanked.reduce((a,b)=>(b[1].sprintCommit||0)>(a[1].sprintCommit||0)?b:a,indRanked[0]||['—',{},'']);
   const topBonus=indRanked.reduce((a,b)=>(b[1].bonus||0)>(a[1].bonus||0)?b:a,indRanked[0]||['—',{},'']);
   const topTeam=teamRanked[0]?.[0]||'—';
-  panel.innerHTML=`
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+  panel.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
     <div class="score-card"><div style="font-size:13px;font-weight:700;margin-bottom:12px">🏆 Team Rankings</div>
       <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--border)">
         <th style="padding:5px 10px;font-size:10px;color:var(--text3);text-align:left">#</th>
@@ -5694,22 +6302,20 @@ function renderRankings() {
         <th style="padding:5px 10px;font-size:10px;color:var(--text3);text-align:left">Pod</th>
         <th style="padding:5px 10px;font-size:10px;color:var(--text3);text-align:left">Score</th>
         <th style="padding:5px 10px;font-size:10px;color:var(--text3);text-align:left">Bonus</th>
-      </tr></thead><tbody>${indRows}</tbody></table></div>
-  </div>
+      </tr></thead><tbody>${indRows}</tbody></table></div></div>
   <div class="score-card"><div style="font-size:13px;font-weight:700;margin-bottom:14px">🏅 Special Awards</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-      ${[{icon:'📋',title:'Best Jira Discipline',name:topJira[0],score:topJira[1].jiraDiscipline||0,label:'Jira Score'},
-         {icon:'🚀',title:'Best Sprint Commitment',name:topCommit[0],score:topCommit[1].sprintCommit||0,label:'Commit Score'},
-         {icon:'🌟',title:'Most Valuable (Bonus)',name:topBonus[0],score:topBonus[1].bonus||0,label:'Bonus Points'},
-         {icon:'🏆',title:'Top Team',name:topTeam,score:teamScores[topTeam]?.total||0,label:'Team Score'},
+      ${[{icon:'📋',title:'Best Jira Discipline',name:topJira[0],score:topJira[1].jiraDiscipline||0,label:'Score'},
+         {icon:'🚀',title:'Best Sprint Commitment',name:topCommit[0],score:topCommit[1].sprintCommit||0,label:'Score'},
+         {icon:'🌟',title:'Most Bonus Points',name:topBonus[0],score:topBonus[1].bonus||0,label:'Points'},
+         {icon:'🏆',title:'Top Team',name:topTeam,score:teamScores[topTeam]?.total||0,label:'Score'},
       ].map(a=>`<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
         <div style="font-size:24px;margin-bottom:4px">${a.icon}</div>
         <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${a.title}</div>
         <div style="font-size:14px;font-weight:700">${esc(a.name)}</div>
         <div style="font-size:11px;color:var(--text3)">${a.label}: ${a.score}</div>
       </div>`).join('')}
-    </div>
-  </div>
+    </div></div>
   <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <button class="btn btn-primary btn-sm" onclick="freezeSprintScores()">❄️ Freeze Sprint & Archive</button>
     <button class="btn btn-ghost btn-sm" onclick="downloadCurrentScoresExcel()">⬇ Download Excel</button>
@@ -5718,7 +6324,6 @@ function renderRankings() {
   </div>`;
 }
 
-// ── Bonus Modal ───────────────────────────────────────────────────
 let _bonusTarget={type:'individual',name:''};
 function openBonusModal(type,name){
   _bonusTarget={type,name};
@@ -5732,8 +6337,7 @@ function openBonusModal(type,name){
 }
 function onBonusTypeChange(){
   const type=document.querySelector('input[name="bonus-type"]:checked')?.value||'individual';
-  const sel=document.getElementById('bonus-recipient-select');
-  if(!sel)return;
+  const sel=document.getElementById('bonus-recipient-select');if(!sel)return;
   sel.innerHTML='<option value="">— Choose —</option>';
   if(type==='individual'){
     TEAMS_FROM_JIRA.forEach(team=>{
@@ -5742,7 +6346,6 @@ function onBonusTypeChange(){
       if(grp.children.length)sel.appendChild(grp);
     });
   }else{TEAMS_FROM_JIRA.forEach(t=>{const o=document.createElement('option');o.value=t.name;o.textContent=t.name;sel.appendChild(o);});}
-  sel.style.maxHeight='180px';sel.style.overflowY='auto';
   sel.size=type==='individual'?Math.min(8,sel.options.length):1;
   const li=document.getElementById('bonus-type-ind-label'),lt=document.getElementById('bonus-type-team-label');
   if(li)li.style.borderColor=type==='individual'?'var(--accent)':'var(--border)';
@@ -5765,30 +6368,23 @@ function submitBonus(){
   showToast(`🌟 +${points} bonus awarded to ${recipient}`);
 }
 
-// ── Bonus Log Panel ───────────────────────────────────────────────
 function renderBonusLog(){
-  const panel=document.getElementById('score-panel-bonus');
-  if(!panel)return;
+  const panel=document.getElementById('score-panel-bonus');if(!panel)return;
   const log=getBonusLog(),total=log.reduce((s,b)=>s+(Number(b.points)||0),0);
   const hdr=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
     <div><div style="font-size:13px;font-weight:700">🌟 Bonus Points Audit Log</div>
     <div style="font-size:11px;color:var(--text3)">${log.length} entries · ${total} total points</div></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-primary btn-sm" onclick="openBonusModal('individual','')">+ Award Bonus</button>
-      <button class="btn btn-ghost btn-sm" onclick="downloadBonusLogExcel()">⬇ Excel</button>
-    </div></div>`;
+    <div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" onclick="openBonusModal('individual','')">+ Award Bonus</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadBonusLogExcel()">⬇ Excel</button></div></div>`;
   const manualSection=`<div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px">✏️ Manual Score Inputs</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Enter Release Success Rate, SLA Adherence (auto-computed metrics need no input), and individual behavioural scores.</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Enter Release Success Rate, SLA Adherence, and individual behavioural scores.</div>
     <div id="manual-score-table" style="display:flex;flex-direction:column;gap:6px"></div>
     <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
       <button class="btn btn-primary btn-sm" onclick="saveManualScores()">Save Manual Scores</button>
       <span id="manual-save-status" style="font-size:11px;color:var(--green)"></span>
     </div></div>`;
-  if(!log.length){
-    panel.innerHTML=`<div class="score-card">${hdr}<div style="font-size:13px;color:var(--text3);padding:12px 0">No bonus points awarded yet.</div></div>${manualSection}`;
-    renderManualInputs();return;
-  }
+  if(!log.length){panel.innerHTML=`<div class="score-card">${hdr}<div style="font-size:13px;color:var(--text3);padding:12px 0">No bonus points awarded yet.</div></div>${manualSection}`;renderManualInputs();return;}
   const rows=[...log].reverse().map(b=>`<tr style="border-bottom:1px solid var(--border)">
     <td style="padding:7px 10px;font-size:11px">${b.date}</td>
     <td style="padding:7px 10px;font-size:12px;font-weight:600">${esc(b.recipient||b.team)}</td>
@@ -5808,51 +6404,40 @@ function renderBonusLog(){
       <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Awarded By</th>
       <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Reason</th>
       <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--text3)">Sprint</th>
-      <th></th>
-    </tr></thead><tbody>${rows}</tbody></table></div></div>${manualSection}`;
+      <th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${manualSection}`;
   renderManualInputs();
 }
 function deleteBonus(id){saveBonusLog(getBonusLog().filter(b=>b.id!==id));renderBonusLog();computeAllScores();showToast('Bonus entry removed');}
 
-// ── Manual Inputs ─────────────────────────────────────────────────
 function renderManualInputs(){
-  const container=document.getElementById('manual-score-table');
-  if(!container)return;
-  const indManual =JSON.parse(localStorage.getItem('adloggs_manual_ind_scores') ||'{}');
+  const container=document.getElementById('manual-score-table');if(!container)return;
+  const indManual=JSON.parse(localStorage.getItem('adloggs_manual_ind_scores')||'{}');
   const teamManual=JSON.parse(localStorage.getItem('adloggs_manual_team_scores')||'{}');
-  const sprintManual=[
-    {key:'releaseSuccess',label:'Release Success Rate',max:20},
-    {key:'slaAdherence',  label:'SLA Adherence',       max:15},
-  ];
+  const sprintManual=[{key:'releaseSuccess',label:'Release Success Rate',max:20},{key:'slaAdherence',label:'SLA Adherence',max:15}];
   const behavFields=[
-    {key:'crossCollab',   label:'Cross-functional Team Collaboration',     max:10},
-    {key:'ownership',     label:'Ownership of the Task',                   max:15},
-    {key:'reporting',     label:'Reporting & Follow-ups',                  max:15},
-    {key:'communication', label:'Active in Email & Chat Communications',   max:10},
-    {key:'aiAdoption',    label:'Active use of AI / Adoption Initiatives', max:10},
-    {key:'discussions',   label:'Eagerness in Discussions & Brainstorming',max:10},
-    {key:'knowledgeRepo', label:'Knowledge Repository Contributions',      max:5 },
+    {key:'crossCollab',label:'Cross-functional Team Collaboration',max:10},
+    {key:'ownership',label:'Ownership of the Task',max:15},
+    {key:'reporting',label:'Reporting & Follow-ups',max:15},
+    {key:'communication',label:'Active in Email & Chat Communications',max:10},
+    {key:'aiAdoption',label:'Active use of AI / Adoption Initiatives',max:10},
+    {key:'discussions',label:'Eagerness in Discussions & Brainstorming',max:10},
+    {key:'knowledgeRepo',label:'Knowledge Repository Contributions',max:5},
   ];
-  let html=`<div style="font-size:12px;font-weight:700;color:var(--text);margin:4px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">🏆 Team — Manual Sprint Metrics</div>
-  <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Sprint Commitment, Velocity, Bug Leakage and Jira Discipline are auto-computed from Jira. Enter Release Success Rate and SLA Adherence below.</div>`;
+  let html=`<div style="font-size:12px;font-weight:700;color:var(--text);margin:4px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">🏆 Team — Manual Sprint Metrics</div>`;
   TEAMS_FROM_JIRA.forEach(team=>{
-    const m=teamManual[team.name]||{};
-    const pColor=POD_COLORS[team.name]||'#6b7280';
+    const m=teamManual[team.name]||{},pColor=POD_COLORS[team.name]||'#6b7280';
     html+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
       <div style="background:${pColor}18;border-bottom:1px solid var(--border);padding:7px 14px;display:flex;align-items:center;gap:8px">
         <div style="width:10px;height:10px;border-radius:50%;background:${pColor}"></div>
-        <span style="font-size:12px;font-weight:700">${esc(team.name)}</span>
-      </div>
+        <span style="font-size:12px;font-weight:700">${esc(team.name)}</span></div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
         ${sprintManual.map(f=>`<div>
           <div style="font-size:11px;color:var(--text2);margin-bottom:4px">${f.label} <span style="color:var(--text3)">(0–${f.max})</span></div>
           <input type="number" min="0" max="${f.max}" class="input" data-team="${esc(team.name)}" data-key="${f.key}" value="${m[f.key]??''}" placeholder="0–${f.max}" style="width:100%;font-size:12px"/>
-        </div>`).join('')}
-      </div>
-    </div>`;
+        </div>`).join('')}</div></div>`;
   });
   html+=`<div style="font-size:12px;font-weight:700;color:var(--text);margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)">👤 Individual — Behavioural Metrics</div>
-  <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Enter the 7 behavioural scores per person. Sprint metrics (Sprint Commitment, Velocity, Bug Leakage, Jira Discipline) are auto-computed from Jira.</div>`;
+  <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Sprint metrics are auto-computed. Enter the 7 behavioural scores per person.</div>`;
   TEAMS_FROM_JIRA.forEach(team=>{
     const pColor=POD_COLORS[team.name]||'#6b7280';
     (team.members||[]).forEach(m=>{
@@ -5863,45 +6448,37 @@ function renderManualInputs(){
         <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:7px 14px;display:flex;align-items:center;gap:8px">
           <div style="width:26px;height:26px;border-radius:50%;background:${pColor};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>
           <span style="font-size:12px;font-weight:700">${esc(m.name)}</span>
-          <span style="font-size:10px;color:var(--text3)">${esc(team.name)}</span>
-        </div>
+          <span style="font-size:10px;color:var(--text3)">${esc(team.name)}</span></div>
         <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
-          ${[...behavFields].map(f=>`<div>
+          ${behavFields.map(f=>`<div>
             <div style="font-size:10px;color:var(--text2);margin-bottom:3px;line-height:1.4">${f.label} <span style="color:var(--text3)">(0–${f.max})</span></div>
             <input type="number" min="0" max="${f.max}" class="input" data-member="${esc(m.name)}" data-key="${f.key}" value="${saved[f.key]??''}" placeholder="0–${f.max}" style="width:100%;font-size:12px"/>
-          </div>`).join('')}
-        </div>
-      </div>`;
+          </div>`).join('')}</div></div>`;
     });
   });
   container.innerHTML=html;
 }
 
 function saveManualScores(){
-  const indManual =JSON.parse(localStorage.getItem('adloggs_manual_ind_scores') ||'{}');
+  const indManual=JSON.parse(localStorage.getItem('adloggs_manual_ind_scores')||'{}');
   const teamManual=JSON.parse(localStorage.getItem('adloggs_manual_team_scores')||'{}');
   document.querySelectorAll('#manual-score-table input[data-member]').forEach(el=>{
     const name=el.dataset.member,key=el.dataset.key,val=el.value.trim();
-    if(!indManual[name])indManual[name]={};
-    if(val!=='')indManual[name][key]=Number(val)||0;
+    if(!indManual[name])indManual[name]={};if(val!=='')indManual[name][key]=Number(val)||0;
   });
   document.querySelectorAll('#manual-score-table input[data-team]').forEach(el=>{
     const team=el.dataset.team,key=el.dataset.key,val=el.value.trim();
-    if(!teamManual[team])teamManual[team]={};
-    if(val!=='')teamManual[team][key]=Number(val)||0;
+    if(!teamManual[team])teamManual[team]={};if(val!=='')teamManual[team][key]=Number(val)||0;
   });
-  localStorage.setItem('adloggs_manual_ind_scores', JSON.stringify(indManual));
+  localStorage.setItem('adloggs_manual_ind_scores',JSON.stringify(indManual));
   localStorage.setItem('adloggs_manual_team_scores',JSON.stringify(teamManual));
   const el=document.getElementById('manual-save-status');
   if(el){el.textContent='✓ Saved';setTimeout(()=>el.textContent='',2500);}
-  renderTeamScores();renderIndividualScores();
-  showToast('Scores saved ✓');
+  renderTeamScores();renderIndividualScores();showToast('Scores saved ✓');
 }
 
-// ── Sprint History ────────────────────────────────────────────────
 function freezeSprintScores(){
-  const sprint=currentSprintLabel();
-  const indS=getMergedIndividualScores(),teamS=getMergedTeamScores();
+  const sprint=currentSprintLabel(),indS=getMergedIndividualScores(),teamS=getMergedTeamScores();
   const nameMap=buildNameMap(),memberTeam={};
   TEAMS_FROM_JIRA.forEach(t=>(t.members||[]).forEach(m=>{memberTeam[m.name]=t.name;}));
   const history=JSON.parse(localStorage.getItem('adloggs_score_history')||'[]');
@@ -5918,8 +6495,7 @@ function freezeSprintScores(){
 
 function renderHistoryPanel(){
   const history=JSON.parse(localStorage.getItem('adloggs_score_history')||'[]');
-  const panel=document.getElementById('score-panel-history');
-  if(!panel)return;
+  const panel=document.getElementById('score-panel-history');if(!panel)return;
   if(!history.length){panel.innerHTML='<div style="padding:20px;font-size:13px;color:var(--text3)">No archived sprints yet.</div>';return;}
   panel.innerHTML=history.map(h=>{
     const ti=h.individuals?.[0],tt=h.teams?.[0];
@@ -5932,19 +6508,16 @@ function renderHistoryPanel(){
           ${tt?`<div style="background:var(--bg);padding:5px 12px;border-radius:6px;font-size:11px">🏆 <strong>${esc(tt.team)}</strong> — ${tt.total}</div>`:''}
           ${ti?`<div style="background:var(--bg);padding:5px 12px;border-radius:6px;font-size:11px">🥇 <strong>${esc(ti.name)}</strong> — ${ti.total}</div>`:''}
           <button class="btn btn-primary btn-sm" onclick="downloadSprintHistoryExcel('${esc(h.sprint)}')">⬇ Excel</button>
-        </div>
-      </div>
+        </div></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Teams</div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase">Teams</div>
           <table style="width:100%;border-collapse:collapse"><tbody>${tRows}</tbody></table></div>
-        <div><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Individuals</div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase">Individuals</div>
           <table style="width:100%;border-collapse:collapse"><tbody>${iRows}</tbody></table></div>
-      </div>
-    </div>`;
+      </div></div>`;
   }).join('');
 }
 
-// ── Excel ─────────────────────────────────────────────────────────
 function csvEsc(v){const s=String(v==null?'':v);return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:`${s}`;}
 function csvRow(a){return a.map(csvEsc).join(',');}
 function downloadAsCSV(filename,sheets){
@@ -5961,8 +6534,7 @@ function downloadCurrentScoresExcel(){
   const ih=['Rank','Name','Team','Sprint Commit','Release Success','Velocity','Bug Leakage','Jira Discipline','SLA Adherence','CrossCollab','Ownership','Reporting','Comms','AI','Discussions','KnowledgeRepo','Bonus','TOTAL'];
   const indEntries=Object.entries(indS).map(([n,s])=>[resolvePortalName(n,nameMap),memberTeam[resolvePortalName(n,nameMap)]||'',s]).sort((a,b)=>b[2].total-a[2].total);
   const indRows=[ih,...indEntries.map(([name,team,s],i)=>[i+1,name,team,s.sprintCommit,s.releaseSuccess,s.velocity,s.bugLeakage,s.jiraDiscipline,s.slaAdherence,s.crossCollab,s.ownership,s.reporting,s.communication,s.aiAdoption,s.discussions,s.knowledgeRepo,s.bonus,s.total])];
-  const bh=['Date','Recipient','Type','Points','Awarded By','Reason','Sprint'];
-  const bonusRows=[bh,...getBonusLog().map(b=>[b.date,b.recipient||b.team,b.type,b.points,b.awardedBy,b.reason,b.sprint||''])];
+  const bonusRows=[['Date','Recipient','Type','Points','Awarded By','Reason','Sprint'],...getBonusLog().map(b=>[b.date,b.recipient||b.team,b.type,b.points,b.awardedBy,b.reason,b.sprint||''])];
   downloadAsCSV(`Adloggs-Scores-${currentSprintLabel().replace(/\s+/g,'-')}.csv`,[{name:'Team Scores',rows:teamRows},{name:'Individual Scores',rows:indRows},{name:'Bonus Log',rows:bonusRows}]);
   showToast('Scores downloaded ✓');
 }
@@ -5986,130 +6558,10 @@ function switchScoreTab(tab){
     if(btn){btn.style.color=t===tab?'var(--accent)':'var(--text3)';btn.style.borderBottom=t===tab?'2px solid var(--accent)':'2px solid transparent';btn.style.fontWeight=t===tab?'700':'500';}
   });
   if(tab==='rankings')renderRankings();
-  if(tab==='bonus')   renderBonusLog();
-  if(tab==='history') renderHistoryPanel();
+  if(tab==='bonus')renderBonusLog();
+  if(tab==='history')renderHistoryPanel();
 }
 
-
-async function init() {
-  // ── Step 1: Load config — KV first (always fresh), then GitHub fallback
-  // KV is updated on every toggle/save even without a GitHub token
-  // GitHub is the fallback for new devices that haven't set up KV yet
-  let configLoaded = false;
-  try {
-    const kvCfg = await loadEodConfigFromWorker();
-    if (kvCfg) {
-      applyEodConfigPayload(kvCfg);
-      configLoaded = true;
-    }
-  } catch(e) { /* KV not available */ }
-
-  if (!configLoaded) {
-    try {
-      await pullConfigFromGithub();
-    } catch(e) { /* silent — config file may not exist yet */ }
-  }
-
-  // ── Step 2: Restore all UI from STATE / localStorage (now updated by GitHub pull)
-  if (STATE.scriptUrl) document.getElementById('cfg-script-url').value = STATE.scriptUrl;
-  if (STATE.jiraProxyUrl) {
-    document.getElementById('cfg-jira-proxy').value = STATE.jiraProxyUrl;
-    const badge = document.getElementById('jira-cfg-badge');
-    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
-    badge.textContent = '✓ Cloudflare Worker connected';
-  }
-  if (STATE.gchatWebhookUrl) {
-    document.getElementById('cfg-gchat-webhook').value = STATE.gchatWebhookUrl;
-    const badge = document.getElementById('gchat-cfg-badge');
-    badge.style.background = 'rgba(62,207,142,0.12)'; badge.style.color = 'var(--green)';
-    badge.textContent = '✓ Webhook configured';
-  }
-  if (STATE.reminderInterval) {
-    const sel = document.getElementById('reminder-interval');
-    if (sel) sel.value = String(STATE.reminderInterval);
-  }
-
-  // GitHub UI
-  const ghUser  = localStorage.getItem('adloggs_github_user')  || GITHUB_DEFAULT_USER;
-  const ghRepo  = localStorage.getItem('adloggs_github_repo')  || GITHUB_DEFAULT_REPO;
-  const ghToken = localStorage.getItem('adloggs_github_token') || '';
-  const guEl = document.getElementById('cfg-github-user');  if (guEl) guEl.value = ghUser;
-  const grEl = document.getElementById('cfg-github-repo');  if (grEl) grEl.value = ghRepo;
-  const gtEl = document.getElementById('cfg-github-token'); if (gtEl && ghToken) gtEl.value = ghToken;
-  updateGithubBadge();
-
-  // EOD UI — read from localStorage (now updated by KV/GitHub pull above)
-  const eodTime = localStorage.getItem('adloggs_eod_time') || '18:30';
-  const eodTz   = localStorage.getItem('adloggs_eod_tz')   || 'Asia/Kolkata';
-  const eodTimeEl = document.getElementById('eod-time'); if (eodTimeEl) eodTimeEl.value = eodTime;
-  const eodTzEl   = document.getElementById('eod-tz');   if (eodTzEl)   eodTzEl.value   = eodTz;
-  const eodStatusEl = document.getElementById('eod-status');
-  if (eodStatusEl) {
-    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const days = JSON.parse(localStorage.getItem('adloggs_eod_days') || '[1,2,3,4,5]');
-    const dayLabel = days.length===5 && !days.includes(0) && !days.includes(6)
-      ? 'Mon–Fri' : days.map(d=>dayNames[d]).join(', ');
-    eodStatusEl.textContent = `Scheduled: ${eodTime} · ${dayLabel}`;
-    eodStatusEl.style.color = 'var(--text3)';
-  }
-  try {
-    const fr = JSON.parse(localStorage.getItem('adloggs_eod_fullreport') || '{}');
-    const gr = JSON.parse(localStorage.getItem('adloggs_eod_group') || '{}');
-    if (fr.name)    document.getElementById('eod-fullreport-name').value    = fr.name;
-    if (fr.webhook) { document.getElementById('eod-fullreport-webhook').value = fr.webhook; document.getElementById('eod-fullreport-status').textContent = '✓ Saved'; }
-    if (gr.name)    document.getElementById('eod-group-name').value    = gr.name;
-    if (gr.webhook) { document.getElementById('eod-group-webhook').value = gr.webhook; document.getElementById('eod-group-status').textContent = '✓ Saved'; }
-    const destEnabled = JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled') || '{}');
-    ['fullreport','group'].forEach(key => {
-      const isOn = destEnabled[key] !== false;
-      const btn  = document.getElementById(`eod-toggle-${key}`);
-      const row  = document.getElementById(`eod-${key}-row`);
-      if (btn) { btn.textContent=isOn?'ON':'OFF'; btn.style.background=isOn?'#22c55e':'#d1d5db'; btn.style.color=isOn?'#fff':'#6b7280'; }
-      if (row) row.style.opacity = isOn ? '1' : '0.5';
-    });
-  } catch(e) {}
-  updateEodBadge();
-  restoreEodDayPicker();
-  startEodScheduler();
-  startReminderTimer();
-  setTimeout(() => renderEodMemberTable(), 800);
-
-  // ── Step 3: Show UI
-  document.querySelector('.sidebar').style.visibility = 'visible';
-  document.querySelector('.main').style.visibility    = 'visible';
-
-  renderTeams();
-  populateMemberFilter();
-
-  // Load sprint from localStorage cache (instant display)
-  try {
-    const cached = localStorage.getItem('adloggs_sprint_cache');
-    const cacheTime = parseInt(localStorage.getItem('adloggs_sprint_cache_time') || '0');
-    if (cached && (Date.now() - cacheTime < 24 * 60 * 60 * 1000)) {
-      const parsed = JSON.parse(cached);
-      if (parsed.length > 0) {
-        SPRINT_DATA.length = 0;
-        parsed.forEach(i => SPRINT_DATA.push(i));
-        const badge = document.getElementById('sprint-badge');
-        if (badge) badge.textContent = SPRINT_DATA.length;
-      }
-    }
-  } catch(e) {}
-
-  renderFilteredBoard();
-  updateSprintMeta();
-  renderReleases();
-  renderRequirements();
-  STATE.lastJiraSync = new Date();
-  document.getElementById('teams-sync-time').textContent = 'Synced ' + fmt(STATE.lastJiraSync);
-  document.getElementById('req-sheet-time').textContent  = 'Loading...';
-
-  if (STATE.scriptUrl)    setTimeout(() => loadRequirementsFromSheet(), 800);
-  if (STATE.jiraProxyUrl) setTimeout(() => syncSprint(), 1200);
-  startAutoSync();
-}
-
-init();
 </script>
 </body>
 </html>
