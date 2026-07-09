@@ -2960,9 +2960,11 @@ async function syncSprint() {
     const badge = document.getElementById('sprint-badge');
     if (badge) badge.textContent = SPRINT_DATA.length;
     const sel = document.getElementById('filter-member');
-    sel.innerHTML = '<option value="">All Members</option>';
-    const names = [...new Set(SPRINT_DATA.map(i=>i.assignee).filter(Boolean))].sort();
-    names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+    if (sel) {
+      sel.innerHTML = '<option value="">All Members</option>';
+      const names = [...new Set(SPRINT_DATA.map(i=>i.assignee).filter(Boolean))].sort();
+      names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+    }
 
     showToast(`✓ ${SPRINT_DATA.length} issues synced from Jira (${added} new)`);
 
@@ -5974,7 +5976,7 @@ async function init() {
   try {
     const cached=localStorage.getItem('adloggs_sprint_cache');
     const cacheTime=parseInt(localStorage.getItem('adloggs_sprint_cache_time')||'0');
-    if(cached&&(Date.now()-cacheTime<24*60*60*1000)){
+    if(cached&&(Date.now()-cacheTime<30*60*1000)){  // 30 min cache only
       const parsed=JSON.parse(cached);
       if(parsed.length>0){
         SPRINT_DATA.length=0;
@@ -5982,6 +5984,9 @@ async function init() {
         const badge=document.getElementById('sprint-badge');
         if(badge) badge.textContent=SPRINT_DATA.length;
       }
+    } else {
+      // Cache expired — clear it so fresh data loads
+      localStorage.removeItem('adloggs_sprint_cache');
     }
   } catch(e){}
 
@@ -5993,7 +5998,9 @@ async function init() {
   const tst=document.getElementById('teams-sync-time'); if(tst) tst.textContent='Synced '+fmt(STATE.lastJiraSync);
   const rst=document.getElementById('req-sheet-time');  if(rst) rst.textContent='Loading...';
   if(STATE.scriptUrl) setTimeout(()=>loadRequirementsFromSheet(),800);
-  if(STATE.jiraProxyUrl) setTimeout(()=>syncSprint(),1200);
+  // Always sync sprint on load — ensures we always show current sprint, not cached stale data
+  if(STATE.jiraProxyUrl) setTimeout(()=>syncSprint(),1000);
+  else setTimeout(()=>{ showToast('Set Worker URL in Integrations to sync Jira'); },2000);
 
   loadEodConfigFromWorker().then(cfg=>{
     if(cfg){applyEodConfigPayload(cfg);showToast('Config synced ✓');}
