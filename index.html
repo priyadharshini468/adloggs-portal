@@ -2950,10 +2950,11 @@ async function syncSprint() {
     SPRINT_DATA.length = 0;
     newData.forEach(i => SPRINT_DATA.push(i));
 
-    // Save to localStorage cache
+    // Save to localStorage cache with sprint state
     try {
       localStorage.setItem('adloggs_sprint_cache', JSON.stringify(SPRINT_DATA));
       localStorage.setItem('adloggs_sprint_cache_time', Date.now());
+      if(STATE.sprintMeta) localStorage.setItem('adloggs_sprint_meta', JSON.stringify(STATE.sprintMeta));
     } catch(e) {}
 
     // Update badge + member filter
@@ -5976,17 +5977,26 @@ async function init() {
   try {
     const cached=localStorage.getItem('adloggs_sprint_cache');
     const cacheTime=parseInt(localStorage.getItem('adloggs_sprint_cache_time')||'0');
-    if(cached&&(Date.now()-cacheTime<30*60*1000)){  // 30 min cache only
+    if(cached&&(Date.now()-cacheTime<30*60*1000)){
       const parsed=JSON.parse(cached);
       if(parsed.length>0){
-        SPRINT_DATA.length=0;
-        parsed.forEach(i=>SPRINT_DATA.push(i));
-        const badge=document.getElementById('sprint-badge');
-        if(badge) badge.textContent=SPRINT_DATA.length;
+        // Check if cached sprint is ended — if so, discard cache
+        const cachedSprint=(parsed[0]?.sprint||'');
+        const sprintEnded = STATE.sprintMeta?.state==='closed';
+        if(!sprintEnded){
+          SPRINT_DATA.length=0;
+          parsed.forEach(i=>SPRINT_DATA.push(i));
+          const badge=document.getElementById('sprint-badge');
+          if(badge) badge.textContent=SPRINT_DATA.length;
+        } else {
+          localStorage.removeItem('adloggs_sprint_cache');
+          localStorage.removeItem('adloggs_sprint_cache_time');
+        }
       }
     } else {
-      // Cache expired — clear it so fresh data loads
+      // Cache expired — clear it
       localStorage.removeItem('adloggs_sprint_cache');
+      localStorage.removeItem('adloggs_sprint_cache_time');
     }
   } catch(e){}
 
