@@ -5801,9 +5801,155 @@ function buildStandupHtml() {
   return `<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.7;color:#333;max-width:600px">${content}${notesHtml}</div>`;
 }
 
+// ── Send ──────────────────────────────────────────────────────────
+async function sendMrReport(type) {
+  const cfg = getMrConfig();
+  const statusEl = document.getElementById(`mr-${type}-status`);
+  const toChat  = document.getElementById(`mr-${type}-to-chat`)?.checked;
+  const toEmail = document.getElementById(`mr-${type}-to-email`)?.checked;
 
-// ================================================================
-// SCORING ENGINE v4
+  if (!toChat && !toEmail) { showToast('Select at least one destination'); return; }
+  if (toChat  && !cfg.webhook)    { showToast('Add webhook URL in Settings'); return; }
+  if (toEmail && !cfg.emails)     { showToast('Add email recipients in Settings'); return; }
+  if (toEmail && !STATE.scriptUrl){ showToast('Add Apps Script URL in Integrations first'); return; }
+
+  if (statusEl) statusEl.textContent = '⏳ Sending…';
+
+  const text     = type === 'standup' ? buildStandupText()  : buildStatusText();
+  const htmlBody = type === 'standup' ? buildStandupHtml()  : buildStatusHtml();
+  const date     = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' });
+  const subject  = type === 'standup'
+    ? `Standup — ${date}`
+    : `EOD Status — ${date}`;
+
+  const results = [];
+
+  // Google Chat
+  if (toChat && cfg.webhook) {
+    try {
+      const chatText = type === 'standup'
+        ? text.replace(/\*\*(.*?)\*\*/g,'*$1*') // convert html bold to chat bold
+        : text;
+      const url = STATE.jiraProxyUrl
+        ? STATE.jiraProxyUrl.replace(/\/+$/,'') + '/gchat'
+        : cfg.webhook;
+      const body = STATE.jiraProxyUrl
+        ? JSON.stringify({ webhookUrl: cfg.webhook, text: chatText })
+        : JSON.stringify({ text: chatText });
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+      results.push(res.ok ? '✓ Chat' : '✗ Chat failed');
+    } catch(e) { results.push('✗ Chat: ' + e.message); }
+  }
+
+  // Email via Apps Script GET
+  if (toEmail && cfg.emails && STATE.scriptUrl) {
+    try {
+      const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean).join(',');
+      const url = STATE.scriptUrl
+        + '?action=sendEmail'
+        + '&to='      + encodeURIComponent(recipients)
+        + '&subject=' + encodeURIComponent(subject)
+        + '&body='    + encodeURIComponent(text.slice(0, 2000));
+      const res  = await fetch(url, { redirect: 'follow' });
+      const data = await res.json().catch(() => ({}));
+      results.push(data.sent ? '✓ Email' : `✗ Email: ${data.error || 'failed'}`);
+    } catch(e) { results.push('✗ Email: ' + e.message); }
+  }
+
+  const resultText = results.join(' · ');
+  if (statusEl) statusEl.textContent = resultText + ` at ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`;
+
+  // Save to history
+  const history = JSON.parse(localStorage.getItem('adloggs_mr_history') || '[]');
+  history.unshift({ type, text, subject, date: new Date().toISOString(),
+    label: new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) });
+  localStorage.setItem('adloggs_mr_history', JSON.stringify(history.slice(0,60)));
+
+  // Save status draft
+  if (type === 'status') {
+    localStorage.setItem('adloggs_mr_status_draft', JSON.stringify({
+      worked:   document.getElementById('mr-status-worked')?.value   || '',
+      wins:     document.getElementById('mr-status-wins')?.value     || '',
+      tomorrow: document.getElementById('mr-status-tomorrow')?.value || '',
+      blockers: document.getElementById('mr-status-blockers')?.value || '',
+    }));
+  }
+
+  showToast(`Report sent: ${resultText}`);
+}
+
+function clearMrStatus() {
+  ['mr-status-worked','mr-status-wins','mr-status-tomorrow','mr-status-blockers'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  localStorage.removeItem('adloggs_mr_status_draft');
+  showToast('Status cleared');
+}
+
+// ── History ───────────────────────────────────────────────────────
+function renderMrHistory() {
+  const list = document.getElementById('mr-history-list');
+  if (!list) return;
+  const history = JSON.parse(localStorage.getItem('adloggs_mr_history') || '[]');
+  if (!history.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:20px">No sent reports yet.</div>';
+    return;
+  }
+  list.innerHTML = history.map(h => `
+    <div class="score-card" style="padding:14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:18px">${h.type==='standup'?'🗣':'📊'}</span>
+        <span style="font-size:12px;font-weight:700">${h.type==='standup'?'Standup':'Evening Status'}</span>
+        <span style="font-size:11px;color:var(--text3)">${h.label} · ${new Date(h.date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <pre style="font-size:11px;white-space:pre-wrap;color:var(--text2);margin:0;font-family:monospace;background:var(--bg);padding:10px;border-radius:6px;max-height:150px;overflow-y:auto">${esc(h.text)}</pre>
+    </div>`).join('');
+}
+
+// ── Apps Script code modal ────────────────────────────────────────
+
+
+function showAppsScriptCode() {
+  const pre = document.getElementById('mr-script-code');
+  if (pre) pre.textContent = APPS_SCRIPT_EMAIL_CODE;
+  openModal('mr-script-modal');
+}
+function copyAppsScriptCode() {
+  navigator.clipboard.writeText(APPS_SCRIPT_EMAIL_CODE)
+    .then(() => showToast('Code copied ✓'))
+    .catch(() => showToast('Select and copy manually'));
+}
+
+// ── Scheduler ─────────────────────────────────────────────────────
+let _mrTimer = null;
+function startMrScheduler() {
+  if (_mrTimer) clearInterval(_mrTimer);
+  const cfg = getMrConfig();
+  if (!cfg.standupAuto && !cfg.statusAuto) return;
+  const tz  = localStorage.getItem('adloggs_eod_tz') || 'Asia/Kolkata';
+  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone:tz, hour:'numeric', minute:'numeric', hour12:false });
+  _mrTimer = setInterval(async () => {
+    const now   = new Date();
+    const parts = fmt.formatToParts(now);
+    const ch    = Number(parts.find(p=>p.type==='hour')?.value   || 0);
+    const cm    = Number(parts.find(p=>p.type==='minute')?.value || 0);
+    const today = now.toISOString().slice(0,10);
+    const check = async (time, type, autoKey) => {
+      if (!time || !cfg[autoKey]) return;
+      const [h,m] = time.split(':').map(Number);
+      if (ch !== h || cm !== m) return;
+      const sentKey = `adloggs_mr_sent_${type}_${today}`;
+      if (localStorage.getItem(sentKey)) return;
+      localStorage.setItem(sentKey, '1');
+      if (type === 'standup') await generateStandupDraft();
+      await sendMrReport(type);
+    };
+    await check(cfg.standupTime, 'standup', 'standupAuto');
+    await check(cfg.eveningTime, 'status',  'statusAuto');
+  }, 60000);
+}
+
+
 // ================================================================
 // ================================================================
 // SCORING ENGINE v4
