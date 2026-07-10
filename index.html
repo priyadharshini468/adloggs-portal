@@ -5829,31 +5829,21 @@ async function sendMrReport(type) {
         body: text,
         htmlBody,
       };
-      let sent = false;
-      // Try via Worker proxy first (avoids CORS)
       if (STATE.jiraProxyUrl) {
-        try {
-          const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ scriptUrl: STATE.scriptUrl, ...emailPayload }),
-          });
-          if (res.ok) {
-            const data = await res.json().catch(()=>({}));
-            if (data.ok) { results.push('✓ Email'); sent = true; }
-            else results.push(`✗ Email: ${data.error||'failed'}`);
-          }
-        } catch(e) { /* fall through to direct */ }
-      }
-      // Direct fallback with no-cors (fire-and-forget — assume success)
-      if (!sent) {
-        await fetch(STATE.scriptUrl, {
+        const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/email', {
           method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(emailPayload),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scriptUrl: STATE.scriptUrl, ...emailPayload }),
         });
-        results.push('✓ Email (sent)');
+        const data = await res.json().catch(()=>({}));
+        if (data.ok) {
+          results.push('✓ Email');
+        } else {
+          results.push(`✗ Email: ${data.error || data.raw || 'Apps Script error'}`);
+          console.error('Email error detail:', data);
+        }
+      } else {
+        results.push('✗ Email: Worker URL not set — needed to proxy email');
       }
     } catch(e) { results.push('✗ Email: ' + e.message); }
   }
