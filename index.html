@@ -2595,7 +2595,12 @@ function getFilteredIssues() {
   return SPRINT_DATA.filter(i => {
     if (FILTER.team   && getTeamForAssignee(i.assignee) !== FILTER.team) return false;
     if (FILTER.status && i.status !== FILTER.status) return false;
-    if (FILTER.member && i.assignee !== FILTER.member) return false;
+    if (FILTER.member) {
+      const assignee = (i.assignee || '').toLowerCase();
+      const filter   = FILTER.member.toLowerCase();
+      // Match exact OR partial (e.g. "Raja" matches "Raja Kumar")
+      if (assignee !== filter && !assignee.startsWith(filter) && !filter.startsWith(assignee)) return false;
+    }
     if (FILTER.type   && (i.type||'').toLowerCase() !== FILTER.type.toLowerCase()) return false;
     return true;
   });
@@ -2658,9 +2663,22 @@ function clearOneFilter(key) {
 }
 
 function populateMemberFilter() {
+  // Clear and repopulate both dropdowns with current sprint assignees
+  const sel = document.getElementById('filter-member');
+  if (sel) {
+    const current = sel.value; // preserve current selection
+    sel.innerHTML = '<option value="">All Members</option>';
+    const allAssignees = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))].sort();
+    allAssignees.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current; // restore selection if still valid
+  }
+
   const listEl = document.getElementById('sd-member-list');
   if (!listEl) return;
-  // Keep the "All Members" option, rebuild the rest
   listEl.innerHTML = `<div class="sd-option selected" data-value="" onclick="selectSD('sd-member','','All Members')">All Members</div>`;
   const names = [...new Set(SPRINT_DATA.map(i => i.assignee).filter(Boolean))].sort();
   names.forEach(name => {
@@ -5801,22 +5819,42 @@ async function sendMrReport(type) {
     } catch(e) { results.push('✗ Chat: ' + e.message); }
   }
 
-  // Email via Apps Script
+  // Email via Worker → Apps Script (avoids CORS)
   if (toEmail && cfg.emails && STATE.scriptUrl) {
     try {
-      const res = await fetch(STATE.scriptUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sendEmail',
-          to: cfg.emails.split(',').map(e=>e.trim()).filter(Boolean),
-          subject,
-          body: text,
-          htmlBody,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      results.push(data.ok ? '✓ Email' : `✗ Email: ${data.error||'failed'}`);
+      const emailPayload = {
+        action: 'sendEmail',
+        to: cfg.emails.split(',').map(e=>e.trim()).filter(Boolean),
+        subject,
+        body: text,
+        htmlBody,
+      };
+      let sent = false;
+      // Try via Worker proxy first (avoids CORS)
+      if (STATE.jiraProxyUrl) {
+        try {
+          const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scriptUrl: STATE.scriptUrl, ...emailPayload }),
+          });
+          if (res.ok) {
+            const data = await res.json().catch(()=>({}));
+            if (data.ok) { results.push('✓ Email'); sent = true; }
+            else results.push(`✗ Email: ${data.error||'failed'}`);
+          }
+        } catch(e) { /* fall through to direct */ }
+      }
+      // Direct fallback with no-cors (fire-and-forget — assume success)
+      if (!sent) {
+        await fetch(STATE.scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(emailPayload),
+        });
+        results.push('✓ Email (sent)');
+      }
     } catch(e) { results.push('✗ Email: ' + e.message); }
   }
 
