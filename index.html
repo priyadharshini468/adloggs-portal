@@ -5757,30 +5757,92 @@ function buildStatusHtml() {
   const wins     = document.getElementById('mr-status-wins')?.value.trim().replace(/\n/g,'<br>')   || '—';
   const tomorrow = document.getElementById('mr-status-tomorrow')?.value.trim().replace(/\n/g,'<br>') || '—';
   const blockers = document.getElementById('mr-status-blockers')?.value.trim().replace(/\n/g,'<br>') || 'None';
-  return `<h2 style="color:#1a73e8">📊 End of Day Status — Priya</h2>
-<p style="color:#666">${date}</p>
-<h3>✅ What I worked on</h3><p>${worked}</p>
-<h3>🎯 Key Wins</h3><p>${wins}</p>
-<h3>⏭ Tomorrow's Focus</h3><p>${tomorrow}</p>
-<h3>🚧 Blockers / Escalations</h3><p>${blockers}</p>
-<hr><p style="color:#999;font-size:12px">Sent from Adloggs Portal</p>`;
+  const cfg = getMrConfig(); const name = cfg.name || 'Priya';
+  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333">
+    <div style="background:#1a73e8;padding:16px 20px;border-radius:8px 8px 0 0">
+      <h2 style="margin:0;color:#fff;font-size:18px">📊 End of Day Status — ${name}</h2>
+      <p style="margin:4px 0 0;color:#d0e4ff;font-size:13px">${date}</p>
+    </div>
+    <div style="background:#f8f9fa;padding:20px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0;border-top:none">
+      <div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:6px;border-left:4px solid #22c55e">
+        <div style="font-weight:700;font-size:13px;color:#166534;margin-bottom:6px">✅ What I worked on</div>
+        <div style="font-size:13px;color:#555;line-height:1.6">${worked}</div>
+      </div>
+      <div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:6px;border-left:4px solid #1a73e8">
+        <div style="font-weight:700;font-size:13px;color:#1e3a5f;margin-bottom:6px">🎯 Key Wins</div>
+        <div style="font-size:13px;color:#555;line-height:1.6">${wins}</div>
+      </div>
+      <div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:6px;border-left:4px solid #f59e0b">
+        <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:6px">⏭ Tomorrow's Focus</div>
+        <div style="font-size:13px;color:#555;line-height:1.6">${tomorrow}</div>
+      </div>
+      <div style="padding:12px;background:#fff;border-radius:6px;border-left:4px solid #ef4444">
+        <div style="font-weight:700;font-size:13px;color:#991b1b;margin-bottom:6px">🚧 Blockers / Escalations</div>
+        <div style="font-size:13px;color:#555;line-height:1.6">${blockers}</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#999;text-align:center;margin-top:12px">Sent from Adloggs Portal</p>
+  </div>`;
 }
 
 function buildStandupHtml() {
-  // Convert the edited textarea content to HTML for email
   const draft = document.getElementById('mr-standup-draft')?.value.trim() || '';
   const notes = document.getElementById('mr-standup-notes')?.value.trim() || '';
   const content = notes && !draft.includes(notes) ? draft + '\n\n📝 Notes / Blockers\n' + notes : draft;
-  // Convert plain text to simple HTML
-  const htmlLines = content.split('\n').map(line => {
-    if (line.startsWith('🗣')) return `<h2 style="color:#1a73e8">${esc(line)}</h2>`;
-    if (/^[A-Z]/.test(line) && !line.startsWith(' ')) return `<h3 style="color:#444;margin-top:14px">${esc(line)}</h3>`;
-    if (line.includes('👤')) return `<p style="margin:6px 0;font-weight:600">${esc(line.trim())}</p>`;
-    if (line.includes('🔄')) return `<p style="margin:2px 0 2px 20px;color:#555">${esc(line.trim())}</p>`;
-    if (line.includes('📝')) return `<h3 style="color:#444;margin-top:14px">${esc(line.trim())}</h3>`;
-    return line.trim() ? `<p style="margin:2px 0 2px 20px;color:#666">${esc(line.trim())}</p>` : '';
-  }).join('');
-  return `${htmlLines}<hr><p style="color:#999;font-size:12px">Sent from Adloggs Portal</p>`;
+  const date = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  let html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333">
+    <div style="background:#1a73e8;padding:16px 20px;border-radius:8px 8px 0 0">
+      <h2 style="margin:0;color:#fff;font-size:18px">🗣 Daily Standup</h2>
+      <p style="margin:4px 0 0;color:#d0e4ff;font-size:13px">${date}</p>
+    </div>
+    <div style="background:#f8f9fa;padding:20px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0;border-top:none">`;
+
+  const lines = content.split('\n');
+  let currentTeam = '';
+  let currentMember = '';
+  let inTeam = false;
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    // Team header (no indent, not emoji line)
+    if (!line.startsWith(' ') && !trimmed.startsWith('🗣') && !trimmed.startsWith('👤') && !trimmed.startsWith('🔄') && !trimmed.startsWith('📝')) {
+      if (inTeam) html += '</div>';
+      const pod = TEAMS_FROM_JIRA?.find(t => t.name === trimmed);
+      const colors = {'Pinnacle':'#2563eb','Momentum':'#059669','Catalyst':'#d97706','AI Intelligence':'#7c3aed','Shared Resources':'#6b7280'};
+      const color = colors[trimmed] || '#1a73e8';
+      html += `<div style="margin-bottom:16px">
+        <div style="display:inline-block;background:${color};color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px;margin-bottom:8px">${trimmed}</div>`;
+      inTeam = true;
+    }
+    // Member line
+    else if (trimmed.startsWith('👤')) {
+      const name = trimmed.replace('👤', '').trim();
+      html += `<div style="margin:8px 0 4px 0;font-weight:600;font-size:13px;color:#333">👤 ${name}</div>`;
+    }
+    // Task line
+    else if (trimmed.startsWith('🔄')) {
+      const task = trimmed.replace('🔄', '').trim();
+      html += `<div style="margin:2px 0 2px 16px;font-size:12px;color:#555;padding:3px 8px;background:#fff;border-left:3px solid #f59e0b;border-radius:0 4px 4px 0">🔄 ${task}</div>`;
+    }
+    // Notes section
+    else if (trimmed.startsWith('📝')) {
+      if (inTeam) { html += '</div>'; inTeam = false; }
+      html += `<div style="margin-top:16px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px">
+        <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:6px">📝 Notes / Blockers</div>`;
+    }
+    else if (!trimmed.startsWith('🗣')) {
+      html += `<div style="font-size:12px;color:#555;margin:2px 0">${trimmed}</div>`;
+    }
+  });
+
+  if (inTeam) html += '</div>';
+  html += `</div>
+    <p style="font-size:11px;color:#999;text-align:center;margin-top:12px">Sent from Adloggs Portal</p>
+  </div>`;
+  return html;
 }
 
 // ── Send ──────────────────────────────────────────────────────────
@@ -5823,12 +5885,11 @@ async function sendMrReport(type) {
   if (toEmail && cfg.emails && STATE.scriptUrl) {
     try {
       const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean).join(',');
-      // Call Apps Script directly via GET — same pattern as login/read (always works)
       const url = STATE.scriptUrl
         + '?action=sendEmail'
-        + '&to=' + encodeURIComponent(recipients)
+        + '&to='      + encodeURIComponent(recipients)
         + '&subject=' + encodeURIComponent(subject)
-        + '&body=' + encodeURIComponent(text.slice(0, 2000)); // trim to avoid URL limit
+        + '&body='    + encodeURIComponent(htmlBody.slice(0, 3000));
       const res = await fetch(url, { redirect: 'follow' });
       const data = await res.json().catch(() => ({}));
       if (data.sent || data.ok) {
