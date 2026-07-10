@@ -815,11 +815,20 @@
           Auto-generated from Jira — In Progress tasks per member. Edit freely before sending.
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">📋 Standup Content</div>
-            <span style="font-size:10px;color:var(--text3)">Edit directly below</span>
+            <div style="display:flex;gap:4px">
+              <button onclick="document.execCommand('bold')" title="Bold" style="border:1px solid var(--border);background:var(--surface);border-radius:4px;padding:2px 7px;font-size:12px;font-weight:700;cursor:pointer">B</button>
+              <button onclick="document.execCommand('italic')" title="Italic" style="border:1px solid var(--border);background:var(--surface);border-radius:4px;padding:2px 7px;font-size:12px;font-style:italic;cursor:pointer">I</button>
+              <button onclick="document.execCommand('insertUnorderedList')" title="Bullet list" style="border:1px solid var(--border);background:var(--surface);border-radius:4px;padding:2px 7px;font-size:12px;cursor:pointer">• List</button>
+              <button onclick="clearStandupDraft()" title="Clear" style="border:1px solid var(--border);background:var(--surface);border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text3)">Clear</button>
+            </div>
           </div>
-          <textarea id="mr-standup-draft" class="input" rows="14" placeholder="Click ⟳ Refresh from Jira to generate..." style="width:100%;font-size:12px;resize:vertical;font-family:monospace;line-height:1.6"></textarea>
+          <div id="mr-standup-draft"
+            contenteditable="true"
+            spellcheck="true"
+            style="min-height:200px;max-height:400px;overflow-y:auto;font-size:12px;line-height:1.7;font-family:inherit;outline:none;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text)"
+            placeholder="Click ⟳ Refresh from Jira to generate..."></div>
         </div>
         <!-- Editable notes -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
@@ -5686,27 +5695,22 @@ function switchMrTab(tab) {
 
 // ── Standup draft from Jira ───────────────────────────────────────
 async function generateStandupDraft() {
-  const textarea = document.getElementById('mr-standup-draft');
-  if (!textarea) return;
-  textarea.value = '⏳ Fetching from Jira...';
-  textarea.style.color = 'var(--text3)';
+  const editor = document.getElementById('mr-standup-draft');
+  if (!editor) return;
+  editor.innerHTML = '<span style="color:var(--text3)">⏳ Fetching from Jira...</span>';
 
-  if (STATE.jiraProxyUrl) {
-    try { await syncSprint(); } catch(e) {}
-  }
+  if (STATE.jiraProxyUrl) { try { await syncSprint(); } catch(e) {} }
 
   const issues  = SPRINT_DATA || [];
   const nameMap = buildNameMap();
   const date    = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
   if (!issues.length) {
-    textarea.value = 'No sprint data — connect Jira in Integrations first.';
-    textarea.style.color = 'var(--text3)';
+    editor.innerHTML = '<span style="color:var(--text3)">No sprint data — connect Jira in Integrations first.</span>';
     return;
   }
 
-  let text = `🗣 Daily Standup — ${date}
-`;
+  let h = `<p><strong>🗣 Daily Standup — ${date}</strong></p>`;
   TEAMS_FROM_JIRA.forEach(team => {
     const mNames  = (team.members||[]).map(m => m.name.toLowerCase());
     const tIssues = issues.filter(i => {
@@ -5714,31 +5718,36 @@ async function generateStandupDraft() {
       const pn = resolvePortalName(i.assignee, nameMap).toLowerCase();
       return mNames.some(n => pn === n || pn.startsWith(n.split(' ')[0]));
     });
-    const teamLines = [];
+    const lines = [];
     (team.members||[]).forEach(m => {
-      const mine   = tIssues.filter(i => resolvePortalName(i.assignee||'', nameMap).toLowerCase() === m.name.toLowerCase() ||
-                                         resolvePortalName(i.assignee||'', nameMap).split(' ')[0].toLowerCase() === m.name.split(' ')[0].toLowerCase());
+      const mine   = tIssues.filter(i => resolvePortalName(i.assignee||'',nameMap).toLowerCase() === m.name.toLowerCase() ||
+                                         resolvePortalName(i.assignee||'',nameMap).split(' ')[0].toLowerCase() === m.name.split(' ')[0].toLowerCase());
       const active = mine.filter(i => (i.status||'').toLowerCase() === 'in progress');
       if (!active.length) return;
-      teamLines.push(`  👤 ${m.name}`);
-      active.forEach(i => teamLines.push(`    🔄 [${i.key}] ${i.summary}`));
+      lines.push(`<p style="margin:6px 0 2px 0"><strong>👤 ${esc(m.name)}</strong></p>`);
+      active.forEach(i => lines.push(`<p style="margin:1px 0 1px 16px">🔄 [${esc(i.key)}] ${esc(i.summary)}</p>`));
     });
-    if (teamLines.length) text += '\n' + team.name + '\n' + teamLines.join('\n') + '\n';
+    if (lines.length) {
+      const pColor = POD_COLORS[team.name]||'#6b7280';
+      h += `<p style="margin:12px 0 4px 0"><span style="background:${pColor};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${esc(team.name)}</span></p>`;
+      h += lines.join('');
+    }
   });
-
-  textarea.value = text;
-  textarea.style.color = '';
+  editor.innerHTML = h;
   showToast('Standup draft ready — edit freely and send');
+}
+
+function clearStandupDraft() {
+  const el = document.getElementById('mr-standup-draft'); if (el) el.innerHTML = '';
 }
 
 // ── Build message text ────────────────────────────────────────────
 function buildStandupText() {
-  const draft = document.getElementById('mr-standup-draft')?.value.trim() || '';
-  const notes = document.getElementById('mr-standup-notes')?.value.trim() || '';
-  let text = draft;
-  if (notes && !draft.includes(notes)) text += '\n\nNotes / Blockers\n' + notes;
-  // Remove Google Chat markdown (* for bold, _ for italic) for plain text email
-  return text.replace(/^\*/mg,'').replace(/\*$/mg,'').replace(/\*/g,'');
+  const editor = document.getElementById('mr-standup-draft');
+  const notes  = document.getElementById('mr-standup-notes')?.value.trim() || '';
+  // Get plain text from contenteditable — strip HTML tags
+  const raw = (editor?.innerText || editor?.textContent || '').trim();
+  return notes ? raw + '\n\nNotes / Blockers\n' + notes : raw;
 }
 
 function buildStatusText() {
@@ -5785,336 +5794,13 @@ function buildStatusHtml() {
 }
 
 function buildStandupHtml() {
-  const draft = document.getElementById('mr-standup-draft')?.value.trim() || '';
-  const notes = document.getElementById('mr-standup-notes')?.value.trim() || '';
-  const content = notes && !draft.includes(notes) ? draft + '\n\n📝 Notes / Blockers\n' + notes : draft;
-  const date = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-
-  let html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333">
-    <div style="background:#1a73e8;padding:16px 20px;border-radius:8px 8px 0 0">
-      <h2 style="margin:0;color:#fff;font-size:18px">🗣 Daily Standup</h2>
-      <p style="margin:4px 0 0;color:#d0e4ff;font-size:13px">${date}</p>
-    </div>
-    <div style="background:#f8f9fa;padding:20px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0;border-top:none">`;
-
-  const lines = content.split('\n');
-  let currentTeam = '';
-  let currentMember = '';
-  let inTeam = false;
-
-  lines.forEach(line => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-
-    // Team header (no indent, not emoji line)
-    if (!line.startsWith(' ') && !trimmed.startsWith('🗣') && !trimmed.startsWith('👤') && !trimmed.startsWith('🔄') && !trimmed.startsWith('📝')) {
-      if (inTeam) html += '</div>';
-      const pod = TEAMS_FROM_JIRA?.find(t => t.name === trimmed);
-      const colors = {'Pinnacle':'#2563eb','Momentum':'#059669','Catalyst':'#d97706','AI Intelligence':'#7c3aed','Shared Resources':'#6b7280'};
-      const color = colors[trimmed] || '#1a73e8';
-      html += `<div style="margin-bottom:16px">
-        <div style="display:inline-block;background:${color};color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px;margin-bottom:8px">${trimmed}</div>`;
-      inTeam = true;
-    }
-    // Member line
-    else if (trimmed.startsWith('👤')) {
-      const name = trimmed.replace('👤', '').trim();
-      html += `<div style="margin:8px 0 4px 0;font-weight:600;font-size:13px;color:#333">👤 ${name}</div>`;
-    }
-    // Task line
-    else if (trimmed.startsWith('🔄')) {
-      const task = trimmed.replace('🔄', '').trim();
-      html += `<div style="margin:2px 0 2px 16px;font-size:12px;color:#555;padding:3px 8px;background:#fff;border-left:3px solid #f59e0b;border-radius:0 4px 4px 0">🔄 ${task}</div>`;
-    }
-    // Notes section
-    else if (trimmed.startsWith('📝')) {
-      if (inTeam) { html += '</div>'; inTeam = false; }
-      html += `<div style="margin-top:16px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px">
-        <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:6px">📝 Notes / Blockers</div>`;
-    }
-    else if (!trimmed.startsWith('🗣')) {
-      html += `<div style="font-size:12px;color:#555;margin:2px 0">${trimmed}</div>`;
-    }
-  });
-
-  if (inTeam) html += '</div>';
-  html += `</div>
-    <p style="font-size:11px;color:#999;text-align:center;margin-top:12px">Sent from Adloggs Portal</p>
-  </div>`;
-  return html;
+  const editor  = document.getElementById('mr-standup-draft');
+  const notes   = document.getElementById('mr-standup-notes')?.value.trim() || '';
+  const content = (editor?.innerHTML || '').trim();
+  const notesHtml = notes ? `<div style="margin-top:12px;padding:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px"><strong>📝 Notes / Blockers</strong><br>${notes.replace(/\n/g,'<br>')}</div>` : '';
+  return `<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.7;color:#333;max-width:600px">${content}${notesHtml}</div>`;
 }
 
-// ── Send ──────────────────────────────────────────────────────────
-async function sendMrReport(type) {
-  const cfg = getMrConfig();
-  const statusEl = document.getElementById(`mr-${type}-status`);
-  const toChat  = document.getElementById(`mr-${type}-to-chat`)?.checked;
-  const toEmail = document.getElementById(`mr-${type}-to-email`)?.checked;
-
-  if (!toChat && !toEmail) { showToast('Select at least one destination'); return; }
-  if (toChat  && !cfg.webhook) { showToast('Add webhook URL in Settings'); return; }
-  if (toEmail && !cfg.emails)  { showToast('Add email recipients in Settings'); return; }
-  if (toEmail && !STATE.scriptUrl) { showToast('Add Apps Script URL in Integrations first'); return; }
-
-  if (statusEl) statusEl.textContent = '⏳ Sending…';
-
-  const text     = type === 'standup' ? buildStandupText()  : buildStatusText();
-  const htmlBody = type === 'standup' ? buildStandupHtml()  : buildStatusHtml();
-  const subject  = type === 'standup'
-    ? `Standup — ${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}`
-    : `EOD Status — ${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}`;
-
-  const results = [];
-
-  // Google Chat
-  if (toChat && cfg.webhook) {
-    try {
-      const url = STATE.jiraProxyUrl
-        ? STATE.jiraProxyUrl.replace(/\/+$/,'') + '/gchat'
-        : cfg.webhook;
-      const body = STATE.jiraProxyUrl
-        ? JSON.stringify({ webhookUrl: cfg.webhook, text })
-        : JSON.stringify({ text });
-      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
-      results.push(res.ok ? '✓ Chat' : '✗ Chat failed');
-    } catch(e) { results.push('✗ Chat: ' + e.message); }
-  }
-
-  // Email via Worker → Apps Script (avoids CORS)
-  if (toEmail && cfg.emails && STATE.scriptUrl) {
-    try {
-      const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean).join(',');
-      const plainText = buildStandupText ? (type === 'standup' ? buildStandupText() : buildStatusText()) : text;
-      const url = STATE.scriptUrl
-        + '?action=sendEmail'
-        + '&to='      + encodeURIComponent(recipients)
-        + '&subject=' + encodeURIComponent(subject)
-        + '&body='    + encodeURIComponent(plainText.slice(0, 2000));
-      const res = await fetch(url, { redirect: 'follow' });
-      const data = await res.json().catch(() => ({}));
-      results.push(data.sent ? '✓ Email' : `✗ Email: ${data.error || 'failed'}`);
-    } catch(e) { results.push('✗ Email: ' + e.message); }
-  }
-
-  const resultText = results.join(' · ');
-  if (statusEl) statusEl.textContent = resultText + ` at ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`;
-
-  // Save to history
-  const history = JSON.parse(localStorage.getItem('adloggs_mr_history') || '[]');
-  history.unshift({ type, text, subject, date: new Date().toISOString(),
-    label: new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) });
-  localStorage.setItem('adloggs_mr_history', JSON.stringify(history.slice(0,60)));
-
-  // Save status draft
-  if (type === 'status') {
-    localStorage.setItem('adloggs_mr_status_draft', JSON.stringify({
-      worked:   document.getElementById('mr-status-worked')?.value   || '',
-      wins:     document.getElementById('mr-status-wins')?.value     || '',
-      tomorrow: document.getElementById('mr-status-tomorrow')?.value || '',
-      blockers: document.getElementById('mr-status-blockers')?.value || '',
-    }));
-  }
-
-  showToast(`Report sent: ${resultText}`);
-}
-
-function clearMrStatus() {
-  ['mr-status-worked','mr-status-wins','mr-status-tomorrow','mr-status-blockers'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  localStorage.removeItem('adloggs_mr_status_draft');
-  showToast('Status cleared');
-}
-
-// ── History ───────────────────────────────────────────────────────
-function renderMrHistory() {
-  const list    = document.getElementById('mr-history-list');
-  if (!list) return;
-  const history = JSON.parse(localStorage.getItem('adloggs_mr_history') || '[]');
-  if (!history.length) {
-    list.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:20px">No sent reports yet.</div>';
-    return;
-  }
-  list.innerHTML = history.map(h => `
-    <div class="score-card" style="padding:14px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:18px">${h.type==='standup'?'🗣':'📊'}</span>
-        <span style="font-size:12px;font-weight:700">${h.type==='standup'?'Standup':'Evening Status'}</span>
-        <span style="font-size:11px;color:var(--text3)">${h.label} · ${new Date(h.date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>
-      </div>
-      <pre style="font-size:11px;white-space:pre-wrap;color:var(--text2);margin:0;font-family:monospace;background:var(--bg);padding:10px;border-radius:6px;max-height:150px;overflow-y:auto">${esc(h.text)}</pre>
-    </div>`).join('');
-}
-
-// ── Apps Script code modal ────────────────────────────────────────
-function showAppsScriptCode() {
-  const pre = document.getElementById('mr-script-code');
-  if (pre) pre.textContent = APPS_SCRIPT_EMAIL_CODE;
-  openModal('mr-script-modal');
-}
-function copyAppsScriptCode() {
-  navigator.clipboard.writeText(APPS_SCRIPT_EMAIL_CODE)
-    .then(() => showToast('Code copied ✓'))
-    .catch(() => showToast('Select and copy manually'));
-}
-
-// ── Scheduler (browser backup) ────────────────────────────────────
-let _mrTimer = null;
-function startMrScheduler() {
-  if (_mrTimer) clearInterval(_mrTimer);
-  const cfg = getMrConfig();
-  if (!cfg.standupAuto && !cfg.statusAuto) return;
-  const tz  = localStorage.getItem('adloggs_eod_tz') || 'Asia/Kolkata';
-  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone:tz, hour:'numeric', minute:'numeric', hour12:false });
-  _mrTimer = setInterval(async () => {
-    const now   = new Date();
-    const parts = fmt.formatToParts(now);
-    const ch    = Number(parts.find(p=>p.type==='hour')?.value   || 0);
-    const cm    = Number(parts.find(p=>p.type==='minute')?.value || 0);
-    const today = now.toISOString().slice(0,10);
-    const check = async (time, type, autoKey) => {
-      if (!time || !cfg[autoKey]) return;
-      const [h,m] = time.split(':').map(Number);
-      if (ch !== h || cm !== m) return;
-      const sentKey = `adloggs_mr_sent_${type}_${today}`;
-      if (localStorage.getItem(sentKey)) return;
-      localStorage.setItem(sentKey, '1');
-      if (type === 'standup') await generateStandupDraft();
-      await sendMrReport(type);
-    };
-    await check(cfg.standupTime, 'standup', 'standupAuto');
-    await check(cfg.eveningTime, 'status',  'statusAuto');
-  }, 60000);
-}
-
-
-
-
-// ================================================================
-// INIT
-// ================================================================
-async function init() {
-  // Step 1: Load config from KV first, then GitHub fallback
-  let configLoaded = false;
-  try {
-    const kvCfg = await loadEodConfigFromWorker();
-    if (kvCfg) { applyEodConfigPayload(kvCfg); configLoaded = true; }
-  } catch(e) {}
-  if (!configLoaded) {
-    try { await pullConfigFromGithub(); } catch(e) {}
-  }
-
-  // Step 2: Restore UI
-  if (STATE.scriptUrl) { const el=document.getElementById('cfg-script-url'); if(el) el.value=STATE.scriptUrl; }
-  if (STATE.jiraProxyUrl) {
-    const el=document.getElementById('cfg-jira-proxy'); if(el) el.value=STATE.jiraProxyUrl;
-    const badge=document.getElementById('jira-cfg-badge');
-    if(badge){badge.style.background='rgba(62,207,142,0.12)';badge.style.color='var(--green)';badge.textContent='✓ Cloudflare Worker connected';}
-  }
-  if (STATE.gchatWebhookUrl) {
-    const el=document.getElementById('cfg-gchat-webhook'); if(el) el.value=STATE.gchatWebhookUrl;
-    const badge=document.getElementById('gchat-cfg-badge');
-    if(badge){badge.style.background='rgba(62,207,142,0.12)';badge.style.color='var(--green)';badge.textContent='✓ Webhook configured';}
-  }
-  if (STATE.reminderInterval) { const sel=document.getElementById('reminder-interval'); if(sel) sel.value=String(STATE.reminderInterval); }
-
-  const ghUser  = localStorage.getItem('adloggs_github_user')  || GITHUB_DEFAULT_USER;
-  const ghRepo  = localStorage.getItem('adloggs_github_repo')  || GITHUB_DEFAULT_REPO;
-  const ghToken = localStorage.getItem('adloggs_github_token') || '';
-  const guEl=document.getElementById('cfg-github-user'); if(guEl) guEl.value=ghUser;
-  const grEl=document.getElementById('cfg-github-repo'); if(grEl) grEl.value=ghRepo;
-  const gtEl=document.getElementById('cfg-github-token'); if(gtEl&&ghToken) gtEl.value=ghToken;
-  updateGithubBadge();
-  restoreMrConfig();
-  startMrScheduler();
-
-  // EOD UI
-  const eodTime=localStorage.getItem('adloggs_eod_time')||'18:30';
-  const eodTz=localStorage.getItem('adloggs_eod_tz')||'Asia/Kolkata';
-  const eodTimeEl=document.getElementById('eod-time'); if(eodTimeEl) eodTimeEl.value=eodTime;
-  const eodTzEl=document.getElementById('eod-tz'); if(eodTzEl) eodTzEl.value=eodTz;
-  const eodStatusEl=document.getElementById('eod-status');
-  if(eodStatusEl){
-    const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const days=JSON.parse(localStorage.getItem('adloggs_eod_days')||'[1,2,3,4,5]');
-    const dayLabel=days.length===5&&!days.includes(0)&&!days.includes(6)?'Mon–Fri':days.map(d=>dayNames[d]).join(', ');
-    eodStatusEl.textContent=`Scheduled: ${eodTime} · ${dayLabel}`;
-    eodStatusEl.style.color='var(--text3)';
-  }
-  try {
-    const fr=JSON.parse(localStorage.getItem('adloggs_eod_fullreport')||'{}');
-    const gr=JSON.parse(localStorage.getItem('adloggs_eod_group')||'{}');
-    if(fr.name){const el=document.getElementById('eod-fullreport-name');if(el)el.value=fr.name;}
-    if(fr.webhook){const el=document.getElementById('eod-fullreport-webhook');if(el)el.value=fr.webhook;const s=document.getElementById('eod-fullreport-status');if(s)s.textContent='✓ Saved';}
-    if(gr.name){const el=document.getElementById('eod-group-name');if(el)el.value=gr.name;}
-    if(gr.webhook){const el=document.getElementById('eod-group-webhook');if(el)el.value=gr.webhook;const s=document.getElementById('eod-group-status');if(s)s.textContent='✓ Saved';}
-    const destEnabled=JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')||'{}');
-    ['fullreport','group'].forEach(key=>{
-      const isOn=destEnabled[key]!==false;
-      const btn=document.getElementById(`eod-toggle-${key}`);
-      const row=document.getElementById(`eod-${key}-row`);
-      if(btn){btn.textContent=isOn?'ON':'OFF';btn.style.background=isOn?'#22c55e':'#d1d5db';btn.style.color=isOn?'#fff':'#6b7280';}
-      if(row) row.style.opacity=isOn?'1':'0.5';
-    });
-  } catch(e){}
-  updateEodBadge();
-  restoreEodDayPicker();
-  startEodScheduler();
-  startReminderTimer();
-  setTimeout(()=>renderEodMemberTable(),600);
-
-  // Step 3: Show UI
-  document.querySelector('.sidebar').style.visibility='visible';
-  document.querySelector('.main').style.visibility='visible';
-  renderTeams();
-  populateMemberFilter();
-
-  try {
-    const cached=localStorage.getItem('adloggs_sprint_cache');
-    const cacheTime=parseInt(localStorage.getItem('adloggs_sprint_cache_time')||'0');
-    if(cached&&(Date.now()-cacheTime<30*60*1000)){
-      const parsed=JSON.parse(cached);
-      if(parsed.length>0){
-        // Check if cached sprint is ended — if so, discard cache
-        const cachedSprint=(parsed[0]?.sprint||'');
-        const sprintEnded = STATE.sprintMeta?.state==='closed';
-        if(!sprintEnded){
-          SPRINT_DATA.length=0;
-          parsed.forEach(i=>SPRINT_DATA.push(i));
-          const badge=document.getElementById('sprint-badge');
-          if(badge) badge.textContent=SPRINT_DATA.length;
-        } else {
-          localStorage.removeItem('adloggs_sprint_cache');
-          localStorage.removeItem('adloggs_sprint_cache_time');
-        }
-      }
-    } else {
-      // Cache expired — clear it
-      localStorage.removeItem('adloggs_sprint_cache');
-      localStorage.removeItem('adloggs_sprint_cache_time');
-    }
-  } catch(e){}
-
-  renderFilteredBoard();
-  updateSprintMeta();
-  renderReleases();
-  renderRequirements();
-  STATE.lastJiraSync=new Date();
-  const tst=document.getElementById('teams-sync-time'); if(tst) tst.textContent='Synced '+fmt(STATE.lastJiraSync);
-  const rst=document.getElementById('req-sheet-time');  if(rst) rst.textContent='Loading...';
-  if(STATE.scriptUrl) setTimeout(()=>loadRequirementsFromSheet(),800);
-  // Always sync sprint on load — ensures we always show current sprint, not cached stale data
-  if(STATE.jiraProxyUrl) setTimeout(()=>syncSprint(),1000);
-  else setTimeout(()=>{ showToast('Set Worker URL in Integrations to sync Jira'); },2000);
-
-  loadEodConfigFromWorker().then(cfg=>{
-    if(cfg){applyEodConfigPayload(cfg);showToast('Config synced ✓');}
-  }).catch(()=>{});
-
-  startAutoSync();
-}
-
-init();
 
 // ================================================================
 // SCORING ENGINE v4
@@ -6135,7 +5821,7 @@ function currentSprintLabel() {
 }
 function buildNameMap() {
   const map={};
-  const ALIASES={'vijayalavan tharmalingam':'Vijayalavan T','ramakrishnan murugan':'Ramakrishnan','vijay':'Vijayalavan T','raja':'Raja','raja kumar':'Raja','raja m':'Raja','rajan':'Raja'};
+  const ALIASES={'vijayalavan tharmalingam':'Vijayalavan T','ramakrishnan murugan':'Ramakrishnan','vijay':'Vijayalavan T','raja':'Raja'};
   (STATE.teams||TEAMS_FROM_JIRA||[]).forEach(t=>(t.members||[]).forEach(m=>{
     if(!m.name)return;
     map[m.name.toLowerCase()]=m.name;
@@ -6673,6 +6359,107 @@ function switchScoreTab(tab){
   if(tab==='bonus')renderBonusLog();
   if(tab==='history')renderHistoryPanel();
 }
+
+// ================================================================
+// INIT
+// ================================================================
+async function init() {
+  let configLoaded = false;
+  try {
+    const kvCfg = await loadEodConfigFromWorker();
+    if (kvCfg) { applyEodConfigPayload(kvCfg); configLoaded = true; }
+  } catch(e) {}
+  if (!configLoaded) { try { await pullConfigFromGithub(); } catch(e) {} }
+
+  if (STATE.scriptUrl) { const el=document.getElementById('cfg-script-url'); if(el) el.value=STATE.scriptUrl; }
+  if (STATE.jiraProxyUrl) {
+    const el=document.getElementById('cfg-jira-proxy'); if(el) el.value=STATE.jiraProxyUrl;
+    const badge=document.getElementById('jira-cfg-badge');
+    if(badge){badge.style.background='rgba(62,207,142,0.12)';badge.style.color='var(--green)';badge.textContent='✓ Cloudflare Worker connected';}
+  }
+  if (STATE.gchatWebhookUrl) {
+    const el=document.getElementById('cfg-gchat-webhook'); if(el) el.value=STATE.gchatWebhookUrl;
+    const badge=document.getElementById('gchat-cfg-badge');
+    if(badge){badge.style.background='rgba(62,207,142,0.12)';badge.style.color='var(--green)';badge.textContent='✓ Webhook configured';}
+  }
+  if (STATE.reminderInterval) { const sel=document.getElementById('reminder-interval'); if(sel) sel.value=String(STATE.reminderInterval); }
+  const ghUser=localStorage.getItem('adloggs_github_user')||GITHUB_DEFAULT_USER;
+  const ghRepo=localStorage.getItem('adloggs_github_repo')||GITHUB_DEFAULT_REPO;
+  const ghToken=localStorage.getItem('adloggs_github_token')||'';
+  const guEl=document.getElementById('cfg-github-user'); if(guEl) guEl.value=ghUser;
+  const grEl=document.getElementById('cfg-github-repo'); if(grEl) grEl.value=ghRepo;
+  const gtEl=document.getElementById('cfg-github-token'); if(gtEl&&ghToken) gtEl.value=ghToken;
+  updateGithubBadge();
+  restoreMrConfig();
+  startMrScheduler();
+
+  const eodTime=localStorage.getItem('adloggs_eod_time')||'18:30';
+  const eodTz=localStorage.getItem('adloggs_eod_tz')||'Asia/Kolkata';
+  const eodTimeEl=document.getElementById('eod-time'); if(eodTimeEl) eodTimeEl.value=eodTime;
+  const eodTzEl=document.getElementById('eod-tz'); if(eodTzEl) eodTzEl.value=eodTz;
+  const eodStatusEl=document.getElementById('eod-status');
+  if(eodStatusEl){
+    const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const days=JSON.parse(localStorage.getItem('adloggs_eod_days')||'[1,2,3,4,5]');
+    const dayLabel=days.length===5&&!days.includes(0)&&!days.includes(6)?'Mon–Fri':days.map(d=>dayNames[d]).join(', ');
+    eodStatusEl.textContent=`Scheduled: ${eodTime} · ${dayLabel}`;
+    eodStatusEl.style.color='var(--text3)';
+  }
+  try {
+    const fr=JSON.parse(localStorage.getItem('adloggs_eod_fullreport')||'{}');
+    const gr=JSON.parse(localStorage.getItem('adloggs_eod_group')||'{}');
+    if(fr.name){const el=document.getElementById('eod-fullreport-name');if(el)el.value=fr.name;}
+    if(fr.webhook){const el=document.getElementById('eod-fullreport-webhook');if(el)el.value=fr.webhook;const s=document.getElementById('eod-fullreport-status');if(s)s.textContent='✓ Saved';}
+    if(gr.name){const el=document.getElementById('eod-group-name');if(el)el.value=gr.name;}
+    if(gr.webhook){const el=document.getElementById('eod-group-webhook');if(el)el.value=gr.webhook;const s=document.getElementById('eod-group-status');if(s)s.textContent='✓ Saved';}
+    const destEnabled=JSON.parse(localStorage.getItem('adloggs_eod_dest_enabled')||'{}');
+    ['fullreport','group'].forEach(key=>{
+      const isOn=destEnabled[key]!==false;
+      const btn=document.getElementById(`eod-toggle-${key}`);
+      const row=document.getElementById(`eod-${key}-row`);
+      if(btn){btn.textContent=isOn?'ON':'OFF';btn.style.background=isOn?'#22c55e':'#d1d5db';btn.style.color=isOn?'#fff':'#6b7280';}
+      if(row)row.style.opacity=isOn?'1':'0.5';
+    });
+  }catch(e){}
+  updateEodBadge();
+  restoreEodDayPicker();
+  startEodScheduler();
+  startReminderTimer();
+  setTimeout(()=>renderEodMemberTable(),600);
+
+  document.querySelector('.sidebar').style.visibility='visible';
+  document.querySelector('.main').style.visibility='visible';
+  renderTeams();
+  populateMemberFilter();
+
+  try {
+    const cached=localStorage.getItem('adloggs_sprint_cache');
+    const cacheTime=parseInt(localStorage.getItem('adloggs_sprint_cache_time')||'0');
+    if(cached&&(Date.now()-cacheTime<30*60*1000)){
+      const parsed=JSON.parse(cached);
+      if(parsed.length>0){SPRINT_DATA.length=0;parsed.forEach(i=>SPRINT_DATA.push(i));
+        const badge=document.getElementById('sprint-badge');if(badge)badge.textContent=SPRINT_DATA.length;}
+    } else { localStorage.removeItem('adloggs_sprint_cache');localStorage.removeItem('adloggs_sprint_cache_time'); }
+  }catch(e){}
+
+  renderFilteredBoard();
+  updateSprintMeta();
+  renderReleases();
+  renderRequirements();
+  STATE.lastJiraSync=new Date();
+  const tst=document.getElementById('teams-sync-time');if(tst)tst.textContent='Synced '+fmt(STATE.lastJiraSync);
+  const rst=document.getElementById('req-sheet-time');if(rst)rst.textContent='Loading...';
+  if(STATE.scriptUrl) setTimeout(()=>loadRequirementsFromSheet(),800);
+  if(STATE.jiraProxyUrl) setTimeout(()=>syncSprint(),1000);
+
+  loadEodConfigFromWorker().then(cfg=>{
+    if(cfg){applyEodConfigPayload(cfg);}
+  }).catch(()=>{});
+
+  startAutoSync();
+}
+
+init();
 
 </script>
 </body>
