@@ -5822,28 +5822,20 @@ async function sendMrReport(type) {
   // Email via Worker → Apps Script (avoids CORS)
   if (toEmail && cfg.emails && STATE.scriptUrl) {
     try {
-      const emailPayload = {
-        action: 'sendEmail',
-        to: cfg.emails.split(',').map(e=>e.trim()).filter(Boolean),
-        subject,
-        body: text,
-        htmlBody,
-      };
-      if (STATE.jiraProxyUrl) {
-        const res = await fetch(STATE.jiraProxyUrl.replace(/\/+$/,'') + '/email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scriptUrl: STATE.scriptUrl, ...emailPayload }),
-        });
-        const data = await res.json().catch(()=>({}));
-        if (data.ok) {
-          results.push('✓ Email');
-        } else {
-          results.push(`✗ Email: ${data.error || data.raw || 'Apps Script error'}`);
-          console.error('Email error detail:', data);
-        }
+      const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean).join(',');
+      // Call Apps Script directly via GET — same pattern as login/read (always works)
+      const url = STATE.scriptUrl
+        + '?action=sendEmail'
+        + '&to=' + encodeURIComponent(recipients)
+        + '&subject=' + encodeURIComponent(subject)
+        + '&body=' + encodeURIComponent(text.slice(0, 2000)); // trim to avoid URL limit
+      const res = await fetch(url, { redirect: 'follow' });
+      const data = await res.json().catch(() => ({}));
+      if (data.sent || data.ok) {
+        results.push('✓ Email');
       } else {
-        results.push('✗ Email: Worker URL not set — needed to proxy email');
+        results.push(`✗ Email: ${data.error || 'failed'}`);
+        console.error('Email error:', data);
       }
     } catch(e) { results.push('✗ Email: ' + e.message); }
   }
