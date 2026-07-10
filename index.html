@@ -2907,6 +2907,7 @@ async function syncSprint() {
   const icon = document.getElementById('sprint-sync-icon');
   if (icon) icon.classList.add('spin');
   setPill('syncing', 'Syncing Jira...');
+  STATE.sprintMeta = null; // clear stale sprint name so fresh data always updates it
 
   try {
     if (!STATE.jiraProxyUrl) {
@@ -2943,7 +2944,7 @@ async function syncSprint() {
       const f  = issue.fields || {};
       const ex = existingMap[issue.key];
       const sprint = (f.customfield_10020 || [])[0] || {};
-      if (sprint.name && !STATE.sprintMeta) {
+      if (sprint.name) {
         STATE.sprintMeta = { name:sprint.name, startDate:sprint.startDate,
           endDate:sprint.endDate, goal:sprint.goal||'', boardId:sprint.boardId, state:sprint.state };
       }
