@@ -1,13 +1,13 @@
 {
-  "_updated": "2026-07-10T07:34:51.572Z",
+  "_updated": "2026-07-10T10:17:08.831Z",
   "_note": "Adloggs Portal config — auto-managed by portal",
   "jiraProxyUrl": "https://jira-proxy.priyadharshini.workers.dev",
-  "scriptUrl": "https://script.google.com/macros/s/AKfycbxpclgVzQv9blhn6Oi8wa3SFhU3p1nl3SyOuf7LzRmAPMSztK9TqfQubclVFQ_4qENH/exec",
+  "scriptUrl": "https://script.google.com/macros/s/AKfycbwZJ_-Yg9Ys76qDgXS_--75cGirmaVXvg1CRN74Tl0MrfOou7-orX3ryLaAPmp5Gm71/exec",
   "gchatWebhookUrl": "",
   "reminderInterval": 30,
   "github_user": "priyadharshini468",
   "github_repo": "adloggs-portal",
-  "github_token_enc": "KZndngwypk2Bm5PgEorjhfM8MGPVT1cw/K27yZw1WIPXdVlxE23LUWzXi/aVrcogciR7v1ODwud9OeUv2wINLO4fWon8KWLYqS8DEMPcyqTrNs4RA7xZLMYGscDqLTD8YBPjLpxnN8Niwr7/KMowXMFtFev/uvPvTw==",
+  "github_token_enc": "ywwYsK0Y3Ne4xO9LIHPNvysUlD/NVUhfaUxWM/T6+hi4pARzuxm6EaauLRMRn1qIahq6IXPz6FU6D4Mpc4lknyZgOoWo435+xdWIR+4l/wGczQ5nG6IbUnpXuMVjknATPL1iXYQsrHQ/IaNRUIrH37dwFcjzyPzehQ==",
   "team_data": [
     {
       "name": "Pinnacle",
