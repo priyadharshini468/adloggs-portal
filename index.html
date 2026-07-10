@@ -5884,19 +5884,27 @@ async function sendMrReport(type) {
   // Email via Worker → Apps Script (avoids CORS)
   if (toEmail && cfg.emails && STATE.scriptUrl) {
     try {
-      const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean).join(',');
-      const url = STATE.scriptUrl
-        + '?action=sendEmail'
-        + '&to='      + encodeURIComponent(recipients)
-        + '&subject=' + encodeURIComponent(subject)
-        + '&body='    + encodeURIComponent(htmlBody.slice(0, 3000));
-      const res = await fetch(url, { redirect: 'follow' });
-      const data = await res.json().catch(() => ({}));
-      if (data.sent || data.ok) {
-        results.push('✓ Email');
-      } else {
-        results.push(`✗ Email: ${data.error || 'failed'}`);
-        console.error('Email error:', data);
+      const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean);
+      const emailPayload = {
+        action:   'sendEmail',
+        to:       recipients,
+        subject,
+        body:     text,     // plain text fallback
+        htmlBody,           // HTML version for proper rendering
+      };
+      // POST via Worker proxy — Worker calls Apps Script server-side (no CORS issues)
+      const proxyUrl = STATE.jiraProxyUrl
+        ? STATE.jiraProxyUrl.replace(/\/+$/,'') + '/email'
+        : null;
+      if (!proxyUrl) { results.push('✗ Email: Worker URL not set'); }
+      else {
+        const res = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scriptUrl: STATE.scriptUrl, ...emailPayload }),
+        });
+        const data = await res.json().catch(() => ({}));
+        results.push(data.ok ? '✓ Email' : `✗ Email: ${data.error || 'failed'}`);
       }
     } catch(e) { results.push('✗ Email: ' + e.message); }
   }
