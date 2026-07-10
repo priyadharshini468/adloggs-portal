@@ -953,7 +953,7 @@
           <button class="btn btn-primary btn-sm" onclick="saveJiraProxy()">Save URL</button>
           <button class="btn btn-ghost btn-sm" onclick="testJiraProxy()">Test Connection</button>
           <button class="btn btn-ghost btn-sm" onclick="syncSprint()">↻ Sync Sprint</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderReleases()">↻ Sync Releases</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearPortalCache()" title="Clear sprint cache and reload fresh data">🗑 Clear Cache</button>
           <button class="btn btn-ghost btn-sm" onclick="fixWorkerUrl()" title="Reset to correct URL">⚠ Fix URL</button>
           <a href="https://adloggss.atlassian.net" target="_blank" class="btn btn-ghost btn-sm">Open Jira ↗</a>
           <span id="jira-proxy-status" style="font-size:11px;color:var(--text3)"></span>
@@ -2029,6 +2029,9 @@ async function syncTeamsFromJira() {
     'ramakrishnan murugan':     'Ramakrishnan',
     'vijay':                    'Vijayalavan T',
     'raja':                     'Raja',
+    'raja kumar':               'Raja',
+    'raja m':                   'Raja',
+    'rajan':                    'Raja',
   };
 
   // Resolve Jira assignee → canonical portal name
@@ -2836,6 +2839,21 @@ function renderSprint(issues) {
   renderFilteredBoard();
   updateSprintMeta();
   document.getElementById('sprint-sub').querySelector && null; // handled by updateSprintMeta
+}
+
+function clearPortalCache() {
+  const keys = [
+    'adloggs_sprint_cache',
+    'adloggs_sprint_cache_time',
+    'adloggs_sprint_meta',
+    'adloggs_eod_last_sent',
+    'adloggs_mr_sent_standup_' + new Date().toISOString().slice(0,10),
+    'adloggs_mr_sent_status_'  + new Date().toISOString().slice(0,10),
+  ];
+  keys.forEach(k => localStorage.removeItem(k));
+  SPRINT_DATA.length = 0;
+  showToast('Cache cleared ✓ — fetching fresh data from Jira...');
+  setTimeout(() => syncSprint(), 300);
 }
 
 function fixWorkerUrl() {
@@ -6040,7 +6058,7 @@ function currentSprintLabel() {
 }
 function buildNameMap() {
   const map={};
-  const ALIASES={'vijayalavan tharmalingam':'Vijayalavan T','ramakrishnan murugan':'Ramakrishnan','vijay':'Vijayalavan T','raja':'Raja'};
+  const ALIASES={'vijayalavan tharmalingam':'Vijayalavan T','ramakrishnan murugan':'Ramakrishnan','vijay':'Vijayalavan T','raja':'Raja','raja kumar':'Raja','raja m':'Raja','rajan':'Raja'};
   (STATE.teams||TEAMS_FROM_JIRA||[]).forEach(t=>(t.members||[]).forEach(m=>{
     if(!m.name)return;
     map[m.name.toLowerCase()]=m.name;
