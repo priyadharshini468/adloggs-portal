@@ -5733,13 +5733,12 @@ async function generateStandupDraft() {
 
 // ── Build message text ────────────────────────────────────────────
 function buildStandupText() {
-  // Read directly from the editable textarea — user may have modified it
   const draft = document.getElementById('mr-standup-draft')?.value.trim() || '';
   const notes = document.getElementById('mr-standup-notes')?.value.trim() || '';
   let text = draft;
-  if (notes && !draft.includes(notes)) text += `\n\n📝 Notes / Blockers\n${notes}`;
-  // Wrap in Google Chat bold for header line
-  return text.replace(/^(🗣 Daily Standup — .+)$/m, '*$1*');
+  if (notes && !draft.includes(notes)) text += '\n\nNotes / Blockers\n' + notes;
+  // Remove Google Chat markdown (* for bold, _ for italic) for plain text email
+  return text.replace(/^\*/mg,'').replace(/\*$/mg,'').replace(/\*/g,'');
 }
 
 function buildStatusText() {
@@ -5884,28 +5883,16 @@ async function sendMrReport(type) {
   // Email via Worker → Apps Script (avoids CORS)
   if (toEmail && cfg.emails && STATE.scriptUrl) {
     try {
-      const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean);
-      const emailPayload = {
-        action:   'sendEmail',
-        to:       recipients,
-        subject,
-        body:     text,     // plain text fallback
-        htmlBody,           // HTML version for proper rendering
-      };
-      // POST via Worker proxy — Worker calls Apps Script server-side (no CORS issues)
-      const proxyUrl = STATE.jiraProxyUrl
-        ? STATE.jiraProxyUrl.replace(/\/+$/,'') + '/email'
-        : null;
-      if (!proxyUrl) { results.push('✗ Email: Worker URL not set'); }
-      else {
-        const res = await fetch(proxyUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scriptUrl: STATE.scriptUrl, ...emailPayload }),
-        });
-        const data = await res.json().catch(() => ({}));
-        results.push(data.ok ? '✓ Email' : `✗ Email: ${data.error || 'failed'}`);
-      }
+      const recipients = cfg.emails.split(',').map(e=>e.trim()).filter(Boolean).join(',');
+      const plainText = buildStandupText ? (type === 'standup' ? buildStandupText() : buildStatusText()) : text;
+      const url = STATE.scriptUrl
+        + '?action=sendEmail'
+        + '&to='      + encodeURIComponent(recipients)
+        + '&subject=' + encodeURIComponent(subject)
+        + '&body='    + encodeURIComponent(plainText.slice(0, 2000));
+      const res = await fetch(url, { redirect: 'follow' });
+      const data = await res.json().catch(() => ({}));
+      results.push(data.sent ? '✓ Email' : `✗ Email: ${data.error || 'failed'}`);
     } catch(e) { results.push('✗ Email: ' + e.message); }
   }
 
